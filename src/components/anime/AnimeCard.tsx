@@ -1,14 +1,13 @@
-
 "use client";
 
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Anime } from '@/lib/types';
+import { Anime } from '../../lib/types';
 import { Star, PlayCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/components/providers/LanguageContext';
-import { translations } from '@/lib/i18n';
+import { Badge } from '../../components/ui/badge';
+import { useLanguage } from '../../components/providers/LanguageContext';
+import { translations } from '../../lib/i18n';
 
 interface AnimeCardProps {
   anime: Anime;

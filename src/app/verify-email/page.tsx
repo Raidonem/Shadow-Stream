@@ -1,15 +1,14 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useUser, useAuth } from '@/firebase/index';
-import { sendVerification } from '@/firebase/non-blocking-login';
+import { Navbar } from '../../components/layout/Navbar';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
+import { useUser, useAuth } from '../../firebase/index';
+import { sendVerification } from '../../firebase/non-blocking-login';
 import { Mail, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../../hooks/use-toast';
 import { signOut } from 'firebase/auth';
 
 export default function VerifyEmailPage() {
