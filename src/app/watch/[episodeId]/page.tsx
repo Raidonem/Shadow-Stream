@@ -1,12 +1,13 @@
+
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
-import { StreamPlayer } from '@/components/anime/StreamPlayer';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { Navbar } from '../../../components/layout/Navbar';
+import { StreamPlayer } from '../../../components/anime/StreamPlayer';
+import { Button } from '../../../components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import { Textarea } from '../../../components/ui/textarea';
+import { Badge } from '../../../components/ui/badge';
 import { 
   Heart, 
   MessageSquare,
@@ -24,15 +25,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase/index';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
 import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useLanguage } from '@/components/providers/LanguageContext';
-import { translations } from '@/lib/i18n';
-import { EpisodeServer } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { AdBanner } from '@/components/ads/AdBanner';
+import { useToast } from '../../../hooks/use-toast';
+import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
+import { useLanguage } from '../../../components/providers/LanguageContext';
+import { translations } from '../../../lib/i18n';
+import { EpisodeServer } from '../../../lib/types';
+import { cn } from '../../../lib/utils';
+import { AdBanner } from '../../../components/ads/AdBanner';
 
 function WatchContent({ episodeId }: { episodeId: string }) {
   const searchParams = useSearchParams();

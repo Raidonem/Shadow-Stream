@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/index';
+import { cn } from '../../lib/utils';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
 
 interface AdBannerProps {

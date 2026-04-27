@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLanguage } from '@/components/providers/LanguageContext';
-import { useTheme } from '@/components/providers/ThemeContext';
+import { useLanguage } from '../../components/providers/LanguageContext';
+import { useTheme } from '../../components/providers/ThemeContext';
 import { 
   Search, 
   Menu, 
@@ -18,8 +19,8 @@ import {
   Settings,
   LogIn
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Button } from '../../components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +28,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase/index';
+} from "../../components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 

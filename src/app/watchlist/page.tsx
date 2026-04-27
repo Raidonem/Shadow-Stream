@@ -1,15 +1,16 @@
+
 "use client";
 
-import { Navbar } from '@/components/layout/Navbar';
-import { AnimeCard } from '@/components/anime/AnimeCard';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase/index';
+import { Navbar } from '../../components/layout/Navbar';
+import { AnimeCard } from '../../components/anime/AnimeCard';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, query, where, documentId, orderBy } from 'firebase/firestore';
-import { useLanguage } from '@/components/providers/LanguageContext';
+import { useLanguage } from '../../components/providers/LanguageContext';
 import { Loader2, Bookmark, Heart, History, PlayCircle } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 
 export default function WatchlistPage() {
   const { user, isUserLoading } = useUser();
