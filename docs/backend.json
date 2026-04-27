@@ -138,6 +138,10 @@
           "type": "number",
           "description": "The calculated average rating for this anime."
         },
+        "views": {
+          "type": "number",
+          "description": "The total number of views for this anime."
+        },
         "status": {
           "type": "string",
           "description": "The airing status of the anime.",

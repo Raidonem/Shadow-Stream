@@ -14,7 +14,7 @@ export interface Anime {
   bannerImage: string;
   genres: GenreKey[];
   rating: number;
-  releaseYear: number;
+  views: number;
   status: 'Airing' | 'Finished';
   type: AnimeType;
   season: AnimeSeason;

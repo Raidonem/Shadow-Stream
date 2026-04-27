@@ -27,7 +27,7 @@ import {
   X,
   Server,
   Globe,
-  AlertTriangle
+  Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -63,7 +63,8 @@ export default function AdminPage() {
     releaseYear: new Date().getFullYear().toString(),
     status: 'Airing' as 'Airing' | 'Finished',
     type: 'tv' as AnimeType,
-    season: 'fall' as AnimeSeason
+    season: 'fall' as AnimeSeason,
+    views: '0'
   });
 
   const [episodeData, setEpisodeData] = useState({
@@ -136,7 +137,8 @@ export default function AdminPage() {
       releaseYear: '2024', 
       status: 'Airing',
       type: 'tv',
-      season: 'fall'
+      season: 'fall',
+      views: '0'
     });
     setSelectedGenres([]);
     setEditingAnimeId(null);
@@ -180,6 +182,7 @@ export default function AdminPage() {
       ...animeData,
       genres: selectedGenres,
       releaseYear: parseInt(animeData.releaseYear),
+      views: parseInt(animeData.views) || 0,
       updatedAt: serverTimestamp(),
     };
 
@@ -215,7 +218,8 @@ export default function AdminPage() {
       releaseYear: anime.releaseYear.toString(),
       status: anime.status,
       type: anime.type || 'tv',
-      season: anime.season || 'fall'
+      season: anime.season || 'fall',
+      views: (anime.views || 0).toString()
     });
     setSelectedGenres(anime.genres || []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -447,6 +451,15 @@ export default function AdminPage() {
                           />
                         </div>
                         <div className="space-y-2">
+                          <Label>Total Views</Label>
+                          <Input 
+                            type="number"
+                            value={animeData.views}
+                            onChange={(e) => setAnimeData({...animeData, views: e.target.value})}
+                            className="rounded-xl border-none bg-secondary/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
                           <Label>Status</Label>
                           <Select 
                             value={animeData.status} 
@@ -461,6 +474,9 @@ export default function AdminPage() {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
+
+                      <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Type</Label>
                           <Select 
@@ -479,9 +495,6 @@ export default function AdminPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
-
-                      <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Season</Label>
                           <Select 
@@ -518,6 +531,10 @@ export default function AdminPage() {
                           <Image src={anime.bannerImage} alt={anime.titleEn} fill className="object-cover" />
                           <div className="absolute inset-0 bg-black/40 p-4 flex flex-col justify-end">
                             <h3 className="font-bold text-white text-lg leading-tight">{anime.titleEn}</h3>
+                            <div className="flex items-center gap-1 text-xs text-white/80 mt-1">
+                              <Eye className="h-3 w-3" />
+                              {anime.views || 0} views
+                            </div>
                           </div>
                         </div>
                         <CardContent className="p-4 flex justify-between items-center">

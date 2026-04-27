@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Navbar } from "../components/layout/Navbar";
 import { AnimeCard } from "../components/anime/AnimeCard";
 import { Button } from "../components/ui/button";
@@ -8,27 +9,39 @@ import { Play, Info, ChevronRight, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '../firebase/index';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useLanguage } from "../components/providers/LanguageContext";
 import { translations } from "../lib/i18n";
 import { AdBanner } from "../components/ads/AdBanner";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "../components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 
 export default function Home() {
   const db = useFirestore();
   const { language, t } = useLanguage();
 
-  const animeQuery = useMemoFirebase(() => {
+  // Trending Query (Top 5 by Views)
+  const trendingQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'anime'), orderBy('updatedAt', 'desc'));
+    return query(collection(db, 'anime'), orderBy('views', 'desc'), limit(5));
   }, [db]);
 
-  const { data: animeList, isLoading } = useCollection(animeQuery);
+  // Latest Updates Query
+  const latestQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'anime'), orderBy('updatedAt', 'desc'), limit(12));
+  }, [db]);
 
-  const heroAnime = animeList?.[0];
-  const latestUpdates = animeList?.slice(0, 12);
+  const { data: trendingAnime, isLoading: isTrendingLoading } = useCollection(trendingQuery);
+  const { data: latestUpdates, isLoading: isLatestLoading } = useCollection(latestQuery);
+
   const tTags = translations[language].tags;
 
-  if (isLoading) {
+  if (isTrendingLoading || isLatestLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -40,53 +53,71 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {heroAnime ? (
+      {trendingAnime && trendingAnime.length > 0 ? (
         <section className="relative h-[80vh] w-full overflow-hidden">
-          <Image
-            src={heroAnime.bannerImage}
-            alt={(language === 'ar' ? heroAnime.titleAr : heroAnime.titleEn) || 'Anime Banner'}
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-          
-          <div className="container relative mx-auto flex h-full flex-col justify-center px-4 md:px-8">
-            <div className="max-w-2xl space-y-6">
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-accent px-2 py-1 text-xs font-bold uppercase text-accent-foreground">
-                  {language === 'ar' ? 'أحدث إصدار' : 'Newest Release'}
-                </span>
-                <span className="text-sm font-medium text-muted-foreground">
-                  {heroAnime.genres?.map(g => tTags[g as keyof typeof tTags]).join(' • ')}
-                </span>
-              </div>
-              
-              <h1 className="font-headline text-5xl font-bold tracking-tight md:text-7xl">
-                {language === 'ar' ? heroAnime.titleAr : heroAnime.titleEn}
-              </h1>
-              
-              <p className="line-clamp-3 text-lg text-muted-foreground md:text-xl">
-                {language === 'ar' ? heroAnime.descriptionAr : heroAnime.descriptionEn}
-              </p>
-              
-              <div className="flex flex-wrap gap-4 pt-4">
-                <Link href={`/anime/${heroAnime.id}`}>
-                  <Button size="lg" className="h-14 gap-2 rounded-xl bg-accent px-8 text-lg font-bold text-accent-foreground hover:bg-accent/90">
-                    <Play className="h-6 w-6 fill-current" />
-                    {language === 'ar' ? 'شاهد الآن' : 'Watch Now'}
-                  </Button>
-                </Link>
-                <Link href={`/anime/${heroAnime.id}`}>
-                  <Button size="lg" variant="secondary" className="h-14 gap-2 rounded-xl px-8 text-lg font-bold">
-                    <Info className="h-6 w-6" />
-                    {language === 'ar' ? 'مزيد من التفاصيل' : 'More Details'}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
+          <Carousel
+            opts={{
+              loop: true,
+            }}
+            plugins={[
+              Autoplay({
+                delay: 6000,
+              }),
+            ]}
+            className="h-full w-full"
+          >
+            <CarouselContent className="h-full">
+              {trendingAnime.map((anime) => (
+                <CarouselItem key={anime.id} className="relative h-[80vh] w-full">
+                  <Image
+                    src={anime.bannerImage}
+                    alt={(language === 'ar' ? anime.titleAr : anime.titleEn) || 'Anime Banner'}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+                  
+                  <div className="container relative mx-auto flex h-full flex-col justify-center px-4 md:px-8">
+                    <div className="max-w-2xl space-y-6">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-accent px-2 py-1 text-xs font-bold uppercase text-accent-foreground">
+                          {language === 'ar' ? 'رائج الآن' : 'Trending Now'}
+                        </span>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {anime.genres?.map(g => tTags[g as keyof typeof tTags]).join(' • ')}
+                        </span>
+                      </div>
+                      
+                      <h1 className="font-headline text-5xl font-bold tracking-tight md:text-7xl animate-in slide-in-from-left duration-700">
+                        {language === 'ar' ? anime.titleAr : anime.titleEn}
+                      </h1>
+                      
+                      <p className="line-clamp-3 text-lg text-muted-foreground md:text-xl animate-in slide-in-from-left duration-1000">
+                        {language === 'ar' ? anime.descriptionAr : anime.descriptionEn}
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-4 pt-4 animate-in fade-in duration-1000">
+                        <Link href={`/anime/${anime.id}`}>
+                          <Button size="lg" className="h-14 gap-2 rounded-xl bg-accent px-8 text-lg font-bold text-accent-foreground hover:bg-accent/90">
+                            <Play className="h-6 w-6 fill-current" />
+                            {language === 'ar' ? 'شاهد الآن' : 'Watch Now'}
+                          </Button>
+                        </Link>
+                        <Link href={`/anime/${anime.id}`}>
+                          <Button size="lg" variant="secondary" className="h-14 gap-2 rounded-xl px-8 text-lg font-bold">
+                            <Info className="h-6 w-6" />
+                            {language === 'ar' ? 'مزيد من التفاصيل' : 'More Details'}
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
         </section>
       ) : (
         <div className="flex h-[40vh] items-center justify-center">
@@ -134,7 +165,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {animeList?.slice(0, 4).map((anime) => (
+              {latestUpdates?.slice(0, 4).map((anime) => (
                 <Link key={anime.id} href={`/anime/${anime.id}`} className="relative aspect-video overflow-hidden rounded-xl group">
                   <Image
                     src={anime.bannerImage}
@@ -143,7 +174,7 @@ export default function Home() {
                     className="object-cover transition-transform group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-white font-bold text-center px-2">
+                    <span className="text-white font-bold text-center px-2 text-sm">
                       {language === 'ar' ? anime.titleAr : anime.titleEn}
                     </span>
                   </div>
