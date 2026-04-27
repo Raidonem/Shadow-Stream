@@ -12,10 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase/index';
 import { doc, collection, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/components/providers/LanguageContext';
-import { translations } from '@/lib/i18n';
-import { db, auth } from "../../../firebase/index";
+import { useToast } from "../../../hooks/use-toast";
+import { useLanguage } from '../../../components/providers/LanguageContext';
+import { translations } from '../../../lib/i18n';
+import { db, auth } from "../../../firebase/config";
 
 export default function AnimeDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
