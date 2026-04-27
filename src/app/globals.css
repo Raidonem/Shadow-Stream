@@ -1,0 +1,70 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 280 15% 98%;
+    --foreground: 280 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 280 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 280 20% 10%;
+    --primary: 272 65% 26%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 272 20% 96%;
+    --secondary-foreground: 272 65% 26%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 212 100% 68%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 272 65% 26%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 280 11% 10%;
+    --foreground: 210 40% 98%;
+    --card: 280 11% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 280 11% 12%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 272 65% 26%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 280 11% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 280 11% 15%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 212 100% 68%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 280 11% 20%;
+    --input: 280 11% 20%;
+    --ring: 212 100% 68%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline tracking-tight;
+  }
+}
+
+.anime-card-hover {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.anime-card-hover:hover {
+  transform: translateY(-8px) scale(1.02);
+}

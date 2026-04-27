@@ -1,0 +1,9 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+runConfig:
+  cpu: 1
+  memory: 1024MiB
+  maxInstances: 10
+
+env:
+  - variable: NODE_ENV
+    value: production

@@ -1,0 +1,338 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile and application-specific settings, excluding authentication details managed by an external system. This entity differentiates between 'user' and 'admin' account types.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "externalAuthId": {
+          "type": "string",
+          "description": "Identifier from the external authentication system, linking this user profile to their authentication credentials."
+        },
+        "username": {
+          "type": "string",
+          "description": "Display name chosen by the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address, used for communication and not for authentication within this system.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the application, determining access levels and permissions (e.g., 'user', 'admin')."
+        },
+        "isPremium": {
+          "type": "boolean",
+          "description": "Indicates if the user has an active premium subscription to remove ads."
+        },
+        "languagePreference": {
+          "type": "string",
+          "description": "User's preferred language for the application interface (e.g., 'en' for English, 'ar' for Arabic)."
+        },
+        "themePreference": {
+          "type": "string",
+          "description": "User's preferred color theme for the application interface (e.g., 'dark', 'light')."
+        },
+        "watchlistAnimeIds": {
+          "type": "array",
+          "description": "An array of unique identifiers for Anime entities that the user has added to their personal watchlist.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "favoriteAnimeIds": {
+          "type": "array",
+          "description": "An array of unique identifiers for Anime entities that the user has favorited.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "favoriteEpisodeIds": {
+          "type": "array",
+          "description": "An array of unique identifiers for Episode entities that the user has favorited.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "externalAuthId",
+        "username",
+        "email",
+        "role",
+        "languagePreference",
+        "themePreference",
+        "watchlistAnimeIds",
+        "favoriteAnimeIds",
+        "favoriteEpisodeIds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Anime": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Anime",
+      "type": "object",
+      "description": "Represents an anime series available on the platform, including its metadata and general information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Anime entity."
+        },
+        "titleEn": {
+          "type": "string",
+          "description": "The main title of the anime series in English."
+        },
+        "titleAr": {
+          "type": "string",
+          "description": "The main title of the anime series in Arabic."
+        },
+        "descriptionEn": {
+          "type": "string",
+          "description": "A brief summary or synopsis of the anime's plot in English."
+        },
+        "descriptionAr": {
+          "type": "string",
+          "description": "A brief summary or synopsis of the anime's plot in Arabic."
+        },
+        "releaseYear": {
+          "type": "number",
+          "description": "The original release year of the anime series."
+        },
+        "coverImage": {
+          "type": "string",
+          "description": "URL to the primary poster image for the anime series.",
+          "format": "uri"
+        },
+        "bannerImage": {
+          "type": "string",
+          "description": "URL to the banner image for the anime series.",
+          "format": "uri"
+        },
+        "genres": {
+          "type": "array",
+          "description": "An array of genres associated with this anime.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rating": {
+          "type": "number",
+          "description": "The calculated average rating for this anime."
+        },
+        "status": {
+          "type": "string",
+          "description": "The airing status of the anime.",
+          "enum": ["Airing", "Finished"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the anime entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the anime entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "titleEn",
+        "titleAr",
+        "descriptionEn",
+        "descriptionAr",
+        "releaseYear",
+        "coverImage",
+        "bannerImage",
+        "genres",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Episode": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Episode",
+      "type": "object",
+      "description": "Represents a single episode within an anime series, containing multiple streaming servers and metadata.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Episode entity."
+        },
+        "animeId": {
+          "type": "string",
+          "description": "Reference to the parent Anime entity."
+        },
+        "episodeNumber": {
+          "type": "number",
+          "description": "The sequential number of the episode."
+        },
+        "titleEn": {
+          "type": "string",
+          "description": "The title of the episode in English."
+        },
+        "titleAr": {
+          "type": "string",
+          "description": "The title of the episode in Arabic."
+        },
+        "servers": {
+          "type": "array",
+          "description": "A list of streaming servers for this episode.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lang": { "type": "string", "enum": ["ar", "en"] },
+              "name": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["lang", "name", "url"]
+          }
+        },
+        "duration": {
+          "type": "string",
+          "description": "The duration of the episode (e.g., '24:00')."
+        },
+        "thumbnail": {
+          "type": "string",
+          "description": "URL to a thumbnail image for the episode.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the episode entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the episode entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "animeId",
+        "episodeNumber",
+        "titleEn",
+        "titleAr",
+        "servers",
+        "duration",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WatchHistory": {
+      "title": "WatchHistory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "animeId": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "animeTitleEn": { "type": "string" },
+        "animeTitleAr": { "type": "string" },
+        "episodeTitleEn": { "type": "string" },
+        "episodeTitleAr": { "type": "string" },
+        "episodeNumber": { "type": "number" },
+        "thumbnail": { "type": "string" },
+        "watchedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "animeId", "episodeId", "watchedAt"]
+    },
+    "Tag": {
+      "title": "Tag",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "createdAt", "updatedAt"]
+    },
+    "Rating": {
+      "title": "Rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "animeId": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "value": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "animeId", "episodeId", "value", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "text": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "episodeId", "text", "createdAt", "updatedAt"]
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profiles, preferences, and watchlist."
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "WatchHistory",
+      "description": "Stores user's watched episodes history."
+    },
+    "/admins/{adminId}": {
+      "schema": "object",
+      "description": "Dedicated collection for administrative role assignment."
+    },
+    "/anime/{animeId}": {
+      "schema": "Anime",
+      "description": "Stores public information about anime series."
+    },
+    "/anime/{animeId}/episodes/{episodeId}": {
+      "schema": "Episode",
+      "description": "Stores details for individual episodes."
+    },
+    "/tags/{tagId}": {
+      "schema": "Tag",
+      "description": "Stores categorical tags/genres for anime."
+    },
+    "/ratings/{ratingId}": {
+      "schema": "Rating",
+      "description": "Stores individual user ratings for anime episodes."
+    },
+    "/anime/{animeId}/episodes/{episodeId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Stores user comments for specific anime episodes."
+    }
+  }
+}

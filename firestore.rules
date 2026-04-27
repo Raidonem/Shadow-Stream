@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * SHADOWSTREAM SECURITY RULES - SYNCED FOR PROJECT: shadows-16567
+     * Standardized rules for production stability and App Hosting sync.
+     */
+
+    // --- Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isExistingOwner(ownerId) {
+      return resource != null && isOwner(ownerId);
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if true; 
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      match /history/{historyId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn();
+      allow create, list, update, delete: if false;
+    }
+
+    match /anime/{animeId} {
+      allow get, list: if true;
+      allow create: if isAdmin();
+      allow update: if (
+        isAdmin() || 
+        (
+          isSignedIn() && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'updatedAt'])
+        )
+      ) && resource != null;
+      allow delete: if isAdmin() && resource != null;
+
+      match /episodes/{episodeId} {
+        allow get, list: if true;
+        allow create: if isAdmin() && request.resource.data.animeId == animeId;
+        allow update, delete: if isAdmin() && resource != null;
+
+        match /comments/{commentId} {
+          allow get, list: if true;
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.episodeId == episodeId;
+          allow update: if isExistingOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
+          allow delete: if isExistingOwner(resource.data.userId);
+        }
+      }
+    }
+
+    match /tags/{tagId} {
+      allow get, list: if true;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
+    }
+
+    match /ratings/{ratingId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(resource.data.userId);
+    }
+  }
+}

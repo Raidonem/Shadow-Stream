@@ -1,0 +1,47 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-anime",
+      "description": "Epic anime scene background",
+      "imageUrl": "https://picsum.photos/seed/anime1/1200/600",
+      "imageHint": "anime landscape"
+    },
+    {
+      "id": "anime-1",
+      "description": "Cyberpunk themed anime",
+      "imageUrl": "https://picsum.photos/seed/anime2/400/600",
+      "imageHint": "cyberpunk anime"
+    },
+    {
+      "id": "anime-2",
+      "description": "Fantasy themed anime",
+      "imageUrl": "https://picsum.photos/seed/anime3/400/600",
+      "imageHint": "fantasy anime"
+    },
+    {
+      "id": "anime-3",
+      "description": "Slice of life anime",
+      "imageUrl": "https://picsum.photos/seed/anime4/400/600",
+      "imageHint": "slice of life"
+    },
+    {
+      "id": "anime-4",
+      "description": "Shonen battle anime",
+      "imageUrl": "https://picsum.photos/seed/anime5/400/600",
+      "imageHint": "action anime"
+    },
+    {
+      "id": "anime-5",
+      "description": "Mystery anime",
+      "imageUrl": "https://picsum.photos/seed/anime6/400/600",
+      "imageHint": "mystery anime"
+    },
+    {
+      "id": "anime-6",
+      "description": "Romance anime",
+      "imageUrl": "https://picsum.photos/seed/anime7/400/600",
+      "imageHint": "romance anime"
+    }
+  ]
+}
