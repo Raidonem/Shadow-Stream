@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef } from 'react';
-import { Navbar } from '@/components/Layout/Navbar';
+import { Navbar } from '@/components/layout/Navbar';
 import { StreamPlayer } from '@/components/anime/StreamPlayer';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

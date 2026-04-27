@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Navbar } from '@/components/Layout/Navbar';
+import { Navbar } from '@/components/layout/Navbar';
 import { AnimeCard } from '@/components/anime/AnimeCard';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase/index';
 import { collection, query, orderBy } from 'firebase/firestore';

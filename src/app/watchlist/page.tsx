@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Navbar } from '@/components/Layout/Navbar';
+import { Navbar } from '@/components/layout/Navbar';
 import { AnimeCard } from '@/components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase/index'index';
 import { doc, collection, query, where, documentId, orderBy } from 'firebase/firestore';
