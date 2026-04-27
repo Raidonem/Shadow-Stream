@@ -1,9 +1,8 @@
-
 "use client";
 
 import { Navbar } from '@/components/layout/Navbar';
 import { AnimeCard } from '@/components/anime/AnimeCard';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase/index'index';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase/index';
 import { doc, collection, query, where, documentId, orderBy } from 'firebase/firestore';
 import { useLanguage } from '@/components/providers/LanguageContext';
 import { Loader2, Bookmark, Heart, History, PlayCircle } from 'lucide-react';

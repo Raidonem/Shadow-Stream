@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -30,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase/index'index';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase/index';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 

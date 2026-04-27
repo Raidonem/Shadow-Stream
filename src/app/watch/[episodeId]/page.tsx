@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef } from 'react';
@@ -25,7 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase/index'index';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase/index';
 import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
