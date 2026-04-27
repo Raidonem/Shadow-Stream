@@ -1,16 +1,17 @@
+
 "use client";
 
-import { Navbar } from '@/components/layout/Navbar';
-import { AnimeCard } from '@/components/anime/AnimeCard';
-import { Button } from '@/components/ui/button';
+import { Navbar } from "../components/layout/Navbar";
+import { AnimeCard } from "../components/anime/AnimeCard";
+import { Button } from "../components/ui/button";
 import { Play, Info, ChevronRight, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '../firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { useLanguage } from '@/components/providers/LanguageContext';
-import { translations } from '@/lib/i18n';
-import { AdBanner } from '@/components/ads/AdBanner';
+import { useLanguage } from "../components/providers/LanguageContext";
+import { translations } from "../lib/i18n";
+import { AdBanner } from "../components/ads/AdBanner";
 
 export default function Home() {
   const db = useFirestore();
@@ -39,7 +40,6 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Section */}
       {heroAnime ? (
         <section className="relative h-[80vh] w-full overflow-hidden">
           <Image
@@ -94,10 +94,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Content Sections */}
       <main className="container mx-auto space-y-16 px-4 py-12 md:px-8">
         
-        {/* Trending Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-headline text-3xl font-bold">{t('trending')}</h2>
@@ -112,12 +110,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Ad Section */}
         <div className="max-w-5xl mx-auto">
           <AdBanner dataAdSlot="1234567890" />
         </div>
 
-        {/* Curated Seasonal Section */}
         <section className="rounded-3xl bg-primary/10 p-8 md:p-12">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div className="space-y-6">
@@ -154,7 +150,6 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="mt-20 border-t bg-card py-12">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex flex-col items-center justify-between gap-8 md:flex-row">

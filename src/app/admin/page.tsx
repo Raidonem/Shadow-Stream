@@ -3,18 +3,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Navbar } from "@/components/layout/Navbar";
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Navbar } from "../../components/layout/Navbar";
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
 import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from "@/components/ui/select";
+} from "../../components/ui/select";
 import { 
   Plus, 
   LayoutDashboard, 
@@ -29,16 +29,16 @@ import {
   Globe,
   AlertTriangle
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { useToast } from '../../hooks/use-toast';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase';
 import { doc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { translations } from '@/lib/i18n';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { GenreKey, EpisodeServer } from '@/lib/types';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { translations } from '../../lib/i18n';
+import { Badge } from '../../components/ui/badge';
+import { cn } from '../../lib/utils';
+import { GenreKey, EpisodeServer } from '../../lib/types';
 import Image from 'next/image';
 
 export default function AdminPage() {
@@ -107,7 +107,6 @@ export default function AdminPage() {
       if (!user) {
         router.push('/login');
       } else if (!adminDoc) {
-        // This handles real-time revocation of admin status
         toast({
           title: "Access Revoked",
           description: "You no longer have administrative privileges.",
@@ -276,7 +275,6 @@ export default function AdminPage() {
     );
   }
 
-  // Final safety check - the real-time redirect handles the rest
   if (!user || !adminDoc) return null;
 
   return (
