@@ -1,8 +1,8 @@
 
 import type {Metadata} from 'next';
 import './globals.css';
-import { Providers } from '@/components/providers/Providers';
-import { AdBanner } from '@/components/ads/AdBanner';
+import { Providers } from '../components/providers/Providers';
+import { AdBanner } from '../components/ads/AdBanner';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
