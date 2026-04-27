@@ -6,6 +6,9 @@ import { cn } from '../../lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
 
+// REPLACE THIS with your actual Publisher ID from AdSense
+export const ADSENSE_PUBLISHER_ID = "ca-pub-9229134067523856";
+
 interface AdBannerProps {
   dataAdSlot: string;
   dataAdFormat?: 'auto' | 'fluid' | 'rectangle' | 'vertical' | 'horizontal';
@@ -16,7 +19,6 @@ interface AdBannerProps {
 
 /**
  * A reusable Google AdSense Banner component.
- * Optimized with IntersectionObserver and physical dimension checks.
  * Automatically hides if the user has a premium subscription or is an administrator.
  */
 export function AdBanner({ 
@@ -70,7 +72,7 @@ export function AdBanner({
             observer.disconnect();
           }
         } catch (err) {
-          // Silently catch errors
+          console.error("AdSense push error:", err);
         }
       }
     }, { 
@@ -83,28 +85,31 @@ export function AdBanner({
     return () => observer.disconnect();
   }, [isMounted, dataAdSlot, shouldHideAds]);
 
-  // If user is premium or admin, don't render the ad slot at all
   if (shouldHideAds) {
     return null;
   }
+
+  // To help you debug, we show a colored box in development if no numeric ID is provided
+  const isPlaceholder = dataAdSlot.includes("_SLOT") || dataAdSlot === "1234567890";
 
   return (
     <div 
       ref={adRef}
       className={cn(
-        "overflow-hidden rounded-2xl bg-secondary/5 p-4 text-center transition-all",
+        "overflow-hidden rounded-2xl bg-secondary/5 p-4 text-center transition-all min-h-[100px]",
         dataAdFormat === 'vertical' ? "h-full flex flex-col items-center" : "my-6",
         className
       )}
     >
       {!hideLabel && (
         <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30">
-          Advertisement
+          {isPlaceholder ? "Ad Placeholder (Replace Slot ID)" : "Advertisement"}
         </div>
       )}
       <div className={cn(
         "min-h-[100px] w-full",
-        dataAdFormat === 'vertical' ? "flex-1" : ""
+        dataAdFormat === 'vertical' ? "flex-1" : "",
+        isPlaceholder ? "border border-dashed border-primary/20 flex items-center justify-center italic text-xs text-muted-foreground" : ""
       )}>
         {isMounted ? (
           <ins
@@ -115,7 +120,7 @@ export function AdBanner({
               minWidth: '100px',
               minHeight: '100px'
             }}
-            data-ad-client="ca-pub-9229134067523856"
+            data-ad-client={ADSENSE_PUBLISHER_ID}
             data-ad-slot={dataAdSlot}
             data-ad-format={dataAdFormat}
             data-full-width-responsive={fullWidthResponsive.toString()}
