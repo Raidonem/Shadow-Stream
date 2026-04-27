@@ -24,7 +24,7 @@ export default function Home() {
   const db = useFirestore();
   const { language, t } = useLanguage();
 
-  // Trending Query (Top 5 by Views)
+  // Trending Query (Top 5 by Views) - Used for the Hero Carousel
   const trendingQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'anime'), orderBy('views', 'desc'), limit(5));
@@ -62,6 +62,7 @@ export default function Home() {
             plugins={[
               Autoplay({
                 delay: 6000,
+                stopOnInteraction: false,
               }),
             ]}
             className="h-full w-full"
@@ -70,11 +71,12 @@ export default function Home() {
               {trendingAnime.map((anime) => (
                 <CarouselItem key={anime.id} className="relative h-[80vh] w-full">
                   <Image
-                    src={anime.bannerImage}
+                    src={anime.bannerImage || anime.coverImage}
                     alt={(language === 'ar' ? anime.titleAr : anime.titleEn) || 'Anime Banner'}
                     fill
                     className="object-cover"
                     priority
+                    data-ai-hint="anime landscape"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
@@ -86,7 +88,7 @@ export default function Home() {
                           {language === 'ar' ? 'رائج الآن' : 'Trending Now'}
                         </span>
                         <span className="text-sm font-medium text-muted-foreground">
-                          {anime.genres?.map(g => tTags[g as keyof typeof tTags]).join(' • ')}
+                          {anime.genres?.slice(0, 3).map(g => tTags[g as keyof typeof tTags]).join(' • ')}
                         </span>
                       </div>
                       
@@ -121,7 +123,7 @@ export default function Home() {
         </section>
       ) : (
         <div className="flex h-[40vh] items-center justify-center">
-          <p className="text-muted-foreground">No anime found. Check back later!</p>
+          <p className="text-muted-foreground">No trending anime found. Check back later!</p>
         </div>
       )}
 
@@ -168,7 +170,7 @@ export default function Home() {
               {latestUpdates?.slice(0, 4).map((anime) => (
                 <Link key={anime.id} href={`/anime/${anime.id}`} className="relative aspect-video overflow-hidden rounded-xl group">
                   <Image
-                    src={anime.bannerImage}
+                    src={anime.bannerImage || anime.coverImage}
                     alt={(language === 'ar' ? anime.titleAr : anime.titleEn) || 'Anime Banner'}
                     fill
                     className="object-cover transition-transform group-hover:scale-105"
