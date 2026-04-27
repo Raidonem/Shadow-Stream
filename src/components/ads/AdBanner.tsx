@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
@@ -6,7 +5,7 @@ import { cn } from '../../lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
 
-// REPLACE THIS with your actual Publisher ID from AdSense
+// IMPORTANT: Replace this with your actual Publisher ID from your AdSense Dashboard
 export const ADSENSE_PUBLISHER_ID = "ca-pub-9229134067523856";
 
 interface AdBannerProps {
@@ -64,7 +63,7 @@ export function AdBanner({
       
       // Strict check for visibility and width to prevent "availableWidth=0" error
       if (entry.isIntersecting && adRef.current && adRef.current.clientWidth > 0 && !hasPushed.current) {
-        // Use a small timeout to ensure the DOM layout is completely stable
+        // Use a small timeout to ensure the DOM layout is completely stable before push
         const timer = setTimeout(() => {
           try {
             // @ts-ignore
@@ -77,12 +76,12 @@ export function AdBanner({
           } catch (err) {
             console.error("AdSense push error:", err);
           }
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
       }
     }, { 
       threshold: 0.1,
-      rootMargin: '100px' // Load slightly before coming into view
+      rootMargin: '100px'
     });
 
     observer.observe(adRef.current);
@@ -94,7 +93,6 @@ export function AdBanner({
     return null;
   }
 
-  // To help you debug, we show a colored box in development if no numeric ID is provided
   const isPlaceholder = dataAdSlot.includes("_SLOT") || dataAdSlot === "1234567890";
 
   return (
@@ -108,7 +106,7 @@ export function AdBanner({
     >
       {!hideLabel && (
         <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30">
-          {isPlaceholder ? "Ad Placeholder (Replace Slot ID)" : "Advertisement"}
+          {isPlaceholder ? "Ad Placeholder" : "Advertisement"}
         </div>
       )}
       <div className={cn(
@@ -122,7 +120,7 @@ export function AdBanner({
             style={{ 
               display: 'block', 
               height: dataAdFormat === 'vertical' ? '100%' : 'auto',
-              minWidth: '250px', // Minimum standard width for many ads
+              minWidth: '250px',
               minHeight: '100px'
             }}
             data-ad-client={ADSENSE_PUBLISHER_ID}

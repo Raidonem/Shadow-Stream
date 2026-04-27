@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { Play, Info, ChevronRight, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase } from '../firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '../firebase/index';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useLanguage } from "../components/providers/LanguageContext";
 import { translations } from "../lib/i18n";
