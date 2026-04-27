@@ -2,9 +2,9 @@
 
 import { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
+import { Navbar } from '@/components/Layout/Navbar';
 import { AnimeCard } from '@/components/anime/AnimeCard';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase/index';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useLanguage } from '@/components/providers/LanguageContext';
 import { Loader2, SearchX } from 'lucide-react';

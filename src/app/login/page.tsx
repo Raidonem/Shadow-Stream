@@ -3,13 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
+import { Navbar } from '@/components/Layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth, useUser, useFirestore } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase/index';
 import { initiateEmailSignIn, initiateEmailSignUp, sendVerification } from '@/firebase/non-blocking-login';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
