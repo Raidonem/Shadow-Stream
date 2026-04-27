@@ -62,22 +62,27 @@ export function AdBanner({
     const observer = new IntersectionObserver((entries) => {
       const [entry] = entries;
       
-      if (entry.isIntersecting && adRef.current && adRef.current.offsetWidth > 0 && !hasPushed.current) {
-        try {
-          // @ts-ignore
-          if (typeof window !== 'undefined' && window.adsbygoogle) {
+      // Strict check for visibility and width to prevent "availableWidth=0" error
+      if (entry.isIntersecting && adRef.current && adRef.current.clientWidth > 0 && !hasPushed.current) {
+        // Use a small timeout to ensure the DOM layout is completely stable
+        const timer = setTimeout(() => {
+          try {
             // @ts-ignore
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-            hasPushed.current = true;
-            observer.disconnect();
+            if (typeof window !== 'undefined' && window.adsbygoogle && adRef.current && adRef.current.clientWidth > 0) {
+              // @ts-ignore
+              (window.adsbygoogle = window.adsbygoogle || []).push({});
+              hasPushed.current = true;
+              observer.disconnect();
+            }
+          } catch (err) {
+            console.error("AdSense push error:", err);
           }
-        } catch (err) {
-          console.error("AdSense push error:", err);
-        }
+        }, 100);
+        return () => clearTimeout(timer);
       }
     }, { 
       threshold: 0.1,
-      rootMargin: '50px' 
+      rootMargin: '100px' // Load slightly before coming into view
     });
 
     observer.observe(adRef.current);
@@ -96,8 +101,8 @@ export function AdBanner({
     <div 
       ref={adRef}
       className={cn(
-        "overflow-hidden rounded-2xl bg-secondary/5 p-4 text-center transition-all min-h-[100px]",
-        dataAdFormat === 'vertical' ? "h-full flex flex-col items-center" : "my-6",
+        "overflow-hidden rounded-2xl bg-secondary/5 p-4 text-center transition-all min-h-[100px] w-full",
+        dataAdFormat === 'vertical' ? "h-full flex flex-col items-center min-w-[160px]" : "my-6",
         className
       )}
     >
@@ -117,7 +122,7 @@ export function AdBanner({
             style={{ 
               display: 'block', 
               height: dataAdFormat === 'vertical' ? '100%' : 'auto',
-              minWidth: '100px',
+              minWidth: '250px', // Minimum standard width for many ads
               minHeight: '100px'
             }}
             data-ad-client={ADSENSE_PUBLISHER_ID}
