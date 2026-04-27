@@ -32,7 +32,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
@@ -92,7 +92,7 @@ export default function AdminPage() {
   
   const animeQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'anime'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'anime'), orderBy('updatedAt', 'desc'));
   }, [db]);
   const { data: allAnime } = useCollection(animeQuery);
 
@@ -246,6 +246,10 @@ export default function AdminPage() {
     if (editingEpisodeId) {
       const epRef = doc(db, 'anime', episodeData.animeId, 'episodes', editingEpisodeId);
       updateDocumentNonBlocking(epRef, data);
+      // Update parent anime updatedAt
+      const animeRef = doc(db, 'anime', episodeData.animeId);
+      updateDocumentNonBlocking(animeRef, { updatedAt: serverTimestamp() });
+
       toast({ title: "Episode Updated", description: `Episode ${episodeData.episodeNumber} updated.` });
       resetEpisodeForm();
       setIsSubmitting(false);
@@ -255,6 +259,10 @@ export default function AdminPage() {
         ...data,
         createdAt: serverTimestamp(),
       }).then(() => {
+        // Update parent anime updatedAt
+        const animeRef = doc(db, 'anime', episodeData.animeId);
+        updateDocumentNonBlocking(animeRef, { updatedAt: serverTimestamp() });
+
         toast({ title: "Episode Added", description: `Episode ${episodeData.episodeNumber} published.` });
         resetEpisodeForm();
         setIsSubmitting(false);

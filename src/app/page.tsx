@@ -19,13 +19,13 @@ export default function Home() {
 
   const animeQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'anime'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'anime'), orderBy('updatedAt', 'desc'));
   }, [db]);
 
   const { data: animeList, isLoading } = useCollection(animeQuery);
 
   const heroAnime = animeList?.[0];
-  const trending = animeList?.slice(0, 6);
+  const latestUpdates = animeList?.slice(0, 12);
   const tTags = translations[language].tags;
 
   if (isLoading) {
@@ -98,7 +98,7 @@ export default function Home() {
         
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-headline text-3xl font-bold">{t('trending')}</h2>
+            <h2 className="font-headline text-3xl font-bold">{t('latestUpdates')}</h2>
             <Link href="/search">
               <Button variant="link" className="text-accent gap-1">
                 {language === 'ar' ? 'عرض الكل' : 'View All'} <ChevronRight className="h-4 w-4" />
@@ -106,7 +106,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {trending?.map((anime) => (
+            {latestUpdates?.map((anime) => (
               <AnimeCard key={anime.id} anime={anime} />
             ))}
           </div>
