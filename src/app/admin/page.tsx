@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -37,7 +38,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlo
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
-import { GenreKey, EpisodeServer } from '../../lib/types';
+import { GenreKey, EpisodeServer, AnimeType, AnimeSeason } from '../../lib/types';
 import Image from 'next/image';
 
 export default function AdminPage() {
@@ -60,7 +61,9 @@ export default function AdminPage() {
     coverImage: '',
     bannerImage: '',
     releaseYear: new Date().getFullYear().toString(),
-    status: 'Airing' as 'Airing' | 'Finished'
+    status: 'Airing' as 'Airing' | 'Finished',
+    type: 'tv' as AnimeType,
+    season: 'fall' as AnimeSeason
   });
 
   const [episodeData, setEpisodeData] = useState({
@@ -123,7 +126,18 @@ export default function AdminPage() {
   };
 
   const resetAnimeForm = () => {
-    setAnimeData({ titleEn: '', titleAr: '', descriptionEn: '', descriptionAr: '', coverImage: '', bannerImage: '', releaseYear: '2024', status: 'Airing' });
+    setAnimeData({ 
+      titleEn: '', 
+      titleAr: '', 
+      descriptionEn: '', 
+      descriptionAr: '', 
+      coverImage: '', 
+      bannerImage: '', 
+      releaseYear: '2024', 
+      status: 'Airing',
+      type: 'tv',
+      season: 'fall'
+    });
     setSelectedGenres([]);
     setEditingAnimeId(null);
   };
@@ -199,7 +213,9 @@ export default function AdminPage() {
       coverImage: anime.coverImage,
       bannerImage: anime.bannerImage,
       releaseYear: anime.releaseYear.toString(),
-      status: anime.status
+      status: anime.status,
+      type: anime.type || 'tv',
+      season: anime.season || 'fall'
     });
     setSelectedGenres(anime.genres || []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -412,7 +428,7 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      <div className="grid gap-6 md:grid-cols-2">
+                      <div className="grid gap-6 md:grid-cols-3">
                         <div className="space-y-2">
                           <Label>Release Year</Label>
                           <Input 
@@ -434,6 +450,44 @@ export default function AdminPage() {
                             <SelectContent>
                               <SelectItem value="Airing">Airing</SelectItem>
                               <SelectItem value="Finished">Finished</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select 
+                            value={animeData.type} 
+                            onValueChange={(val: any) => setAnimeData({...animeData, type: val})}
+                          >
+                            <SelectTrigger className="rounded-xl border-none bg-secondary/50">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="tv">{translations.en.animeTypes.tv}</SelectItem>
+                              <SelectItem value="movie">{translations.en.animeTypes.movie}</SelectItem>
+                              <SelectItem value="ova">{translations.en.animeTypes.ova}</SelectItem>
+                              <SelectItem value="ona">{translations.en.animeTypes.ona}</SelectItem>
+                              <SelectItem value="special">{translations.en.animeTypes.special}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Season</Label>
+                          <Select 
+                            value={animeData.season} 
+                            onValueChange={(val: any) => setAnimeData({...animeData, season: val})}
+                          >
+                            <SelectTrigger className="rounded-xl border-none bg-secondary/50">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="spring">{translations.en.animeSeasons.spring}</SelectItem>
+                              <SelectItem value="summer">{translations.en.animeSeasons.summer}</SelectItem>
+                              <SelectItem value="fall">{translations.en.animeSeasons.fall}</SelectItem>
+                              <SelectItem value="winter">{translations.en.animeSeasons.winter}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

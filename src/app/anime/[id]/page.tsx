@@ -48,6 +48,8 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const title = (language === 'ar' ? anime?.titleAr : anime?.titleEn) || '';
   const description = (language === 'ar' ? anime?.descriptionAr : anime?.descriptionEn) || '';
   const tTags = translations[language].tags;
+  const tTypes = translations[language].animeTypes;
+  const tSeasons = translations[language].animeSeasons;
 
   const toggleWatchlist = async () => {
     if (!user || !profileRef) {
@@ -145,6 +147,11 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                 <Badge variant="outline" className="text-accent border-accent">
                   {anime.status}
                 </Badge>
+                {anime.type && (
+                  <Badge variant="secondary" className="bg-secondary">
+                    {tTypes[anime.type as keyof typeof tTypes]}
+                  </Badge>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-4">
@@ -239,6 +246,18 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                       <span className="text-xs font-bold uppercase text-muted-foreground">{t('year')}</span>
                       <p className="font-medium">{anime.releaseYear}</p>
                     </div>
+                    {anime.type && (
+                      <div>
+                        <span className="text-xs font-bold uppercase text-muted-foreground">{t('type')}</span>
+                        <p className="font-medium">{tTypes[anime.type as keyof typeof tTypes]}</p>
+                      </div>
+                    )}
+                    {anime.season && (
+                      <div>
+                        <span className="text-xs font-bold uppercase text-muted-foreground">{t('season')}</span>
+                        <p className="font-medium">{tSeasons[anime.season as keyof typeof tSeasons]}</p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -246,7 +265,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
           </div>
 
           <aside className="space-y-8">
-            {/* Top Members section removed */}
+            {/* Sidebar content */}
           </aside>
         </div>
       </main>

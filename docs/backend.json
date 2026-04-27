@@ -143,6 +143,16 @@
           "description": "The airing status of the anime.",
           "enum": ["Airing", "Finished"]
         },
+        "type": {
+          "type": "string",
+          "description": "The production type of the anime.",
+          "enum": ["tv", "movie", "ova", "ona", "special"]
+        },
+        "season": {
+          "type": "string",
+          "description": "The release season of the anime.",
+          "enum": ["spring", "summer", "fall", "winter"]
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the anime entry was created.",
@@ -164,6 +174,8 @@
         "coverImage",
         "bannerImage",
         "genres",
+        "type",
+        "season",
         "createdAt",
         "updatedAt"
       ]

@@ -1,3 +1,4 @@
+
 export type Language = 'en' | 'ar';
 
 export const translations = {
@@ -23,12 +24,27 @@ export const translations = {
     rating: 'Rating',
     year: 'Year',
     status: 'Status',
+    type: 'Type',
+    season: 'Season',
     language: 'Language',
     theme: 'Theme',
     favorite: 'Favorite',
     watchLater: 'Watch Later',
     myFavorites: 'My Favorites',
     history: 'History',
+    animeTypes: {
+      'tv': 'TV Series',
+      'movie': 'Movie',
+      'ova': 'OVA',
+      'ona': 'ONA',
+      'special': 'Special'
+    },
+    animeSeasons: {
+      'spring': 'Spring',
+      'summer': 'Summer',
+      'fall': 'Fall',
+      'winter': 'Winter'
+    },
     tags: {
       'action': 'Action',
       'adventure': 'Adventure',
@@ -93,12 +109,27 @@ export const translations = {
     rating: 'التقييم',
     year: 'السنة',
     status: 'الحالة',
+    type: 'النوع',
+    season: 'الموسم',
     language: 'اللغة',
     theme: 'المظهر',
     favorite: 'تفضيل',
     watchLater: 'شاهد لاحقاً',
     myFavorites: 'مفضلاتي',
     history: 'السجل',
+    animeTypes: {
+      'tv': 'مسلسل',
+      'movie': 'فلم',
+      'ova': 'أوفا',
+      'ona': 'أونا',
+      'special': 'خاصة'
+    },
+    animeSeasons: {
+      'spring': 'الربيع',
+      'summer': 'الصيف',
+      'fall': 'الخريف',
+      'winter': 'الشتاء'
+    },
     tags: {
       'action': 'اكشن',
       'adventure': 'مغامرات',
