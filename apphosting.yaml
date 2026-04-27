@@ -1,4 +1,3 @@
-# Settings to manage and configure a Firebase App Hosting backend.
 runConfig:
   cpu: 1
   memory: 1024MiB
