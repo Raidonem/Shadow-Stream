@@ -142,6 +142,10 @@
           "type": "number",
           "description": "The total number of views for this anime."
         },
+        "lastEpisodeNumber": {
+          "type": "number",
+          "description": "The number of the most recently added episode."
+        },
         "status": {
           "type": "string",
           "description": "The airing status of the anime.",

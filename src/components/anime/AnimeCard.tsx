@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -37,11 +38,16 @@ export function AnimeCard({ anime }: AnimeCardProps) {
           </div>
         </div>
 
-        <div className="absolute right-2 top-2">
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
           <Badge variant="secondary" className="flex items-center gap-1 bg-black/60 text-white backdrop-blur-sm border-none">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
             {anime.rating?.toFixed(1) || '0.0'}
           </Badge>
+          {anime.lastEpisodeNumber && (
+            <Badge className="bg-primary/80 text-primary-foreground border-none font-bold">
+              EP {anime.lastEpisodeNumber}
+            </Badge>
+          )}
         </div>
       </div>
       

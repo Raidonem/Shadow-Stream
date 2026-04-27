@@ -33,7 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy, getDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
@@ -232,7 +232,7 @@ export default function AdminPage() {
     toast({ title: "Anime Deleted" });
   };
 
-  const handleAddEpisode = (e: React.FormEvent) => {
+  const handleAddEpisode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !episodeData.animeId) return;
     if (episodeData.servers.length === 0) {
@@ -241,18 +241,26 @@ export default function AdminPage() {
     }
     setIsSubmitting(true);
 
+    const episodeNum = parseInt(episodeData.episodeNumber);
     const data = {
       ...episodeData,
-      episodeNumber: parseInt(episodeData.episodeNumber),
+      episodeNumber: episodeNum,
       updatedAt: serverTimestamp(),
     };
 
     if (editingEpisodeId) {
       const epRef = doc(db, 'anime', episodeData.animeId, 'episodes', editingEpisodeId);
       updateDocumentNonBlocking(epRef, data);
-      // Update parent anime updatedAt
+      
+      // Update parent anime metadata
       const animeRef = doc(db, 'anime', episodeData.animeId);
-      updateDocumentNonBlocking(animeRef, { updatedAt: serverTimestamp() });
+      const animeSnap = await getDoc(animeRef);
+      const currentLastEp = animeSnap.data()?.lastEpisodeNumber || 0;
+      
+      updateDocumentNonBlocking(animeRef, { 
+        updatedAt: serverTimestamp(),
+        lastEpisodeNumber: Math.max(currentLastEp, episodeNum)
+      });
 
       toast({ title: "Episode Updated", description: `Episode ${episodeData.episodeNumber} updated.` });
       resetEpisodeForm();
@@ -262,10 +270,16 @@ export default function AdminPage() {
       addDocumentNonBlocking(epRef, {
         ...data,
         createdAt: serverTimestamp(),
-      }).then(() => {
-        // Update parent anime updatedAt
+      }).then(async () => {
+        // Update parent anime metadata
         const animeRef = doc(db, 'anime', episodeData.animeId);
-        updateDocumentNonBlocking(animeRef, { updatedAt: serverTimestamp() });
+        const animeSnap = await getDoc(animeRef);
+        const currentLastEp = animeSnap.data()?.lastEpisodeNumber || 0;
+
+        updateDocumentNonBlocking(animeRef, { 
+          updatedAt: serverTimestamp(),
+          lastEpisodeNumber: Math.max(currentLastEp, episodeNum)
+        });
 
         toast({ title: "Episode Added", description: `Episode ${episodeData.episodeNumber} published.` });
         resetEpisodeForm();
@@ -433,7 +447,7 @@ export default function AdminPage() {
                           <Input 
                             placeholder="https://..." 
                             className="rounded-xl border-none bg-secondary/50"
-                            value={animeData.bannerImage}
+                            value={animeData.coverImage} // Fallback to cover for now as per user code
                             onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})}
                             required
                           />
@@ -528,7 +542,7 @@ export default function AdminPage() {
                     {allAnime?.map(anime => (
                       <Card key={anime.id} className="overflow-hidden rounded-2xl border-none bg-card shadow-md">
                         <div className="relative aspect-video">
-                          <Image src={anime.bannerImage} alt={anime.titleEn} fill className="object-cover" />
+                          <Image src={anime.bannerImage || anime.coverImage} alt={anime.titleEn} fill className="object-cover" />
                           <div className="absolute inset-0 bg-black/40 p-4 flex flex-col justify-end">
                             <h3 className="font-bold text-white text-lg leading-tight">{anime.titleEn}</h3>
                             <div className="flex items-center gap-1 text-xs text-white/80 mt-1">
