@@ -99,9 +99,11 @@ export default function Home() {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-headline text-3xl font-bold">{t('trending')}</h2>
-            <Button variant="link" className="text-accent gap-1">
-              {language === 'ar' ? 'عرض الكل' : 'View All'} <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Link href="/search">
+              <Button variant="link" className="text-accent gap-1">
+                {language === 'ar' ? 'عرض الكل' : 'View All'} <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {trending?.map((anime) => (
@@ -125,9 +127,11 @@ export default function Home() {
                   ? 'يتم تحديث مكتبتنا يومياً بأحدث المغامرات والرحلات العاطفية. انضم إلى مجتمع ShadowStream اليوم.'
                   : 'Our library is updated daily with the latest adventures and emotional journeys. Join the ShadowStream community today.'}
               </p>
-              <Button size="lg" className="rounded-xl bg-primary px-8 font-bold text-primary-foreground hover:bg-primary/90">
-                {language === 'ar' ? 'استكشاف الكل' : 'Explore All'}
-              </Button>
+              <Link href="/search">
+                <Button size="lg" className="rounded-xl bg-primary px-8 font-bold text-primary-foreground hover:bg-primary/90">
+                  {language === 'ar' ? 'استكشاف الكل' : 'Explore All'}
+                </Button>
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {animeList?.slice(0, 4).map((anime) => (
@@ -158,7 +162,7 @@ export default function Home() {
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <span className="font-headline font-bold text-primary-foreground">S</span>
                 </div>
-                <span className="font-headline text-xl font-bold tracking-tight">
+                <span className="font-headline text-xl font-bold tracking-tight md:block">
                   ShadowStream
                 </span>
               </Link>
