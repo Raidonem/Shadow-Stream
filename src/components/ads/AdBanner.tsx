@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
@@ -5,7 +6,6 @@ import { cn } from '../../lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
 
-// IMPORTANT: Replace this with your actual Publisher ID from your AdSense Dashboard
 export const ADSENSE_PUBLISHER_ID = "ca-pub-9229134067523856";
 
 interface AdBannerProps {
@@ -16,10 +16,6 @@ interface AdBannerProps {
   hideLabel?: boolean;
 }
 
-/**
- * A reusable Google AdSense Banner component.
- * Automatically hides if the user has a premium subscription or is an administrator.
- */
 export function AdBanner({ 
   dataAdSlot, 
   dataAdFormat = 'auto', 
@@ -61,9 +57,7 @@ export function AdBanner({
     const observer = new IntersectionObserver((entries) => {
       const [entry] = entries;
       
-      // Strict check for visibility and width to prevent "availableWidth=0" error
       if (entry.isIntersecting && adRef.current && adRef.current.clientWidth > 0 && !hasPushed.current) {
-        // Use a small timeout to ensure the DOM layout is completely stable before push
         const timer = setTimeout(() => {
           try {
             // @ts-ignore
@@ -74,9 +68,9 @@ export function AdBanner({
               observer.disconnect();
             }
           } catch (err) {
-            console.error("AdSense push error:", err);
+            console.warn("AdSense push error:", err);
           }
-        }, 150);
+        }, 200);
         return () => clearTimeout(timer);
       }
     }, { 
