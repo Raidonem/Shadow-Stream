@@ -3,9 +3,9 @@
 
 import { LanguageProvider } from './LanguageContext';
 import { ThemeProvider } from './ThemeContext';
-import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase/index';
-import { useUser, useFirestore } from '@/firebase/index';
+import { Toaster } from '../ui/toaster';
+import { FirebaseClientProvider } from '../../firebase/index';
+import { useUser, useFirestore } from '../../firebase/index';
 import { useEffect } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';

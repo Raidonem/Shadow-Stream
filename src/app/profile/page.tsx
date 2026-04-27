@@ -2,21 +2,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Navbar } from '../../components/layout/Navbar';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from "@/components/ui/select";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/index';
+} from "../../components/ui/select";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { 
   User, 
   Mail, 
@@ -36,10 +36,10 @@ import {
   Clock,
   Lock
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/components/providers/LanguageContext';
-import { useTheme } from '@/components/providers/ThemeContext';
-import { Badge } from '@/components/ui/badge';
+import { useToast } from '../../hooks/use-toast';
+import { useLanguage } from '../../components/providers/LanguageContext';
+import { useTheme } from '../../components/providers/ThemeContext';
+import { Badge } from '../../components/ui/badge';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
