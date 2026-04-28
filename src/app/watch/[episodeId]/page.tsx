@@ -116,7 +116,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const epTitle = language === 'ar' ? episode?.titleAr : episode?.titleEn;
   const tTags = translations[language].tags;
 
-  // Refined Logic to get the appropriate thumbnail for an episode based on the "borrowing" rule
   const getEpisodeThumbnail = (targetEp: any) => {
     const banner = (anime?.bannerImage || '').trim();
     const cover = (anime?.coverImage || '').trim();
@@ -125,45 +124,39 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     if (!targetEp) return fallback;
     if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
     
-    if (!episodes) return fallback;
+    if (!episodes || episodes.length === 0) return fallback;
 
     const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
     
-    // Find last episode before this one that has a thumbnail
+    // 1. Look back for the most recent previous episode with a thumbnail
     const prev = sorted
       .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
       .reverse()[0];
     
     if (prev) return prev.thumbnail;
 
-    // If no previous, find the first episode after this one that has a thumbnail
+    // 2. Look forward for the first following episode with a thumbnail
     const next = sorted
       .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
     
     if (next) return next.thumbnail;
 
-    // Final fallback to series image
+    // 3. Final fallback to series image
     return fallback;
   };
 
-  // Logic to calculate suggested anime
   const suggestedAnime = useMemo(() => {
     if (!allAnime || !anime) return [];
     return allAnime
       .filter(a => a.id !== anime.id)
       .filter(a => {
-        // Priority 1: Similar Name
         const normalizedA = normalizeSearchString(a.titleEn);
         const normalizedCurrent = normalizeSearchString(anime.titleEn);
         const hasSimilarName = normalizedA.includes(normalizedCurrent) || normalizedCurrent.includes(normalizedA);
-        
-        // Priority 2: Shared Genres
         const hasCommonGenre = a.genres?.some(g => anime.genres?.includes(g));
-        
         return hasSimilarName || hasCommonGenre;
       })
       .sort((a, b) => {
-        // Sort by name similarity first
         const aNameSim = normalizeSearchString(a.titleEn).includes(normalizeSearchString(anime.titleEn)) ? 1 : 0;
         const bNameSim = normalizeSearchString(b.titleEn).includes(normalizeSearchString(anime.titleEn)) ? 1 : 0;
         return bNameSim - aNameSim;
@@ -254,7 +247,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     
     const ratingsRef = collection(db, 'ratings');
     
-    // Update Episode Average
     getDocs(query(ratingsRef, where('episodeId', '==', episodeId)))
       .then((snapshot) => {
         const episodeRatings = snapshot.docs
@@ -271,7 +263,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         });
       });
 
-    // Update Anime Average (based on all ratings across all episodes)
     getDocs(query(ratingsRef, where('animeId', '==', animeId)))
       .then((snapshot) => {
         const animeRatings = snapshot.docs
@@ -557,7 +548,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </section>
 
-            {/* Suggested Works Section */}
             {suggestedAnime.length > 0 && (
               <section className="space-y-6 pt-12 border-t mt-12">
                 <div className="flex items-center gap-2">

@@ -51,29 +51,33 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const tTypes = translations[language].animeTypes;
   const tSeasons = translations[language].animeSeasons;
 
-  // Logic to get the appropriate thumbnail for an episode based on the "borrowing" rule
   const getEpisodeThumbnail = (targetEp: any) => {
+    const banner = (anime?.bannerImage || '').trim();
+    const cover = (anime?.coverImage || '').trim();
+    const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
+
+    if (!targetEp) return fallback;
     if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
     
-    if (!episodes) return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+    if (!episodes || episodes.length === 0) return fallback;
 
     const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
     
-    // Find last episode before this one that has a thumbnail
+    // 1. Look back for the most recent previous episode with a thumbnail
     const prev = sorted
       .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
       .reverse()[0];
     
     if (prev) return prev.thumbnail;
 
-    // If no previous, find the first episode after this one that has a thumbnail
+    // 2. Look forward for the first following episode with a thumbnail
     const next = sorted
       .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
     
     if (next) return next.thumbnail;
 
-    // Final fallback to series image
-    return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+    // 3. Final fallback to series image
+    return fallback;
   };
 
   const toggleWatchlist = async () => {
@@ -143,8 +147,8 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
 
   if (!anime) return <div className="text-center py-20">Anime not found.</div>;
 
-  const bannerUrl = anime.bannerImage && anime.bannerImage.trim() !== '' ? anime.bannerImage : anime.coverImage || 'https://picsum.photos/seed/placeholder/1200/600';
-  const coverUrl = anime.coverImage && anime.coverImage.trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600';
+  const bannerUrl = (anime.bannerImage || '').trim() !== '' ? anime.bannerImage : ((anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/1200/600');
+  const coverUrl = (anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600';
 
   return (
     <div className="min-h-screen bg-background">
