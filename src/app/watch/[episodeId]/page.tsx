@@ -592,9 +592,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     "flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50",
                     ep.id === episodeId ? "bg-accent/10 border border-accent/20" : ""
                   )}>
-                    <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg">
+                    <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                       <Image 
-                        src={getEpisodeThumbnail(ep)} 
+                        src={getEpisodeThumbnail(ep).trim()} 
                         alt={language === 'ar' ? ep.titleAr : ep.titleEn} 
                         fill 
                         className="object-cover" 

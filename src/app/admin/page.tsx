@@ -567,7 +567,7 @@ export default function AdminPage() {
                       <Card key={anime.id} className="overflow-hidden rounded-2xl border-none bg-card shadow-md">
                         <div className="relative aspect-video">
                           <Image 
-                            src={anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/600/400'} 
+                            src={(anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/600/400').trim()} 
                             alt={anime.titleEn} 
                             fill 
                             className="object-cover" 
@@ -745,14 +745,14 @@ export default function AdminPage() {
                       </Card>
 
                       <div className="space-y-2">
-                        <Label>Thumbnail URL</Label>
+                        <Label>Thumbnail URL (Optional)</Label>
                         <Input 
                           placeholder="https://..." 
                           className="rounded-xl border-none bg-secondary/50"
                           value={episodeData.thumbnail}
                           onChange={(e) => setEpisodeData({...episodeData, thumbnail: e.target.value})}
-                          required
                         />
+                        <p className="text-[10px] text-muted-foreground">If empty, it will borrow a thumbnail from the closest previous episode.</p>
                       </div>
 
                       <Button type="submit" disabled={isSubmitting || !episodeData.animeId} className="w-full gap-2 rounded-xl bg-primary font-bold text-primary-foreground">
@@ -770,9 +770,9 @@ export default function AdminPage() {
                       {currentEpisodes?.map(ep => (
                         <Card key={ep.id} className="rounded-xl border-none bg-card shadow-sm overflow-hidden">
                           <div className="flex items-center gap-4 p-3">
-                            <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-lg">
+                            <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-lg bg-muted">
                               <Image 
-                                src={ep.thumbnail || 'https://picsum.photos/seed/ep/320/180'} 
+                                src={(ep.thumbnail || 'https://picsum.photos/seed/ep/320/180').trim()} 
                                 alt={ep.titleEn} 
                                 fill 
                                 className="object-cover" 

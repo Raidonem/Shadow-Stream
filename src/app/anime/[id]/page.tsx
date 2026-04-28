@@ -157,7 +157,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       {/* Header / Backdrop */}
       <div className="relative h-[60vh] w-full">
         <Image
-          src={bannerUrl}
+          src={bannerUrl.trim()}
           alt={title || 'Anime Banner'}
           fill
           className="object-cover opacity-60"
@@ -170,7 +170,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
           <div className="flex flex-col gap-8 md:flex-row w-full">
             <div className="relative hidden aspect-[2/3] w-64 shrink-0 overflow-hidden rounded-2xl shadow-2xl md:block">
               <Image
-                src={coverUrl}
+                src={coverUrl.trim()}
                 alt={title || 'Anime Cover'}
                 fill
                 className="object-cover"
@@ -276,7 +276,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                     <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
                       <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
                         <Image
-                          src={getEpisodeThumbnail(ep)}
+                          src={getEpisodeThumbnail(ep).trim()}
                           alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
                           fill
                           className="object-cover"
