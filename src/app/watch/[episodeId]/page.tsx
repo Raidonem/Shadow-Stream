@@ -211,7 +211,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   };
 
   const handleRate = (rating: number) => {
-    if (!user || !db || !animeId || !episodeRatingRef) {
+    if (!user || !db || !animeId || !episodeRatingRef || !episodeId) {
       toast({ title: t('login'), description: "Sign in to rate this episode." });
       return;
     }
@@ -228,16 +228,34 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     setDocumentNonBlocking(episodeRatingRef, ratingData, { merge: true });
     
     const ratingsRef = collection(db, 'ratings');
-    getDocs(query(ratingsRef, where('animeId', '==', animeId)))
+    
+    // Update Episode Average
+    getDocs(query(ratingsRef, where('episodeId', '==', episodeId)))
       .then((snapshot) => {
-        const otherRatings = snapshot.docs
+        const episodeRatings = snapshot.docs
           .filter(d => d.id !== episodeRatingRef.id)
           .map(d => d.data().value as number);
         
-        otherRatings.push(rating);
+        episodeRatings.push(rating);
+        const epSum = episodeRatings.reduce((acc, val) => acc + val, 0);
+        const epAverage = epSum / episodeRatings.length;
+
+        updateDocumentNonBlocking(doc(db, 'anime', animeId, 'episodes', episodeId), {
+          rating: epAverage,
+          updatedAt: serverTimestamp()
+        });
+      });
+
+    // Update Anime Average (based on all ratings across all episodes)
+    getDocs(query(ratingsRef, where('animeId', '==', animeId)))
+      .then((snapshot) => {
+        const animeRatings = snapshot.docs
+          .filter(d => d.id !== episodeRatingRef.id)
+          .map(d => d.data().value as number);
         
-        const sum = otherRatings.reduce((acc, val) => acc + val, 0);
-        const newAverage = sum / otherRatings.length;
+        animeRatings.push(rating);
+        const sum = animeRatings.reduce((acc, val) => acc + val, 0);
+        const newAverage = sum / animeRatings.length;
 
         updateDocumentNonBlocking(doc(db, 'anime', animeId), {
           rating: newAverage,
@@ -380,13 +398,21 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <h1 className="font-headline text-2xl font-bold md:text-3xl">
                     {epTitle}
                   </h1>
-                  <div className="flex items-center gap-4 text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                     <Link href={`/anime/${anime.id}`} className="text-accent hover:underline font-bold">
                       {animeTitle}
                     </Link>
-                    <div className="flex items-center gap-1 text-yellow-400">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span className="text-sm font-bold">{anime.rating?.toFixed(1) || '0.0'} <span className="text-xs text-muted-foreground font-normal">({language === 'ar' ? 'تقييم العمل' : 'Anime Rating'})</span></span>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-yellow-400">
+                        <Star className="h-4 w-4 fill-current" />
+                        <span className="text-sm font-bold">{anime.rating?.toFixed(1) || '0.0'} <span className="text-xs text-muted-foreground font-normal">({language === 'ar' ? 'تقييم العمل' : 'Series Rating'})</span></span>
+                      </div>
+                      {episode.rating !== undefined && (
+                        <div className="flex items-center gap-1 text-accent">
+                          <Star className="h-4 w-4 fill-current" />
+                          <span className="text-sm font-bold">{episode.rating.toFixed(1)} <span className="text-xs text-muted-foreground font-normal">({language === 'ar' ? 'تقييم الحلقة' : 'Episode Rating'})</span></span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -412,7 +438,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
 
               <div className="flex items-center gap-4 bg-secondary/20 p-4 rounded-2xl">
-                <span className="text-sm font-bold text-muted-foreground uppercase">{language === 'ar' ? 'تقييم الحلقة' : 'Rate Episode'}</span>
+                <span className="text-sm font-bold text-muted-foreground uppercase">{language === 'ar' ? 'قيم هذه الحلقة' : 'Rate this Episode'}</span>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button 

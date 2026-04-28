@@ -39,6 +39,7 @@ export interface Episode {
   servers: EpisodeServer[];
   thumbnail: string;
   duration: string;
+  rating?: number;
   createdAt: any;
   updatedAt: any;
 }
@@ -49,7 +50,10 @@ export interface Comment {
   userId: string;
   userName: string;
   text: string;
+  isAdmin?: boolean;
+  isPremium?: boolean;
   createdAt: any;
+  updatedAt: any;
 }
 
 export interface WatchHistory {
