@@ -345,7 +345,7 @@ export default function ProfilePage() {
                       ) : (
                         <div className="space-y-6">
                           <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold">$4.99</span>
+                            <span className="text-3xl font-bold">$0.49</span>
                             <span className="text-muted-foreground">/month</span>
                           </div>
                           
@@ -356,7 +356,7 @@ export default function ProfilePage() {
                               createOrder={(data, actions) => {
                                 return actions.order.create({
                                   purchase_units: [{
-                                    amount: { value: "4.99" },
+                                    amount: { value: "0.49" },
                                     description: "ShadowStream Premium - 1 Month"
                                   }]
                                 });
