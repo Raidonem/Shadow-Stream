@@ -6,7 +6,7 @@ import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, query, where, documentId, orderBy } from 'firebase/firestore';
 import { useLanguage } from '../../components/providers/LanguageContext';
-import { Loader2, Bookmark, Heart, History, PlayCircle } from 'lucide-react';
+import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -34,6 +34,11 @@ export default function WatchlistPage() {
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.favoriteAnimeIds.slice(0, 10)));
   }, [db, profile?.favoriteAnimeIds]);
 
+  const completedQuery = useMemoFirebase(() => {
+    if (!db || !profile?.completedAnimeIds?.length) return null;
+    return query(collection(db, 'anime'), where(documentId(), 'in', profile.completedAnimeIds.slice(0, 10)));
+  }, [db, profile?.completedAnimeIds]);
+
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'history'), orderBy('watchedAt', 'desc'));
@@ -41,6 +46,7 @@ export default function WatchlistPage() {
 
   const { data: watchlistAnime, isLoading: isWatchlistLoading } = useCollection(watchlistQuery);
   const { data: favoritesAnime, isLoading: isFavoritesLoading } = useCollection(favoritesQuery);
+  const { data: completedAnime, isLoading: isCompletedLoading } = useCollection(completedQuery);
   const { data: watchHistory, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   if (isUserLoading || isProfileLoading) {
@@ -74,16 +80,20 @@ export default function WatchlistPage() {
         </div>
 
         <Tabs defaultValue="watchlist" className="w-full">
-          <TabsList className="mb-8 grid w-full max-w-md grid-cols-3 rounded-xl bg-secondary p-1">
-            <TabsTrigger value="watchlist" className="rounded-lg gap-2">
+          <TabsList className="mb-8 flex w-full max-w-xl overflow-x-auto rounded-xl bg-secondary p-1">
+            <TabsTrigger value="watchlist" className="rounded-lg gap-2 flex-1">
               <Bookmark className="h-4 w-4" />
               {t('watchLater')}
             </TabsTrigger>
-            <TabsTrigger value="favorites" className="rounded-lg gap-2">
+            <TabsTrigger value="favorites" className="rounded-lg gap-2 flex-1">
               <Heart className="h-4 w-4" />
               {t('myFavorites')}
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg gap-2">
+            <TabsTrigger value="completed" className="rounded-lg gap-2 flex-1">
+              <CheckCircle2 className="h-4 w-4" />
+              {t('completed')}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="rounded-lg gap-2 flex-1">
               <History className="h-4 w-4" />
               {t('history')}
             </TabsTrigger>
@@ -119,6 +129,23 @@ export default function WatchlistPage() {
               <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
                 <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground">{language === 'ar' ? 'لا توجد عناصر في المفضلة' : 'No items in your favorites'}</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed">
+            {isCompletedLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : completedAnime && completedAnime.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {completedAnime.map(anime => (
+                  <AnimeCard key={anime.id} anime={anime} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
+                <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">{language === 'ar' ? 'لا توجد أنميات مكتملة بعد' : 'No completed anime yet'}</p>
               </div>
             )}
           </TabsContent>

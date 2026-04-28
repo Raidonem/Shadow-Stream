@@ -31,6 +31,8 @@ export const translations = {
     theme: 'Theme',
     favorite: 'Favorite',
     watchLater: 'Watch Later',
+    completed: 'Completed',
+    markAsCompleted: 'Mark as Finished',
     myFavorites: 'My Favorites',
     history: 'History',
     animeTypes: {
@@ -117,6 +119,8 @@ export const translations = {
     theme: 'المظهر',
     favorite: 'تفضيل',
     watchLater: 'شاهد لاحقاً',
+    completed: 'مكتمل',
+    markAsCompleted: 'تمت المشاهدة',
     myFavorites: 'مفضلاتي',
     history: 'السجل',
     animeTypes: {

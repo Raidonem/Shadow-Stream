@@ -54,6 +54,13 @@
             "type": "string"
           }
         },
+        "completedAnimeIds": {
+          "type": "array",
+          "description": "An array of unique identifiers for Anime entities that the user has finished watching.",
+          "items": {
+            "type": "string"
+          }
+        },
         "favoriteEpisodeIds": {
           "type": "array",
           "description": "An array of unique identifiers for Episode entities that the user has favorited.",
@@ -82,6 +89,7 @@
         "themePreference",
         "watchlistAnimeIds",
         "favoriteAnimeIds",
+        "completedAnimeIds",
         "favoriteEpisodeIds",
         "createdAt",
         "updatedAt"

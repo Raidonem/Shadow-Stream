@@ -4,7 +4,7 @@
 import { use } from 'react';
 import { Navbar } from "../../../components/layout/Navbar";
 import { Button } from "../../../components/ui/button";
-import { Star, Play, Heart, Calendar, Loader2, Bookmark } from 'lucide-react';
+import { Star, Play, Heart, Calendar, Loader2, Bookmark, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '../../../components/ui/badge';
@@ -43,6 +43,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const { data: profile } = useDoc(profileRef);
   const isInWatchlist = profile?.watchlistAnimeIds?.includes(id);
   const isFavorite = profile?.favoriteAnimeIds?.includes(id);
+  const isCompleted = profile?.completedAnimeIds?.includes(id);
 
   const title = (language === 'ar' ? anime?.titleAr : anime?.titleEn) || '';
   const description = (language === 'ar' ? anime?.descriptionAr : anime?.descriptionEn) || '';
@@ -81,6 +82,25 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       });
       toast({ 
         title: isFavorite ? (language === 'ar' ? 'تمت الإزالة من المفضلة' : "Removed from Favorites") : (language === 'ar' ? 'تمت الإضافة إلى المفضلة' : "Added to Favorites"),
+        description: title 
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleCompleted = async () => {
+    if (!user || !profileRef) {
+      toast({ title: t('login'), description: "Sign in to track your progress." });
+      return;
+    }
+
+    try {
+      await updateDoc(profileRef, {
+        completedAnimeIds: isCompleted ? arrayRemove(id) : arrayUnion(id)
+      });
+      toast({ 
+        title: isCompleted ? (language === 'ar' ? 'تمت الإزالة من المكتملة' : "Removed from Completed") : (language === 'ar' ? 'تمت الإضافة إلى المكتملة' : "Added to Completed"),
         description: title 
       });
     } catch (e) {
@@ -189,6 +209,15 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                 >
                   <Bookmark className={`h-6 w-6 ${isInWatchlist ? 'fill-accent text-accent' : ''}`} />
                   {t('watchLater')}
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant={isCompleted ? "default" : "secondary"} 
+                  className="h-14 gap-2 rounded-xl px-6 text-lg font-bold"
+                  onClick={toggleCompleted}
+                >
+                  <CheckCircle2 className={`h-6 w-6 ${isCompleted ? 'text-green-500 fill-green-500' : ''}`} />
+                  {language === 'ar' ? 'مكتمل' : 'Finished'}
                 </Button>
               </div>
             </div>

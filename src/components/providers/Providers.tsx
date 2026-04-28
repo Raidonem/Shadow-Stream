@@ -47,6 +47,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
             themePreference: localStorage.getItem('theme') || 'dark',
             watchlistAnimeIds: [],
             favoriteAnimeIds: [],
+            completedAnimeIds: [],
             favoriteEpisodeIds: [],
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -55,10 +56,12 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('pendingUsername');
         } else {
           const data = userSnap.data();
-          if (data.favoriteAnimeIds === undefined || data.favoriteEpisodeIds === undefined) {
+          // Migration for older users who might be missing the new arrays
+          if (data.favoriteAnimeIds === undefined || data.favoriteEpisodeIds === undefined || data.completedAnimeIds === undefined) {
             await setDoc(userRef, {
               favoriteAnimeIds: data.favoriteAnimeIds || [],
               favoriteEpisodeIds: data.favoriteEpisodeIds || [],
+              completedAnimeIds: data.completedAnimeIds || [],
             }, { merge: true });
           }
         }
