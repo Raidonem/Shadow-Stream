@@ -101,7 +101,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   const isAnimeInWatchlist = profile?.watchlistAnimeIds?.includes(animeId || '');
   const isAnimeFavorite = profile?.favoriteAnimeIds?.includes(animeId || '');
-  const isEpisodeFavorite = profile?.favoriteEpisodeIds?.includes(episodeId || '');
   const isAdminUser = !!adminDoc;
 
   const animeTitle = language === 'ar' ? anime?.titleAr : anime?.titleEn;
@@ -116,10 +115,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [episode, language, isManualServerSelection]);
 
-  // Handle Watch History and View Count Increment
   useEffect(() => {
     if (user && db && anime && episode && incrementedViews.current !== episode.id) {
-      // 1. Update Watch History (Always update to keep "watchedAt" current)
       const historyRef = doc(db, 'users', user.uid, 'history', episodeId);
       setDocumentNonBlocking(historyRef, {
         id: episodeId,
@@ -135,8 +132,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         watchedAt: serverTimestamp()
       }, { merge: true });
 
-      // 2. Increment Global Views for the Anime
-      // Check localStorage to prevent view spamming within the same browser session/user
       const viewKey = `ss_viewed_${user.uid}_${episodeId}`;
       const hasViewed = typeof window !== 'undefined' ? localStorage.getItem(viewKey) : null;
 
@@ -229,16 +224,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         favoriteAnimeIds: isAnimeFavorite ? arrayRemove(animeId) : arrayUnion(animeId)
       });
       toast({ title: isAnimeFavorite ? "Removed from Favorites" : "Added to Favorites" });
-    } catch (e) { console.error(e); }
-  };
-
-  const toggleEpisodeFavorite = async () => {
-    if (!user || !profileRef || !episodeId) return;
-    try {
-      await updateDoc(profileRef, {
-        favoriteEpisodeIds: isEpisodeFavorite ? arrayRemove(episodeId) : arrayUnion(episodeId)
-      });
-      toast({ title: isEpisodeFavorite ? "Episode Removed from Favorites" : "Episode Added to Favorites" });
     } catch (e) { console.error(e); }
   };
 
@@ -366,14 +351,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant={isEpisodeFavorite ? "default" : "secondary"} 
-                    className="gap-2 rounded-xl"
-                    onClick={toggleEpisodeFavorite}
-                    title={t('favorite')}
-                  >
-                    <Star className={`h-5 w-5 ${isEpisodeFavorite ? "fill-current text-yellow-400" : ""}`} />
-                  </Button>
                   <Button 
                     variant={isAnimeFavorite ? "default" : "secondary"} 
                     className="gap-2 rounded-xl"
