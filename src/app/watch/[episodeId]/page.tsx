@@ -36,6 +36,7 @@ import { translations } from '../../../lib/i18n';
 import { EpisodeServer, Anime } from '../../../lib/types';
 import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
+import Image from 'next/image';
 
 function WatchContent({ episodeId }: { episodeId: string }) {
   const searchParams = useSearchParams();
@@ -115,44 +116,31 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const epTitle = language === 'ar' ? episode?.titleAr : episode?.titleEn;
   const tTags = translations[language].tags;
 
-  // Find a fallback thumbnail from available episodes
-  const fallbackThumb = useMemo(() => {
-    const epWithThumb = episodes?.find(e => e.thumbnail && e.thumbnail.trim() !== '');
-    return epWithThumb?.thumbnail || anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
-  }, [episodes, anime]);
+  // Refined Logic to get the appropriate thumbnail for an episode based on the "borrowing" rule
+  const getEpisodeThumbnail = (targetEp: any) => {
+    if (!targetEp) return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
+    
+    if (!episodes) return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
 
-  // Suggested works logic
-  const suggestedAnime = useMemo(() => {
-    if (!anime || !allAnime) return [];
+    const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
+    
+    // Find last episode before this one that has a thumbnail
+    const prev = sorted
+      .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
+      .reverse()[0];
+    
+    if (prev) return prev.thumbnail;
 
-    const normalizedCurrentTitle = normalizeSearchString(animeTitle || '');
-    const currentGenres = new Set(anime.genres || []);
+    // If no previous, find the first episode after this one that has a thumbnail
+    const next = sorted
+      .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
+    
+    if (next) return next.thumbnail;
 
-    return allAnime
-      .filter(a => a.id !== anime.id)
-      .map(a => {
-        let score = 0;
-        
-        // Name similarity (Priority)
-        const aTitleEn = normalizeSearchString(a.titleEn || '');
-        const aTitleAr = normalizeSearchString(a.titleAr || '');
-        const aAltTitles = (a.alternativeTitles || []).map(t => normalizeSearchString(t));
-
-        if (aTitleEn.includes(normalizedCurrentTitle) || normalizedCurrentTitle.includes(aTitleEn)) score += 10;
-        if (aTitleAr.includes(normalizedCurrentTitle) || normalizedCurrentTitle.includes(aTitleAr)) score += 10;
-        if (aAltTitles.some(t => t.includes(normalizedCurrentTitle) || normalizedCurrentTitle.includes(t))) score += 10;
-
-        // Shared genres
-        const sharedGenres = (a.genres || []).filter(g => currentGenres.has(g)).length;
-        score += sharedGenres * 2;
-
-        return { anime: a, score };
-      })
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map(item => item.anime);
-  }, [anime, allAnime, animeTitle]);
+    // Final fallback to series image
+    return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+  };
 
   useEffect(() => {
     if (episode?.servers?.length && (loadedEpisodeId.current !== episode.id || !isManualServerSelection)) {
@@ -164,7 +152,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   useEffect(() => {
     if (user && db && anime && episode && incrementedViews.current !== episode.id) {
-      const finalThumbnail = episode.thumbnail && episode.thumbnail.trim() !== '' ? episode.thumbnail : fallbackThumb;
+      const finalThumbnail = getEpisodeThumbnail(episode);
       
       const historyRef = doc(db, 'users', user.uid, 'history', episodeId);
       setDocumentNonBlocking(historyRef, {
@@ -197,7 +185,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
       incrementedViews.current = episode.id;
     }
-  }, [user, db, anime, episode, episodeId, isAdminUser, fallbackThumb]);
+  }, [user, db, anime, episode, episodeId, isAdminUser, episodes]);
 
   const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -587,7 +575,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   )}>
                     <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg">
                       <Image 
-                        src={ep.thumbnail && ep.thumbnail.trim() !== '' ? ep.thumbnail : fallbackThumb} 
+                        src={getEpisodeThumbnail(ep)} 
                         alt={language === 'ar' ? ep.titleAr : ep.titleEn} 
                         fill 
                         className="object-cover" 

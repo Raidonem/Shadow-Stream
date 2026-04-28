@@ -51,11 +51,30 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const tTypes = translations[language].animeTypes;
   const tSeasons = translations[language].animeSeasons;
 
-  // Find a fallback thumbnail from available episodes
-  const fallbackThumb = useMemo(() => {
-    const epWithThumb = episodes?.find(e => e.thumbnail && e.thumbnail.trim() !== '');
-    return epWithThumb?.thumbnail || anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
-  }, [episodes, anime]);
+  // Logic to get the appropriate thumbnail for an episode based on the "borrowing" rule
+  const getEpisodeThumbnail = (targetEp: any) => {
+    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
+    
+    if (!episodes) return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+
+    const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
+    
+    // Find last episode before this one that has a thumbnail
+    const prev = sorted
+      .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
+      .reverse()[0];
+    
+    if (prev) return prev.thumbnail;
+
+    // If no previous, find the first episode after this one that has a thumbnail
+    const next = sorted
+      .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
+    
+    if (next) return next.thumbnail;
+
+    // Final fallback to series image
+    return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+  };
 
   const toggleWatchlist = async () => {
     if (!user || !profileRef) {
@@ -253,7 +272,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                     <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
                       <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
                         <Image
-                          src={ep.thumbnail && ep.thumbnail.trim() !== '' ? ep.thumbnail : fallbackThumb}
+                          src={getEpisodeThumbnail(ep)}
                           alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
                           fill
                           className="object-cover"
