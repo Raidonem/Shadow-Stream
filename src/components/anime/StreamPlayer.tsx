@@ -8,12 +8,18 @@ interface StreamPlayerProps {
   title: string;
 }
 
+type PlaybackMode = 
+  | { type: 'none' }
+  | { type: 'youtube'; src: string }
+  | { type: 'video'; src: string }
+  | { type: 'iframe'; src: string };
+
 export function StreamPlayer({ url, title }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Helper to determine the best playback method
-  const playbackMode = useMemo(() => {
-    if (!url) return 'none';
+  const playbackMode = useMemo((): PlaybackMode => {
+    if (!url || typeof url !== 'string' || url.trim() === '') return { type: 'none' };
     
     // 1. Check for YouTube
     const youtubeRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -29,7 +35,6 @@ export function StreamPlayer({ url, title }: StreamPlayerProps) {
     }
 
     // 3. Fallback: If it's a URL but doesn't look like a direct file, it's likely an embeddable page
-    // Common for streaming sites (Gogoanime, etc.)
     return { type: 'iframe', src: url };
   }, [url]);
 

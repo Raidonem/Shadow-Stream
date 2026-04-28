@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -71,7 +72,11 @@ export default function Home() {
           >
             <CarouselContent className="h-full">
               {trendingAnime.map((anime) => {
-                const heroImage = anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/1200/800';
+                // Ensure heroImage is never an empty string or invalid URL
+                const banner = (anime.bannerImage || '').trim();
+                const cover = (anime.coverImage || '').trim();
+                const heroImage = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/1200/800');
+                
                 return (
                   <CarouselItem key={anime.id} className="relative h-[80vh] w-full">
                     <Image
@@ -178,7 +183,10 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {latestUpdates?.slice(0, 4).map((anime) => {
-                const subImage = anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/sub/600/400';
+                const banner = (anime.bannerImage || '').trim();
+                const cover = (anime.coverImage || '').trim();
+                const subImage = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/sub/600/400');
+                
                 return (
                   <Link key={anime.id} href={`/anime/${anime.id}`} className="relative aspect-video overflow-hidden rounded-xl group">
                     <Image

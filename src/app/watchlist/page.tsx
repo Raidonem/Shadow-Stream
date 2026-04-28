@@ -155,31 +155,34 @@ export default function WatchlistPage() {
               <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : watchHistory && watchHistory.length > 0 ? (
               <div className="grid gap-4">
-                {watchHistory.map(entry => (
-                  <Link key={entry.id} href={`/watch/${entry.episodeId}?animeId=${entry.animeId}`}>
-                    <Card className="overflow-hidden border-none bg-secondary/30 transition-colors hover:bg-secondary/50">
-                      <CardContent className="flex items-center gap-4 p-3">
-                        <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg">
-                          <Image src={entry.thumbnail} alt={entry.episodeTitleEn} fill className="object-cover" />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
-                            <PlayCircle className="h-10 w-10 text-white" />
+                {watchHistory.map(entry => {
+                  const thumbnail = (entry.thumbnail || '').trim() !== '' ? entry.thumbnail : 'https://picsum.photos/seed/placeholder/320/180';
+                  return (
+                    <Link key={entry.id} href={`/watch/${entry.episodeId}?animeId=${entry.animeId}`}>
+                      <Card className="overflow-hidden border-none bg-secondary/30 transition-colors hover:bg-secondary/50">
+                        <CardContent className="flex items-center gap-4 p-3">
+                          <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg">
+                            <Image src={thumbnail} alt={entry.episodeTitleEn} fill className="object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
+                              <PlayCircle className="h-10 w-10 text-white" />
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-accent uppercase tracking-wider">
-                            {language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn}
-                          </p>
-                          <h4 className="font-bold truncate text-lg">
-                            {language === 'ar' ? 'الحلقة' : 'Episode'} {entry.episodeNumber}: {language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {entry.watchedAt?.toDate?.()?.toLocaleString() || 'Recently'}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-accent uppercase tracking-wider">
+                              {language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn}
+                            </p>
+                            <h4 className="font-bold truncate text-lg">
+                              {language === 'ar' ? 'الحلقة' : 'Episode'} {entry.episodeNumber}: {language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              {entry.watchedAt?.toDate?.()?.toLocaleString() || 'Recently'}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">

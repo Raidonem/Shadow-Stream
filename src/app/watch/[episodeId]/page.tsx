@@ -118,10 +118,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   // Refined Logic to get the appropriate thumbnail for an episode based on the "borrowing" rule
   const getEpisodeThumbnail = (targetEp: any) => {
-    if (!targetEp) return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+    const banner = (anime?.bannerImage || '').trim();
+    const cover = (anime?.coverImage || '').trim();
+    const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
+
+    if (!targetEp) return fallback;
     if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
     
-    if (!episodes) return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+    if (!episodes) return fallback;
 
     const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
     
@@ -139,8 +143,33 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     if (next) return next.thumbnail;
 
     // Final fallback to series image
-    return anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+    return fallback;
   };
+
+  // Logic to calculate suggested anime
+  const suggestedAnime = useMemo(() => {
+    if (!allAnime || !anime) return [];
+    return allAnime
+      .filter(a => a.id !== anime.id)
+      .filter(a => {
+        // Priority 1: Similar Name
+        const normalizedA = normalizeSearchString(a.titleEn);
+        const normalizedCurrent = normalizeSearchString(anime.titleEn);
+        const hasSimilarName = normalizedA.includes(normalizedCurrent) || normalizedCurrent.includes(normalizedA);
+        
+        // Priority 2: Shared Genres
+        const hasCommonGenre = a.genres?.some(g => anime.genres?.includes(g));
+        
+        return hasSimilarName || hasCommonGenre;
+      })
+      .sort((a, b) => {
+        // Sort by name similarity first
+        const aNameSim = normalizeSearchString(a.titleEn).includes(normalizeSearchString(anime.titleEn)) ? 1 : 0;
+        const bNameSim = normalizeSearchString(b.titleEn).includes(normalizeSearchString(anime.titleEn)) ? 1 : 0;
+        return bNameSim - aNameSim;
+      })
+      .slice(0, 6);
+  }, [allAnime, anime]);
 
   useEffect(() => {
     if (episode?.servers?.length && (loadedEpisodeId.current !== episode.id || !isManualServerSelection)) {
@@ -323,7 +352,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
           <div className="space-y-6">
             <StreamPlayer 
-              url={activeServer?.url || null} 
+              url={activeServer?.url || ""} 
               title={`${animeTitle} - ${language === 'ar' ? 'الحلقة' : 'Episode'} ${episode.episodeNumber} (${activeServer?.name || ''})`} 
             />
             
