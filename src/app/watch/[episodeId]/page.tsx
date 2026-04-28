@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useState, use, useEffect, Suspense, useRef } from 'react';
+import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
 import { Navbar } from '../../../components/layout/Navbar';
 import { StreamPlayer } from '../../../components/anime/StreamPlayer';
+import { AnimeCard } from '../../../components/anime/AnimeCard';
 import { Button } from '../../../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
@@ -21,7 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -31,8 +33,8 @@ import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer } from '../../../lib/types';
-import { cn } from '../../../lib/utils';
+import { EpisodeServer, Anime } from '../../../lib/types';
+import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 
 function WatchContent({ episodeId }: { episodeId: string }) {
@@ -80,11 +82,17 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return doc(db, 'ratings', `${user.uid}_${episodeId}`);
   }, [user, db, animeId, episodeId]);
 
+  const allAnimeQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'anime'));
+  }, [db]);
+
   const { data: episode, isLoading: isEpLoading } = useDoc(episodeRef);
   const { data: anime, isLoading: isAnimeLoading } = useDoc(animeRef);
   const { data: episodes } = useCollection(allEpisodesQuery);
   const { data: comments } = useCollection(commentsQuery);
   const { data: existingRating } = useDoc(episodeRatingRef);
+  const { data: allAnime } = useCollection<Anime>(allAnimeQuery);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -106,6 +114,39 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const animeTitle = language === 'ar' ? anime?.titleAr : anime?.titleEn;
   const epTitle = language === 'ar' ? episode?.titleAr : episode?.titleEn;
   const tTags = translations[language].tags;
+
+  // Suggested works logic
+  const suggestedAnime = useMemo(() => {
+    if (!anime || !allAnime) return [];
+
+    const normalizedCurrentTitle = normalizeSearchString(animeTitle || '');
+    const currentGenres = new Set(anime.genres || []);
+
+    return allAnime
+      .filter(a => a.id !== anime.id)
+      .map(a => {
+        let score = 0;
+        
+        // Name similarity (Priority)
+        const aTitleEn = normalizeSearchString(a.titleEn || '');
+        const aTitleAr = normalizeSearchString(a.titleAr || '');
+        const aAltTitles = (a.alternativeTitles || []).map(t => normalizeSearchString(t));
+
+        if (aTitleEn.includes(normalizedCurrentTitle) || normalizedCurrentTitle.includes(aTitleEn)) score += 10;
+        if (aTitleAr.includes(normalizedCurrentTitle) || normalizedCurrentTitle.includes(aTitleAr)) score += 10;
+        if (aAltTitles.some(t => t.includes(normalizedCurrentTitle) || normalizedCurrentTitle.includes(t))) score += 10;
+
+        // Shared genres
+        const sharedGenres = (a.genres || []).filter(g => currentGenres.has(g)).length;
+        score += sharedGenres * 2;
+
+        return { anime: a, score };
+      })
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map(item => item.anime);
+  }, [anime, allAnime, animeTitle]);
 
   useEffect(() => {
     if (episode?.servers?.length && (loadedEpisodeId.current !== episode.id || !isManualServerSelection)) {
@@ -464,6 +505,23 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 ))}
               </div>
             </section>
+
+            {/* Suggested Works Section */}
+            {suggestedAnime.length > 0 && (
+              <section className="space-y-6 pt-12 border-t mt-12">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-6 w-6 text-accent" />
+                  <h2 className="font-headline text-2xl font-bold">
+                    {language === 'ar' ? 'أعمال مقترحة' : 'Suggested Works'}
+                  </h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {suggestedAnime.map((a) => (
+                    <AnimeCard key={a.id} anime={a} />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           <aside className="space-y-8">
