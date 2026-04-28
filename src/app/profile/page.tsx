@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -32,13 +33,13 @@ import {
   Sparkles,
   Zap,
   Loader2,
-  Clock,
   Lock
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { useTheme } from '../../components/providers/ThemeContext';
 import { Badge } from '../../components/ui/badge';
+import { PayPalButtons } from "@paypal/react-paypal-js";
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -106,6 +107,18 @@ export default function ProfilePage() {
     toast({
       title: "Profile Updated",
       description: "Your changes have been saved successfully."
+    });
+  };
+
+  const handleActivatePremium = () => {
+    if (!profileRef) return;
+    updateDocumentNonBlocking(profileRef, {
+      isPremium: true,
+      updatedAt: new Date().toISOString()
+    });
+    toast({
+      title: "Premium Activated!",
+      description: "Welcome to the elite side of ShadowStream. Enjoy your ad-free experience!",
     });
   };
 
@@ -336,14 +349,32 @@ export default function ProfilePage() {
                             <span className="text-muted-foreground">/month</span>
                           </div>
                           
-                          <div className="group relative rounded-xl border border-dashed border-accent/40 bg-accent/5 p-6 text-center transition-all hover:bg-accent/10">
-                            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent/20 text-accent">
-                              <Lock className="h-6 w-6" />
-                            </div>
-                            <h4 className="font-bold text-accent">Subscription Coming Soon</h4>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              We're finishing the integration of our secure payment gateway. Prepare for the ultimate ShadowStream experience!
-                            </p>
+                          <div className="space-y-4">
+                            <p className="text-xs text-muted-foreground italic">Unlock all features instantly with PayPal:</p>
+                            <PayPalButtons 
+                              style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
+                              createOrder={(data, actions) => {
+                                return actions.order.create({
+                                  purchase_units: [{
+                                    amount: { value: "4.99" },
+                                    description: "ShadowStream Premium - 1 Month"
+                                  }]
+                                });
+                              }}
+                              onApprove={async (data, actions) => {
+                                if (actions.order) {
+                                  await actions.order.capture();
+                                  handleActivatePremium();
+                                }
+                              }}
+                              onError={(err) => {
+                                toast({
+                                  variant: "destructive",
+                                  title: "Payment Error",
+                                  description: "Something went wrong with the PayPal transaction."
+                                });
+                              }}
+                            />
                           </div>
                         </div>
                       )}

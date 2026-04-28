@@ -9,6 +9,7 @@ import { useUser, useFirestore } from '../../firebase/index';
 import { useEffect } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 /**
  * Syncs the user's Auth state with their Firestore UserProfile document.
@@ -49,6 +50,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
             favoriteAnimeIds: [],
             completedAnimeIds: [],
             favoriteEpisodeIds: [],
+            isPremium: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
@@ -57,11 +59,12 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
         } else {
           const data = userSnap.data();
           // Migration for older users who might be missing the new arrays
-          if (data.favoriteAnimeIds === undefined || data.favoriteEpisodeIds === undefined || data.completedAnimeIds === undefined) {
+          if (data.favoriteAnimeIds === undefined || data.favoriteEpisodeIds === undefined || data.completedAnimeIds === undefined || data.isPremium === undefined) {
             await setDoc(userRef, {
               favoriteAnimeIds: data.favoriteAnimeIds || [],
               favoriteEpisodeIds: data.favoriteEpisodeIds || [],
               completedAnimeIds: data.completedAnimeIds || [],
+              isPremium: data.isPremium || false,
             }, { merge: true });
           }
         }
@@ -80,8 +83,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <UserProfileSync>
         <ThemeProvider>
           <LanguageProvider>
-            {children}
-            <Toaster />
+            <PayPalScriptProvider options={{ 
+              "client-id": "AY1-CQWyy-g4R8IHJx8_QJnGRiH2s9m713ZoRZg5vQkWXdX8NW7njEDqzL-r_E4BnIiGJUZ6APzvBW6W",
+              currency: "USD",
+              intent: "capture"
+            }}>
+              {children}
+              <Toaster />
+            </PayPalScriptProvider>
           </LanguageProvider>
         </ThemeProvider>
       </UserProfileSync>
