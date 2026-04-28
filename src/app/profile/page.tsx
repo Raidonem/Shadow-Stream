@@ -356,22 +356,25 @@ export default function ProfilePage() {
                               createOrder={(data, actions) => {
                                 return actions.order.create({
                                   purchase_units: [{
-                                    amount: { value: "0.49" },
+                                    amount: { 
+                                      value: "0.49",
+                                      currency_code: "USD"
+                                    },
                                     description: "ShadowStream Premium - 1 Month"
                                   }]
                                 });
                               }}
-                              onApprove={async (data, actions) => {
-                                if (actions.order) {
-                                  await actions.order.capture();
+                              onApprove={(data, actions) => {
+                                if (!actions.order) return Promise.resolve();
+                                return actions.order.capture().then((details) => {
                                   handleActivatePremium();
-                                }
+                                });
                               }}
                               onError={(err) => {
                                 toast({
                                   variant: "destructive",
                                   title: "Payment Error",
-                                  description: "Something went wrong with the PayPal transaction."
+                                  description: "PayPal encountered an issue. Please try again or check your account."
                                 });
                               }}
                             />
