@@ -17,6 +17,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "../../components/ui/select";
+import { Anime } from '../../lib/types';
 
 type SortOption = 'name' | 'added_desc' | 'added_asc' | 'release_desc' | 'release_asc';
 
@@ -32,7 +33,7 @@ function SearchResults() {
     return query(collection(db, 'anime'));
   }, [db]);
 
-  const { data: animeList, isLoading } = useCollection(animeQuery);
+  const { data: animeList, isLoading } = useCollection<Anime>(animeQuery);
 
   const processedAnime = useMemo(() => {
     if (!animeList) return [];
@@ -44,9 +45,14 @@ function SearchResults() {
       filtered = filtered.filter(anime => {
         const normalizedTitleEn = normalizeSearchString(anime.titleEn);
         const normalizedTitleAr = normalizeSearchString(anime.titleAr);
+        const matchesAlternative = (anime.alternativeTitles || []).some(title => 
+          normalizeSearchString(title).includes(normalizedQuery)
+        );
+
         return (
           normalizedTitleEn.includes(normalizedQuery) || 
-          normalizedTitleAr.includes(normalizedQuery)
+          normalizedTitleAr.includes(normalizedQuery) ||
+          matchesAlternative
         );
       });
     }

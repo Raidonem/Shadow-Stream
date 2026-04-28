@@ -105,6 +105,13 @@
           "type": "string",
           "description": "The main title of the anime series in Arabic."
         },
+        "alternativeTitles": {
+          "type": "array",
+          "description": "Optional list of alternative titles (e.g., Japanese names) for better searchability.",
+          "items": {
+            "type": "string"
+          }
+        },
         "descriptionEn": {
           "type": "string",
           "description": "A brief summary or synopsis of the anime's plot in English."

@@ -37,7 +37,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlo
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
-import { GenreKey, EpisodeServer, AnimeType, AnimeSeason } from '../../lib/types';
+import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime } from '../../lib/types';
 import Image from 'next/image';
 
 export default function AdminPage() {
@@ -55,6 +55,7 @@ export default function AdminPage() {
   const [animeData, setAnimeData] = useState({
     titleEn: '',
     titleAr: '',
+    alternativeTitles: '', // Store as comma-separated string for input
     descriptionEn: '',
     descriptionAr: '',
     coverImage: '',
@@ -129,6 +130,7 @@ export default function AdminPage() {
     setAnimeData({ 
       titleEn: '', 
       titleAr: '', 
+      alternativeTitles: '',
       descriptionEn: '', 
       descriptionAr: '', 
       coverImage: '', 
@@ -185,8 +187,14 @@ export default function AdminPage() {
     }
     setIsSubmitting(true);
 
+    const alternativeTitlesArr = animeData.alternativeTitles
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t !== '');
+
     const data = {
       ...animeData,
+      alternativeTitles: alternativeTitlesArr,
       genres: selectedGenres,
       releaseYear: parseInt(animeData.releaseYear),
       views: parseInt(animeData.views) || 0,
@@ -213,11 +221,12 @@ export default function AdminPage() {
     }
   };
 
-  const handleEditAnime = (anime: any) => {
+  const handleEditAnime = (anime: Anime) => {
     setEditingAnimeId(anime.id);
     setAnimeData({
       titleEn: anime.titleEn,
       titleAr: anime.titleAr,
+      alternativeTitles: (anime.alternativeTitles || []).join(', '),
       descriptionEn: anime.descriptionEn,
       descriptionAr: anime.descriptionAr,
       coverImage: anime.coverImage || '',
@@ -390,6 +399,16 @@ export default function AdminPage() {
                             required
                           />
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Alternative Titles (Japanese, common names, etc. - separated by commas)</Label>
+                        <Input 
+                          placeholder="e.g. Shingeki no Kyojin, SNK, Attack on Titan" 
+                          className="rounded-xl border-none bg-secondary/50"
+                          value={animeData.alternativeTitles}
+                          onChange={(e) => setAnimeData({...animeData, alternativeTitles: e.target.value})}
+                        />
                       </div>
 
                       <div className="grid gap-6 md:grid-cols-2">

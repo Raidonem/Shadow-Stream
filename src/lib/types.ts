@@ -8,6 +8,7 @@ export interface Anime {
   id: string;
   titleEn: string;
   titleAr: string;
+  alternativeTitles?: string[];
   descriptionEn: string;
   descriptionAr: string;
   coverImage: string;
