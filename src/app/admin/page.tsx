@@ -134,7 +134,7 @@ export default function AdminPage() {
       descriptionAr: '', 
       coverImage: '', 
       bannerImage: '', 
-      releaseYear: '2024', 
+      releaseYear: new Date().getFullYear().toString(), 
       status: 'Airing',
       type: 'tv',
       season: 'fall',
@@ -214,7 +214,7 @@ export default function AdminPage() {
       descriptionEn: anime.descriptionEn,
       descriptionAr: anime.descriptionAr,
       coverImage: anime.coverImage,
-      bannerImage: anime.bannerImage,
+      bannerImage: anime.bannerImage || '',
       releaseYear: anime.releaseYear.toString(),
       status: anime.status,
       type: anime.type || 'tv',
@@ -447,7 +447,7 @@ export default function AdminPage() {
                           <Input 
                             placeholder="https://..." 
                             className="rounded-xl border-none bg-secondary/50"
-                            value={animeData.coverImage} // Fallback to cover for now as per user code
+                            value={animeData.bannerImage}
                             onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})}
                             required
                           />
@@ -542,7 +542,12 @@ export default function AdminPage() {
                     {allAnime?.map(anime => (
                       <Card key={anime.id} className="overflow-hidden rounded-2xl border-none bg-card shadow-md">
                         <div className="relative aspect-video">
-                          <Image src={anime.bannerImage || anime.coverImage} alt={anime.titleEn} fill className="object-cover" />
+                          <Image 
+                            src={anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/600/400'} 
+                            alt={anime.titleEn} 
+                            fill 
+                            className="object-cover" 
+                          />
                           <div className="absolute inset-0 bg-black/40 p-4 flex flex-col justify-end">
                             <h3 className="font-bold text-white text-lg leading-tight">{anime.titleEn}</h3>
                             <div className="flex items-center gap-1 text-xs text-white/80 mt-1">
@@ -741,7 +746,12 @@ export default function AdminPage() {
                         <Card key={ep.id} className="rounded-xl border-none bg-card shadow-sm overflow-hidden">
                           <div className="flex items-center gap-4 p-3">
                             <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-lg">
-                              <Image src={ep.thumbnail} alt={ep.titleEn} fill className="object-cover" />
+                              <Image 
+                                src={ep.thumbnail || 'https://picsum.photos/seed/ep/320/180'} 
+                                alt={ep.titleEn} 
+                                fill 
+                                className="object-cover" 
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold text-accent">EPISODE {ep.episodeNumber}</p>

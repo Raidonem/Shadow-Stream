@@ -18,12 +18,13 @@ export function AnimeCard({ anime }: AnimeCardProps) {
   const { language } = useLanguage();
   const title = (language === 'ar' ? anime.titleAr : anime.titleEn) || 'Anime Cover';
   const tTags = translations[language].tags;
+  const imageSrc = anime.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
 
   return (
     <Link href={`/anime/${anime.id}`} className="group relative block w-full overflow-hidden rounded-xl bg-card anime-card-hover">
       <div className="relative aspect-[2/3] w-full overflow-hidden">
         <Image
-          src={anime.coverImage}
+          src={imageSrc}
           alt={title}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-110"
