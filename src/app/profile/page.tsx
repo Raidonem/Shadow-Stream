@@ -15,7 +15,7 @@ import {
 } from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { 
   User, 
   Mail, 
@@ -33,8 +33,7 @@ import {
   Zap,
   Loader2,
   Clock,
-  Lock,
-  UserCheck
+  Lock
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -107,21 +106,6 @@ export default function ProfilePage() {
     toast({
       title: "Profile Updated",
       description: "Your changes have been saved successfully."
-    });
-  };
-
-  const handleClaimAdmin = () => {
-    if (!user || !adminRef) return;
-    
-    setDocumentNonBlocking(adminRef, {
-      uid: user.uid,
-      grantedAt: new Date().toISOString(),
-      role: 'admin'
-    }, { merge: true });
-
-    toast({
-      title: "Admin Access Granted",
-      description: "You now have access to the Admin Panel."
     });
   };
 
@@ -209,16 +193,6 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {!isAdmin && (
-                <Button 
-                  variant="outline" 
-                  className="rounded-xl gap-2 border-accent text-accent hover:bg-accent/10"
-                  onClick={handleClaimAdmin}
-                >
-                  <UserCheck className="h-4 w-4" />
-                  Claim Admin
-                </Button>
-              )}
               <Button 
                 variant={isEditing ? "outline" : "default"} 
                 className="rounded-xl gap-2"

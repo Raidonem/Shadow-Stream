@@ -41,8 +41,7 @@ service cloud.firestore {
 
     match /admins/{adminId} {
       allow get: if isSignedIn();
-      allow create: if isOwner(adminId); 
-      allow list, update, delete: if isAdmin();
+      allow list, create, update, delete: if isAdmin();
     }
 
     match /anime/{animeId} {
