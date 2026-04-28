@@ -33,7 +33,8 @@ import {
   Sparkles,
   Zap,
   Loader2,
-  Lock
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -364,17 +365,42 @@ export default function ProfilePage() {
                                   }]
                                 });
                               }}
-                              onApprove={(data, actions) => {
-                                if (!actions.order) return Promise.resolve();
-                                return actions.order.capture().then((details) => {
-                                  handleActivatePremium();
-                                });
+                              onApprove={async (data, actions) => {
+                                if (!actions.order) return;
+                                try {
+                                  const details = await actions.order.capture();
+                                  
+                                  // Verify that the transaction was actually completed
+                                  if (details.status === 'COMPLETED') {
+                                    handleActivatePremium();
+                                  } else {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Payment Not Completed",
+                                      description: `The payment status is ${details.status}. Please check your account.`,
+                                    });
+                                  }
+                                } catch (err: any) {
+                                  console.error("PayPal Capture Error:", err);
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Transaction Failed",
+                                    description: err.message || "An error occurred while processing your payment.",
+                                  });
+                                }
                               }}
                               onError={(err) => {
+                                console.error("PayPal Global Error:", err);
                                 toast({
                                   variant: "destructive",
-                                  title: "Payment Error",
-                                  description: "PayPal encountered an issue. Please try again or check your account."
+                                  title: "PayPal Error",
+                                  description: "PayPal reported an issue. Your transaction may have been denied by the provider."
+                                });
+                              }}
+                              onCancel={() => {
+                                toast({
+                                  title: "Payment Cancelled",
+                                  description: "You closed the PayPal payment window.",
                                 });
                               }}
                             />
