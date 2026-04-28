@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -192,35 +191,6 @@ export default function Home() {
           </div>
         </section>
       </main>
-
-      <footer className="mt-20 border-t bg-card py-12">
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
-            <div className="flex flex-col gap-2">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="font-headline font-bold text-primary-foreground">S</span>
-                </div>
-                <span className="font-headline text-xl font-bold tracking-tight md:block">
-                  ShadowStream
-                </span>
-              </Link>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                {language === 'ar' ? 'الوجهة النهائية لمشاهدة الأنمي الغامرة.' : 'The ultimate destination for immersive anime streaming.'}
-              </p>
-            </div>
-            <div className="flex gap-8 text-sm font-medium">
-              <Link href="#" className="hover:text-accent">Terms</Link>
-              <Link href="#" className="hover:text-accent">Privacy</Link>
-              <Link href="#" className="hover:text-accent">About</Link>
-              <Link href="#" className="hover:text-accent">Contact</Link>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              © 2024 ShadowStream. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
