@@ -119,7 +119,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   // Handle Watch History and View Count Increment
   useEffect(() => {
     if (user && db && anime && episode && incrementedViews.current !== episode.id) {
-      // 1. Update Watch History
+      // 1. Update Watch History (Always update to keep "watchedAt" current)
       const historyRef = doc(db, 'users', user.uid, 'history', episodeId);
       setDocumentNonBlocking(historyRef, {
         id: episodeId,
@@ -136,15 +136,24 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       }, { merge: true });
 
       // 2. Increment Global Views for the Anime
-      const animeDocRef = doc(db, 'anime', anime.id);
-      updateDocumentNonBlocking(animeDocRef, {
-        views: increment(1),
-        updatedAt: serverTimestamp()
-      });
+      // Check localStorage to prevent view spamming within the same browser session/user
+      const viewKey = `ss_viewed_${user.uid}_${episodeId}`;
+      const hasViewed = typeof window !== 'undefined' ? localStorage.getItem(viewKey) : null;
+
+      if (!hasViewed && !isAdminUser) {
+        const animeDocRef = doc(db, 'anime', anime.id);
+        updateDocumentNonBlocking(animeDocRef, {
+          views: increment(1),
+          updatedAt: serverTimestamp()
+        });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(viewKey, 'true');
+        }
+      }
 
       incrementedViews.current = episode.id;
     }
-  }, [user, db, anime, episode, episodeId]);
+  }, [user, db, anime, episode, episodeId, isAdminUser]);
 
   const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
