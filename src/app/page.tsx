@@ -18,6 +18,7 @@ import {
   CarouselItem,
 } from "../components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import { cn } from "../lib/utils";
 
 export default function Home() {
   const db = useFirestore();
@@ -55,8 +56,10 @@ export default function Home() {
       {trendingAnime && trendingAnime.length > 0 ? (
         <section className="relative h-[80vh] w-full overflow-hidden">
           <Carousel
+            key={language}
             opts={{
               loop: true,
+              direction: language === 'ar' ? 'rtl' : 'ltr',
             }}
             plugins={[
               Autoplay({
@@ -79,7 +82,12 @@ export default function Home() {
                       priority
                       data-ai-hint="anime landscape"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
+                    <div className={cn(
+                      "absolute inset-0",
+                      language === 'ar' 
+                        ? "bg-gradient-to-l from-background via-background/40 to-transparent" 
+                        : "bg-gradient-to-r from-background via-background/40 to-transparent"
+                    )} />
                     <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
                     
                     <div className="container relative mx-auto flex h-full flex-col justify-center px-4 md:px-8">
