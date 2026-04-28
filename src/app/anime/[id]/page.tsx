@@ -4,12 +4,11 @@
 import { use } from 'react';
 import { Navbar } from "../../../components/layout/Navbar";
 import { Button } from "../../../components/ui/button";
-import { Star, Play, Heart, Plus, Calendar, Loader2, Bookmark } from 'lucide-react';
+import { Star, Play, Heart, Calendar, Loader2, Bookmark } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '../../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
 import { doc, collection, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
 import { useToast } from "../../../hooks/use-toast";
@@ -99,6 +98,9 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
 
   if (!anime) return <div className="text-center py-20">Anime not found.</div>;
 
+  const bannerUrl = anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/1200/600';
+  const coverUrl = anime.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -106,10 +108,12 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       {/* Header / Backdrop */}
       <div className="relative h-[60vh] w-full">
         <Image
-          src={anime.bannerImage}
+          src={bannerUrl}
           alt={title || 'Anime Banner'}
           fill
           className="object-cover opacity-60"
+          priority
+          data-ai-hint="anime landscape"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         
@@ -117,10 +121,11 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
           <div className="flex flex-col gap-8 md:flex-row w-full">
             <div className="relative hidden aspect-[2/3] w-64 shrink-0 overflow-hidden rounded-2xl shadow-2xl md:block">
               <Image
-                src={anime.coverImage}
+                src={coverUrl}
                 alt={title || 'Anime Cover'}
                 fill
                 className="object-cover"
+                data-ai-hint="anime portrait"
               />
             </div>
             
@@ -213,10 +218,11 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                     <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
                       <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
                         <Image
-                          src={ep.thumbnail}
+                          src={ep.thumbnail || 'https://picsum.photos/seed/ep/320/180'}
                           alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
                           fill
                           className="object-cover"
+                          data-ai-hint="anime episode"
                         />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/40">
                           <Play className="h-8 w-8 text-white fill-current" />
@@ -265,7 +271,6 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
           </div>
 
           <aside className="space-y-8">
-            {/* Sidebar content */}
           </aside>
         </div>
       </main>

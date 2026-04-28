@@ -26,7 +26,6 @@ import {
   Trash2,
   X,
   Server,
-  Globe,
   Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
@@ -145,7 +144,15 @@ export default function AdminPage() {
   };
 
   const resetEpisodeForm = () => {
-    setEpisodeData({ ...episodeData, episodeNumber: '', titleEn: '', titleAr: '', servers: [], thumbnail: '', duration: '24:00' });
+    setEpisodeData({ 
+      ...episodeData, 
+      episodeNumber: '', 
+      titleEn: '', 
+      titleAr: '', 
+      servers: [], 
+      thumbnail: '', 
+      duration: '24:00' 
+    });
     setEditingEpisodeId(null);
     setNewServer({ lang: 'en', name: '', url: '' });
   };
@@ -213,10 +220,10 @@ export default function AdminPage() {
       titleAr: anime.titleAr,
       descriptionEn: anime.descriptionEn,
       descriptionAr: anime.descriptionAr,
-      coverImage: anime.coverImage,
+      coverImage: anime.coverImage || '',
       bannerImage: anime.bannerImage || '',
-      releaseYear: anime.releaseYear.toString(),
-      status: anime.status,
+      releaseYear: (anime.releaseYear || new Date().getFullYear()).toString(),
+      status: anime.status || 'Airing',
       type: anime.type || 'tv',
       season: anime.season || 'fall',
       views: (anime.views || 0).toString()
@@ -252,7 +259,6 @@ export default function AdminPage() {
       const epRef = doc(db, 'anime', episodeData.animeId, 'episodes', editingEpisodeId);
       updateDocumentNonBlocking(epRef, data);
       
-      // Update parent anime metadata
       const animeRef = doc(db, 'anime', episodeData.animeId);
       const animeSnap = await getDoc(animeRef);
       const currentLastEp = animeSnap.data()?.lastEpisodeNumber || 0;
@@ -271,7 +277,6 @@ export default function AdminPage() {
         ...data,
         createdAt: serverTimestamp(),
       }).then(async () => {
-        // Update parent anime metadata
         const animeRef = doc(db, 'anime', episodeData.animeId);
         const animeSnap = await getDoc(animeRef);
         const currentLastEp = animeSnap.data()?.lastEpisodeNumber || 0;
@@ -296,8 +301,8 @@ export default function AdminPage() {
       titleEn: episode.titleEn,
       titleAr: episode.titleAr,
       servers: episode.servers || [],
-      thumbnail: episode.thumbnail,
-      duration: episode.duration
+      thumbnail: episode.thumbnail || '',
+      duration: episode.duration || '24:00'
     });
   };
 
@@ -547,6 +552,7 @@ export default function AdminPage() {
                             alt={anime.titleEn} 
                             fill 
                             className="object-cover" 
+                            data-ai-hint="anime banner"
                           />
                           <div className="absolute inset-0 bg-black/40 p-4 flex flex-col justify-end">
                             <h3 className="font-bold text-white text-lg leading-tight">{anime.titleEn}</h3>
@@ -751,6 +757,7 @@ export default function AdminPage() {
                                 alt={ep.titleEn} 
                                 fill 
                                 className="object-cover" 
+                                data-ai-hint="anime episode"
                               />
                             </div>
                             <div className="flex-1 min-w-0">
