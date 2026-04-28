@@ -1,7 +1,7 @@
 
 "use client";
 
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import { Navbar } from "../../../components/layout/Navbar";
 import { Button } from "../../../components/ui/button";
 import { Star, Play, Heart, Calendar, Loader2, Bookmark, CheckCircle2 } from 'lucide-react';
@@ -50,6 +50,12 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const tTags = translations[language].tags;
   const tTypes = translations[language].animeTypes;
   const tSeasons = translations[language].animeSeasons;
+
+  // Find a fallback thumbnail from available episodes
+  const fallbackThumb = useMemo(() => {
+    const epWithThumb = episodes?.find(e => e.thumbnail && e.thumbnail.trim() !== '');
+    return epWithThumb?.thumbnail || anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+  }, [episodes, anime]);
 
   const toggleWatchlist = async () => {
     if (!user || !profileRef) {
@@ -118,8 +124,8 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
 
   if (!anime) return <div className="text-center py-20">Anime not found.</div>;
 
-  const bannerUrl = anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/1200/600';
-  const coverUrl = anime.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+  const bannerUrl = anime.bannerImage && anime.bannerImage.trim() !== '' ? anime.bannerImage : anime.coverImage || 'https://picsum.photos/seed/placeholder/1200/600';
+  const coverUrl = anime.coverImage && anime.coverImage.trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600';
 
   return (
     <div className="min-h-screen bg-background">
@@ -181,7 +187,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
 
               <div className="flex flex-wrap gap-4">
                 {episodes && episodes.length > 0 ? (
-                  <Link href={`/watch/${episodes[0].id}?animeId=${id}`}>
+                  <Link href={`/watch/${episodes.sort((a,b) => a.episodeNumber - b.episodeNumber)[0].id}?animeId=${id}`}>
                     <Button size="lg" className="h-14 gap-2 rounded-xl bg-accent px-8 text-lg font-bold text-accent-foreground hover:bg-accent/90">
                       <Play className="h-6 w-6 fill-current" />
                       {language === 'ar' ? 'ابدأ المشاهدة' : 'Start Watching'}
@@ -247,7 +253,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                     <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
                       <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
                         <Image
-                          src={ep.thumbnail || 'https://picsum.photos/seed/ep/320/180'}
+                          src={ep.thumbnail && ep.thumbnail.trim() !== '' ? ep.thumbnail : fallbackThumb}
                           alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
                           fill
                           className="object-cover"

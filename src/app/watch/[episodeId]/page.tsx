@@ -115,6 +115,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const epTitle = language === 'ar' ? episode?.titleAr : episode?.titleEn;
   const tTags = translations[language].tags;
 
+  // Find a fallback thumbnail from available episodes
+  const fallbackThumb = useMemo(() => {
+    const epWithThumb = episodes?.find(e => e.thumbnail && e.thumbnail.trim() !== '');
+    return epWithThumb?.thumbnail || anime?.bannerImage || anime?.coverImage || 'https://picsum.photos/seed/placeholder/400/600';
+  }, [episodes, anime]);
+
   // Suggested works logic
   const suggestedAnime = useMemo(() => {
     if (!anime || !allAnime) return [];
@@ -158,6 +164,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   useEffect(() => {
     if (user && db && anime && episode && incrementedViews.current !== episode.id) {
+      const finalThumbnail = episode.thumbnail && episode.thumbnail.trim() !== '' ? episode.thumbnail : fallbackThumb;
+      
       const historyRef = doc(db, 'users', user.uid, 'history', episodeId);
       setDocumentNonBlocking(historyRef, {
         id: episodeId,
@@ -169,7 +177,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         episodeTitleEn: episode.titleEn,
         episodeTitleAr: episode.titleAr,
         episodeNumber: episode.episodeNumber,
-        thumbnail: episode.thumbnail,
+        thumbnail: finalThumbnail,
         watchedAt: serverTimestamp()
       }, { merge: true });
 
@@ -189,7 +197,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
       incrementedViews.current = episode.id;
     }
-  }, [user, db, anime, episode, episodeId, isAdminUser]);
+  }, [user, db, anime, episode, episodeId, isAdminUser, fallbackThumb]);
 
   const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -566,6 +574,31 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <span className="text-muted-foreground">{t('status')}</span>
                   <Badge variant="outline" className="text-accent border-accent">{anime.status}</Badge>
                 </div>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h3 className="font-headline text-xl font-bold">{t('episodes')}</h3>
+              <div className="space-y-2">
+                {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => (
+                  <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn(
+                    "flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50",
+                    ep.id === episodeId ? "bg-accent/10 border border-accent/20" : ""
+                  )}>
+                    <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg">
+                      <Image 
+                        src={ep.thumbnail && ep.thumbnail.trim() !== '' ? ep.thumbnail : fallbackThumb} 
+                        alt={language === 'ar' ? ep.titleAr : ep.titleEn} 
+                        fill 
+                        className="object-cover" 
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
+                      <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </section>
 
