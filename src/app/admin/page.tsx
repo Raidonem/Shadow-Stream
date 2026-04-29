@@ -26,7 +26,8 @@ import {
   Trash2,
   X,
   Server,
-  Eye
+  Eye,
+  Bell
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -51,11 +52,10 @@ export default function AdminPage() {
   const [editingAnimeId, setEditingAnimeId] = useState<string | null>(null);
   const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
 
-  // Form states
   const [animeData, setAnimeData] = useState({
     titleEn: '',
     titleAr: '',
-    alternativeTitles: '', // Store as comma-separated string for input
+    alternativeTitles: '',
     descriptionEn: '',
     descriptionAr: '',
     coverImage: '',
@@ -77,7 +77,6 @@ export default function AdminPage() {
     duration: '24:00'
   });
 
-  // Server management state
   const [newServer, setNewServer] = useState<EpisodeServer>({
     lang: 'en',
     name: '',
@@ -110,51 +109,28 @@ export default function AdminPage() {
       if (!user) {
         router.push('/login');
       } else if (!adminDoc) {
-        toast({
-          title: "Access Revoked",
-          description: "You no longer have administrative privileges.",
-          variant: "destructive"
-        });
+        toast({ title: "Access Revoked", description: "You no longer have administrative privileges.", variant: "destructive" });
         router.push('/');
       }
     }
   }, [user, isUserLoading, adminDoc, isAdminChecking, router, toast]);
 
   const toggleGenre = (genre: GenreKey) => {
-    setSelectedGenres(prev => 
-      prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]
-    );
+    setSelectedGenres(prev => prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]);
   };
 
   const resetAnimeForm = () => {
     setAnimeData({ 
-      titleEn: '', 
-      titleAr: '', 
-      alternativeTitles: '',
-      descriptionEn: '', 
-      descriptionAr: '', 
-      coverImage: '', 
-      bannerImage: '', 
-      releaseYear: new Date().getFullYear().toString(), 
-      status: 'Airing',
-      type: 'tv',
-      season: 'fall',
-      views: '0'
+      titleEn: '', titleAr: '', alternativeTitles: '', descriptionEn: '', descriptionAr: '', 
+      coverImage: '', bannerImage: '', releaseYear: new Date().getFullYear().toString(), 
+      status: 'Airing', type: 'tv', season: 'fall', views: '0'
     });
     setSelectedGenres([]);
     setEditingAnimeId(null);
   };
 
   const resetEpisodeForm = () => {
-    setEpisodeData({ 
-      ...episodeData, 
-      episodeNumber: '', 
-      titleEn: '', 
-      titleAr: '', 
-      servers: [], 
-      thumbnail: '', 
-      duration: '24:00' 
-    });
+    setEpisodeData({ ...episodeData, episodeNumber: '', titleEn: '', titleAr: '', servers: [], thumbnail: '', duration: '24:00' });
     setEditingEpisodeId(null);
     setNewServer({ lang: 'en', name: '', url: '' });
   };
@@ -164,18 +140,12 @@ export default function AdminPage() {
       toast({ title: "Error", description: "Server name and URL are required.", variant: "destructive" });
       return;
     }
-    setEpisodeData({
-      ...episodeData,
-      servers: [...episodeData.servers, newServer]
-    });
+    setEpisodeData({ ...episodeData, servers: [...episodeData.servers, newServer] });
     setNewServer({ lang: 'en', name: '', url: '' });
   };
 
   const removeServer = (index: number) => {
-    setEpisodeData({
-      ...episodeData,
-      servers: episodeData.servers.filter((_, i) => i !== index)
-    });
+    setEpisodeData({ ...episodeData, servers: episodeData.servers.filter((_, i) => i !== index) });
   };
 
   const handleAddAnime = (e: React.FormEvent) => {
@@ -186,35 +156,16 @@ export default function AdminPage() {
       return;
     }
     setIsSubmitting(true);
-
-    const alternativeTitlesArr = animeData.alternativeTitles
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t !== '');
-
-    const data = {
-      ...animeData,
-      alternativeTitles: alternativeTitlesArr,
-      genres: selectedGenres,
-      releaseYear: parseInt(animeData.releaseYear),
-      views: parseInt(animeData.views) || 0,
-      updatedAt: serverTimestamp(),
-    };
-
+    const alternativeTitlesArr = animeData.alternativeTitles.split(',').map(t => t.trim()).filter(t => t !== '');
+    const data = { ...animeData, alternativeTitles: alternativeTitlesArr, genres: selectedGenres, releaseYear: parseInt(animeData.releaseYear), views: parseInt(animeData.views) || 0, updatedAt: serverTimestamp() };
     if (editingAnimeId) {
-      const animeRef = doc(db, 'anime', editingAnimeId);
-      updateDocumentNonBlocking(animeRef, data);
-      toast({ title: "Anime Updated", description: `${animeData.titleEn} has been updated.` });
+      updateDocumentNonBlocking(doc(db, 'anime', editingAnimeId), data);
+      toast({ title: "Anime Updated" });
       resetAnimeForm();
       setIsSubmitting(false);
     } else {
-      const animeRef = collection(db, 'anime');
-      addDocumentNonBlocking(animeRef, {
-        ...data,
-        rating: 0,
-        createdAt: serverTimestamp(),
-      }).then(() => {
-        toast({ title: "Anime Published", description: `${animeData.titleEn} is now live.` });
+      addDocumentNonBlocking(collection(db, 'anime'), { ...data, rating: 0, createdAt: serverTimestamp() }).then(() => {
+        toast({ title: "Anime Published" });
         resetAnimeForm();
         setIsSubmitting(false);
       });
@@ -224,27 +175,18 @@ export default function AdminPage() {
   const handleEditAnime = (anime: Anime) => {
     setEditingAnimeId(anime.id);
     setAnimeData({
-      titleEn: anime.titleEn,
-      titleAr: anime.titleAr,
-      alternativeTitles: (anime.alternativeTitles || []).join(', '),
-      descriptionEn: anime.descriptionEn,
-      descriptionAr: anime.descriptionAr,
-      coverImage: anime.coverImage || '',
-      bannerImage: anime.bannerImage || '',
-      releaseYear: (anime.releaseYear || new Date().getFullYear()).toString(),
-      status: anime.status || 'Airing',
-      type: anime.type || 'tv',
-      season: anime.season || 'fall',
-      views: (anime.views || 0).toString()
+      titleEn: anime.titleEn, titleAr: anime.titleAr, alternativeTitles: (anime.alternativeTitles || []).join(', '),
+      descriptionEn: anime.descriptionEn, descriptionAr: anime.descriptionAr, coverImage: anime.coverImage || '',
+      bannerImage: anime.bannerImage || '', releaseYear: (anime.releaseYear || new Date().getFullYear()).toString(),
+      status: anime.status || 'Airing', type: anime.type || 'tv', season: anime.season || 'fall', views: (anime.views || 0).toString()
     });
     setSelectedGenres(anime.genres || []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteAnime = (id: string) => {
-    if (!db || !confirm("Are you sure you want to delete this anime and all its episodes?")) return;
-    const animeRef = doc(db, 'anime', id);
-    deleteDocumentNonBlocking(animeRef);
+    if (!db || !confirm("Delete this anime?")) return;
+    deleteDocumentNonBlocking(doc(db, 'anime', id));
     toast({ title: "Anime Deleted" });
   };
 
@@ -252,50 +194,41 @@ export default function AdminPage() {
     e.preventDefault();
     if (!db || !episodeData.animeId) return;
     if (episodeData.servers.length === 0) {
-      toast({ title: "Error", description: "Please add at least one streaming server.", variant: "destructive" });
+      toast({ title: "Error", description: "Please add at least one server.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-
     const episodeNum = parseInt(episodeData.episodeNumber);
-    const data = {
-      ...episodeData,
-      episodeNumber: episodeNum,
-      updatedAt: serverTimestamp(),
-    };
+    const data = { ...episodeData, episodeNumber: episodeNum, updatedAt: serverTimestamp() };
+
+    const animeRef = doc(db, 'anime', episodeData.animeId);
+    const animeSnap = await getDoc(animeRef);
+    const animeNameEn = animeSnap.data()?.titleEn;
+    const animeNameAr = animeSnap.data()?.titleAr;
 
     if (editingEpisodeId) {
-      const epRef = doc(db, 'anime', episodeData.animeId, 'episodes', editingEpisodeId);
-      updateDocumentNonBlocking(epRef, data);
-      
-      const animeRef = doc(db, 'anime', episodeData.animeId);
-      const animeSnap = await getDoc(animeRef);
-      const currentLastEp = animeSnap.data()?.lastEpisodeNumber || 0;
-      
-      updateDocumentNonBlocking(animeRef, { 
-        updatedAt: serverTimestamp(),
-        lastEpisodeNumber: Math.max(currentLastEp, episodeNum)
-      });
-
-      toast({ title: "Episode Updated", description: `Episode ${episodeData.episodeNumber} updated.` });
+      updateDocumentNonBlocking(doc(db, 'anime', episodeData.animeId, 'episodes', editingEpisodeId), data);
+      updateDocumentNonBlocking(animeRef, { updatedAt: serverTimestamp(), lastEpisodeNumber: Math.max(animeSnap.data()?.lastEpisodeNumber || 0, episodeNum) });
+      toast({ title: "Episode Updated" });
       resetEpisodeForm();
       setIsSubmitting(false);
     } else {
       const epRef = collection(db, 'anime', episodeData.animeId, 'episodes');
-      addDocumentNonBlocking(epRef, {
-        ...data,
-        createdAt: serverTimestamp(),
-      }).then(async () => {
-        const animeRef = doc(db, 'anime', episodeData.animeId);
-        const animeSnap = await getDoc(animeRef);
-        const currentLastEp = animeSnap.data()?.lastEpisodeNumber || 0;
-
-        updateDocumentNonBlocking(animeRef, { 
-          updatedAt: serverTimestamp(),
-          lastEpisodeNumber: Math.max(currentLastEp, episodeNum)
+      addDocumentNonBlocking(epRef, { ...data, createdAt: serverTimestamp() }).then(async (newEp) => {
+        updateDocumentNonBlocking(animeRef, { updatedAt: serverTimestamp(), lastEpisodeNumber: Math.max(animeSnap.data()?.lastEpisodeNumber || 0, episodeNum) });
+        
+        // Notification logic: Create a global notification
+        addDocumentNonBlocking(collection(db, 'global_notifications'), {
+          type: 'new_episode',
+          animeId: episodeData.animeId,
+          episodeId: newEp?.id || '',
+          animeTitleEn: animeNameEn,
+          animeTitleAr: animeNameAr,
+          episodeNumber: episodeNum,
+          createdAt: serverTimestamp()
         });
 
-        toast({ title: "Episode Added", description: `Episode ${episodeData.episodeNumber} published.` });
+        toast({ title: "Episode Added & Notification Sent" });
         resetEpisodeForm();
         setIsSubmitting(false);
       });
@@ -305,21 +238,15 @@ export default function AdminPage() {
   const handleEditEpisode = (episode: any) => {
     setEditingEpisodeId(episode.id);
     setEpisodeData({
-      animeId: episode.animeId,
-      episodeNumber: episode.episodeNumber.toString(),
-      titleEn: episode.titleEn,
-      titleAr: episode.titleAr,
-      servers: episode.servers || [],
-      thumbnail: episode.thumbnail || '',
-      duration: episode.duration || '24:00'
+      animeId: episode.animeId, episodeNumber: episode.episodeNumber.toString(), titleEn: episode.titleEn,
+      titleAr: episode.titleAr, servers: episode.servers || [], thumbnail: episode.thumbnail || '', duration: episode.duration || '24:00'
     });
   };
 
   const handleDeleteEpisode = (id: string) => {
-    if (!db || !episodeData.animeId || !confirm("Delete this episode?")) return;
-    const epRef = doc(db, 'anime', episodeData.animeId, 'episodes', id);
-    deleteDocumentNonBlocking(epRef);
-    toast({ title: "Episode Deleted" });
+    if (!db || !episodeData.animeId || !confirm("Delete?")) return;
+    deleteDocumentNonBlocking(doc(db, 'anime', episodeData.animeId, 'episodes', id));
+    toast({ title: "Deleted" });
   };
 
   if (isUserLoading || isAdminChecking) {
@@ -335,7 +262,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
       <main className="container mx-auto px-4 py-8 md:px-8">
         <div className="flex flex-col gap-8 md:flex-row">
           <aside className="w-full shrink-0 space-y-2 md:w-64">
@@ -344,7 +270,6 @@ export default function AdminPage() {
               Management
             </Button>
           </aside>
-
           <div className="flex-1 space-y-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
@@ -355,13 +280,11 @@ export default function AdminPage() {
                 </p>
               </div>
             </div>
-
             <Tabs defaultValue="anime" className="w-full">
               <TabsList className="mb-8 grid w-full max-w-md grid-cols-2 rounded-xl bg-secondary p-1">
                 <TabsTrigger value="anime" className="rounded-lg">Anime Catalog</TabsTrigger>
                 <TabsTrigger value="episodes" className="rounded-lg">Episode Manager</TabsTrigger>
               </TabsList>
-
               <TabsContent value="anime" className="space-y-8">
                 <Card className="rounded-2xl border-none bg-card shadow-xl">
                   <CardHeader>
@@ -373,436 +296,114 @@ export default function AdminPage() {
                         </Button>
                       )}
                     </CardTitle>
-                    <CardDescription>Enter bilingual metadata to manage series.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleAddAnime} className="space-y-6">
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label>Series Title (English)</Label>
-                          <Input 
-                            placeholder="e.g. Shadow Vanguard" 
-                            className="rounded-xl border-none bg-secondary/50"
-                            value={animeData.titleEn}
-                            onChange={(e) => setAnimeData({...animeData, titleEn: e.target.value})}
-                            required
-                          />
+                          <Label>Title (EN)</Label>
+                          <Input value={animeData.titleEn} onChange={(e) => setAnimeData({...animeData, titleEn: e.target.value})} required />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-right block">العنوان (بالعربية)</Label>
-                          <Input 
-                            placeholder="مثال: طليعة الظل" 
-                            dir="rtl"
-                            className="rounded-xl border-none bg-secondary/50 text-right"
-                            value={animeData.titleAr}
-                            onChange={(e) => setAnimeData({...animeData, titleAr: e.target.value})}
-                            required
-                          />
+                        <div className="space-y-2 text-right">
+                          <Label>العنوان (AR)</Label>
+                          <Input dir="rtl" className="text-right" value={animeData.titleAr} onChange={(e) => setAnimeData({...animeData, titleAr: e.target.value})} required />
                         </div>
                       </div>
-
                       <div className="space-y-2">
-                        <Label>Alternative Titles (Japanese, common names, etc. - separated by commas)</Label>
-                        <Input 
-                          placeholder="e.g. Shingeki no Kyojin, SNK, Attack on Titan" 
-                          className="rounded-xl border-none bg-secondary/50"
-                          value={animeData.alternativeTitles}
-                          onChange={(e) => setAnimeData({...animeData, alternativeTitles: e.target.value})}
-                        />
+                        <Label>Alternative Titles (csv)</Label>
+                        <Input value={animeData.alternativeTitles} onChange={(e) => setAnimeData({...animeData, alternativeTitles: e.target.value})} />
                       </div>
-
                       <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Description (English)</Label>
-                          <Textarea 
-                            placeholder="A brief synopsis..." 
-                            className="min-h-[100px] rounded-xl border-none bg-secondary/50"
-                            value={animeData.descriptionEn}
-                            onChange={(e) => setAnimeData({...animeData, descriptionEn: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-right block">الوصف (بالعربية)</Label>
-                          <Textarea 
-                            placeholder="نبذة عن العمل..." 
-                            dir="rtl"
-                            className="min-h-[100px] rounded-xl border-none bg-secondary/50 text-right"
-                            value={animeData.descriptionAr}
-                            onChange={(e) => setAnimeData({...animeData, descriptionAr: e.target.value})}
-                            required
-                          />
-                        </div>
+                        <Textarea placeholder="Description EN" value={animeData.descriptionEn} onChange={(e) => setAnimeData({...animeData, descriptionEn: e.target.value})} required />
+                        <Textarea dir="rtl" className="text-right" placeholder="الوصف بالعربية" value={animeData.descriptionAr} onChange={(e) => setAnimeData({...animeData, descriptionAr: e.target.value})} required />
                       </div>
-
                       <div className="space-y-3">
-                        <Label>Select Genres</Label>
+                        <Label>Genres</Label>
                         <div className="flex flex-wrap gap-2">
                           {availableTags.map(tag => (
-                            <Badge 
-                              key={tag}
-                              variant={selectedGenres.includes(tag) ? "default" : "secondary"}
-                              className={cn(
-                                "cursor-pointer px-4 py-1.5 rounded-full transition-all",
-                                selectedGenres.includes(tag) ? "bg-accent text-accent-foreground" : "hover:bg-accent/20"
-                              )}
-                              onClick={() => toggleGenre(tag)}
-                            >
-                              {selectedGenres.includes(tag) && <Check className="mr-1 h-3 w-3" />}
-                              {translations.en.tags[tag as keyof typeof translations.en.tags]}
+                            <Badge key={tag} variant={selectedGenres.includes(tag) ? "default" : "secondary"} className="cursor-pointer" onClick={() => toggleGenre(tag)}>
+                              {translations.en.tags[tag]}
                             </Badge>
                           ))}
                         </div>
                       </div>
-
                       <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Cover Image URL (Portrait)</Label>
-                          <Input 
-                            placeholder="https://..." 
-                            className="rounded-xl border-none bg-secondary/50"
-                            value={animeData.coverImage}
-                            onChange={(e) => setAnimeData({...animeData, coverImage: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Banner Image URL (Landscape)</Label>
-                          <Input 
-                            placeholder="https://..." 
-                            className="rounded-xl border-none bg-secondary/50"
-                            value={animeData.bannerImage}
-                            onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})}
-                            required
-                          />
-                        </div>
+                        <Input placeholder="Cover URL" value={animeData.coverImage} onChange={(e) => setAnimeData({...animeData, coverImage: e.target.value})} required />
+                        <Input placeholder="Banner URL" value={animeData.bannerImage} onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})} required />
                       </div>
-
                       <div className="grid gap-6 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label>Release Year</Label>
-                          <Input 
-                            type="number"
-                            value={animeData.releaseYear}
-                            onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})}
-                            className="rounded-xl border-none bg-secondary/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Total Views</Label>
-                          <Input 
-                            type="number"
-                            value={animeData.views}
-                            onChange={(e) => setAnimeData({...animeData, views: e.target.value})}
-                            className="rounded-xl border-none bg-secondary/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Status</Label>
-                          <Select 
-                            value={animeData.status} 
-                            onValueChange={(val: any) => setAnimeData({...animeData, status: val})}
-                          >
-                            <SelectTrigger className="rounded-xl border-none bg-secondary/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Airing">Airing</SelectItem>
-                              <SelectItem value="Finished">Finished</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Type</Label>
-                          <Select 
-                            value={animeData.type} 
-                            onValueChange={(val: any) => setAnimeData({...animeData, type: val})}
-                          >
-                            <SelectTrigger className="rounded-xl border-none bg-secondary/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="tv">{translations.en.animeTypes.tv}</SelectItem>
-                              <SelectItem value="movie">{translations.en.animeTypes.movie}</SelectItem>
-                              <SelectItem value="ova">{translations.en.animeTypes.ova}</SelectItem>
-                              <SelectItem value="ona">{translations.en.animeTypes.ona}</SelectItem>
-                              <SelectItem value="special">{translations.en.animeTypes.special}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Season</Label>
-                          <Select 
-                            value={animeData.season} 
-                            onValueChange={(val: any) => setAnimeData({...animeData, season: val})}
-                          >
-                            <SelectTrigger className="rounded-xl border-none bg-secondary/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="spring">{translations.en.animeSeasons.spring}</SelectItem>
-                              <SelectItem value="summer">{translations.en.animeSeasons.summer}</SelectItem>
-                              <SelectItem value="fall">{translations.en.animeSeasons.fall}</SelectItem>
-                              <SelectItem value="winter">{translations.en.animeSeasons.winter}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <Button type="submit" disabled={isSubmitting} className="w-full gap-2 rounded-xl bg-accent font-bold text-accent-foreground">
-                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingAnimeId ? <Save className="h-5 w-5" /> : <Plus className="h-5 w-5" />)}
-                        {editingAnimeId ? 'Update Anime' : 'Publish Anime'}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                  <h2 className="font-headline text-2xl font-bold">Existing Anime</h2>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {allAnime?.map(anime => (
-                      <Card key={anime.id} className="overflow-hidden rounded-2xl border-none bg-card shadow-md">
-                        <div className="relative aspect-video">
-                          <Image 
-                            src={(anime.bannerImage || anime.coverImage || 'https://picsum.photos/seed/placeholder/600/400').trim()} 
-                            alt={anime.titleEn} 
-                            fill 
-                            className="object-cover" 
-                            data-ai-hint="anime banner"
-                          />
-                          <div className="absolute inset-0 bg-black/40 p-4 flex flex-col justify-end">
-                            <h3 className="font-bold text-white text-lg leading-tight">{anime.titleEn}</h3>
-                            <div className="flex items-center gap-1 text-xs text-white/80 mt-1">
-                              <Eye className="h-3 w-3" />
-                              {anime.views || 0} views
-                            </div>
-                          </div>
-                        </div>
-                        <CardContent className="p-4 flex justify-between items-center">
-                          <p className="text-xs text-muted-foreground">{anime.status} • {anime.releaseYear}</p>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditAnime(anime)} className="h-8 w-8 rounded-full">
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAnime(anime.id)} className="h-8 w-8 rounded-full text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="episodes" className="space-y-8">
-                <Card className="rounded-2xl border-none bg-card shadow-xl">
-                  <CardHeader>
-                    <CardTitle className="font-headline flex items-center justify-between">
-                      {editingEpisodeId ? 'Edit Episode' : 'Upload Episode'}
-                      {editingEpisodeId && (
-                        <Button variant="ghost" size="sm" onClick={resetEpisodeForm} className="rounded-full">
-                          <X className="h-4 w-4 mr-1" /> Cancel Edit
-                        </Button>
-                      )}
-                    </CardTitle>
-                    <CardDescription>Provide episode details and multiple servers for the selected series.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleAddEpisode} className="space-y-6">
-                      <div className="space-y-2">
-                        <Label>Select Anime</Label>
-                        <Select 
-                          value={episodeData.animeId} 
-                          onValueChange={(val) => setEpisodeData({...episodeData, animeId: val})}
-                        >
-                          <SelectTrigger className="rounded-xl border-none bg-secondary/50">
-                            <SelectValue placeholder="Choose a series" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allAnime?.map(anime => (
-                              <SelectItem key={anime.id} value={anime.id}>{anime.titleEn}</SelectItem>
-                            ))}
-                          </SelectContent>
+                        <Input type="number" placeholder="Year" value={animeData.releaseYear} onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})} />
+                        <Input type="number" placeholder="Views" value={animeData.views} onChange={(e) => setAnimeData({...animeData, views: e.target.value})} />
+                        <Select value={animeData.status} onValueChange={(val: any) => setAnimeData({...animeData, status: val})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent><SelectItem value="Airing">Airing</SelectItem><SelectItem value="Finished">Finished</SelectItem></SelectContent>
                         </Select>
                       </div>
-
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Episode Title (English)</Label>
-                          <Input 
-                            placeholder="The Awakening" 
-                            className="rounded-xl border-none bg-secondary/50"
-                            value={episodeData.titleEn}
-                            onChange={(e) => setEpisodeData({...episodeData, titleEn: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-right block">عنوان الحلقة (بالعربية)</Label>
-                          <Input 
-                            placeholder="الصحوة" 
-                            dir="rtl"
-                            className="rounded-xl border-none bg-secondary/50 text-right"
-                            value={episodeData.titleAr}
-                            onChange={(e) => setEpisodeData({...episodeData, titleAr: e.target.value})}
-                            required
-                          />
-                        </div>
+                      <Button type="submit" className="w-full">{editingAnimeId ? 'Update' : 'Publish'}</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {allAnime?.map(anime => (
+                    <Card key={anime.id} className="overflow-hidden">
+                      <div className="relative aspect-video">
+                        <Image src={(anime.bannerImage || anime.coverImage || '').trim()} alt={anime.titleEn} fill className="object-cover" />
                       </div>
-
+                      <CardContent className="p-4 flex justify-between">
+                        <span className="font-bold">{anime.titleEn}</span>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditAnime(anime)}><Edit2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteAnime(anime.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="episodes" className="space-y-8">
+                <Card className="rounded-2xl border-none bg-card shadow-xl">
+                  <CardHeader><CardTitle>{editingEpisodeId ? 'Edit Episode' : 'Upload Episode'}</CardTitle></CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddEpisode} className="space-y-6">
+                      <Select value={episodeData.animeId} onValueChange={(val) => setEpisodeData({...episodeData, animeId: val})}>
+                        <SelectTrigger><SelectValue placeholder="Choose series" /></SelectTrigger>
+                        <SelectContent>{allAnime?.map(anime => <SelectItem key={anime.id} value={anime.id}>{anime.titleEn}</SelectItem>)}</SelectContent>
+                      </Select>
                       <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Episode Number</Label>
-                          <Input 
-                            type="number"
-                            placeholder="1" 
-                            className="rounded-xl border-none bg-secondary/50"
-                            value={episodeData.episodeNumber}
-                            onChange={(e) => setEpisodeData({...episodeData, episodeNumber: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Duration (MM:SS)</Label>
-                          <Input 
-                            placeholder="24:00" 
-                            className="rounded-xl border-none bg-secondary/50"
-                            value={episodeData.duration}
-                            onChange={(e) => setEpisodeData({...episodeData, duration: e.target.value})}
-                            required
-                          />
-                        </div>
+                        <Input placeholder="Ep Title EN" value={episodeData.titleEn} onChange={(e) => setEpisodeData({...episodeData, titleEn: e.target.value})} required />
+                        <Input dir="rtl" className="text-right" placeholder="العنوان AR" value={episodeData.titleAr} onChange={(e) => setEpisodeData({...episodeData, titleAr: e.target.value})} required />
                       </div>
-
-                      <Card className="border border-dashed p-4 rounded-xl bg-secondary/20">
-                        <Label className="mb-4 block font-bold flex items-center gap-2">
-                          <Server className="h-4 w-4" /> Streaming Servers
-                        </Label>
-                        <div className="space-y-4">
-                          <div className="grid gap-4 sm:grid-cols-[120px_1fr_1fr_auto]">
-                            <Select 
-                              value={newServer.lang} 
-                              onValueChange={(val: 'ar' | 'en') => setNewServer({...newServer, lang: val})}
-                            >
-                              <SelectTrigger className="bg-background rounded-lg border-none shadow-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ar">Arabic</SelectItem>
-                                <SelectItem value="en">English</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input 
-                              placeholder="Server Name (e.g. Server 1)" 
-                              className="bg-background rounded-lg border-none shadow-sm"
-                              value={newServer.name}
-                              onChange={(e) => setNewServer({...newServer, name: e.target.value})}
-                            />
-                            <Input 
-                              placeholder="Direct Video URL (MP4)" 
-                              className="bg-background rounded-lg border-none shadow-sm"
-                              value={newServer.url}
-                              onChange={(e) => setNewServer({...newServer, url: e.target.value})}
-                            />
-                            <Button type="button" size="icon" onClick={addServer} className="rounded-lg">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="space-y-2 mt-4">
-                            {episodeData.servers.map((server, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-3 bg-background rounded-xl shadow-sm">
-                                <div className="flex items-center gap-4">
-                                  <Badge variant="outline" className={cn(
-                                    "px-2 py-0",
-                                    server.lang === 'ar' ? "border-green-500 text-green-500" : "border-blue-500 text-blue-500"
-                                  )}>
-                                    {server.lang.toUpperCase()}
-                                  </Badge>
-                                  <span className="font-medium">{server.name}</span>
-                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">{server.url}</span>
-                                </div>
-                                <Button 
-                                  type="button" 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => removeServer(idx)}
-                                  className="h-8 w-8 text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                            {episodeData.servers.length === 0 && (
-                              <p className="text-center py-4 text-xs text-muted-foreground italic">No servers added. At least one is required.</p>
-                            )}
-                          </div>
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <Input type="number" placeholder="Ep Number" value={episodeData.episodeNumber} onChange={(e) => setEpisodeData({...episodeData, episodeNumber: e.target.value})} required />
+                        <Input placeholder="Duration (MM:SS)" value={episodeData.duration} onChange={(e) => setEpisodeData({...episodeData, duration: e.target.value})} />
+                      </div>
+                      <Card className="p-4 bg-secondary/20">
+                        <Label className="mb-4 block font-bold flex items-center gap-2"><Server className="h-4 w-4" /> Servers</Label>
+                        <div className="grid gap-4 sm:grid-cols-[120px_1fr_1fr_auto]">
+                          <Select value={newServer.lang} onValueChange={(val: any) => setNewServer({...newServer, lang: val})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="ar">AR</SelectItem><SelectItem value="en">EN</SelectItem></SelectContent>
+                          </Select>
+                          <Input placeholder="Name" value={newServer.name} onChange={(e) => setNewServer({...newServer, name: e.target.value})} />
+                          <Input placeholder="URL" value={newServer.url} onChange={(e) => setNewServer({...newServer, url: e.target.value})} />
+                          <Button type="button" size="icon" onClick={addServer}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                        <div className="space-y-2 mt-4">
+                          {episodeData.servers.map((s, i) => (
+                            <div key={i} className="flex items-center justify-between p-2 bg-background rounded">
+                              <span>{s.lang.toUpperCase()} - {s.name}</span>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeServer(i)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          ))}
                         </div>
                       </Card>
-
-                      <div className="space-y-2">
-                        <Label>Thumbnail URL (Optional)</Label>
-                        <Input 
-                          placeholder="https://..." 
-                          className="rounded-xl border-none bg-secondary/50"
-                          value={episodeData.thumbnail}
-                          onChange={(e) => setEpisodeData({...episodeData, thumbnail: e.target.value})}
-                        />
-                        <p className="text-[10px] text-muted-foreground">If empty, it will borrow a thumbnail from the closest previous episode.</p>
-                      </div>
-
-                      <Button type="submit" disabled={isSubmitting || !episodeData.animeId} className="w-full gap-2 rounded-xl bg-primary font-bold text-primary-foreground">
-                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingEpisodeId ? <Save className="h-5 w-5" /> : <Save className="h-5 w-5" />)}
-                        {editingEpisodeId ? 'Update Episode' : 'Add Episode'}
+                      <Button type="submit" className="w-full gap-2">
+                        <Bell className="h-4 w-4" />
+                        {editingEpisodeId ? 'Update Episode' : 'Publish & Notify'}
                       </Button>
                     </form>
                   </CardContent>
                 </Card>
-
-                {episodeData.animeId && (
-                  <div className="space-y-4">
-                    <h2 className="font-headline text-2xl font-bold">Episodes for {allAnime?.find(a => a.id === episodeData.animeId)?.titleEn}</h2>
-                    <div className="grid gap-4">
-                      {currentEpisodes?.map(ep => (
-                        <Card key={ep.id} className="rounded-xl border-none bg-card shadow-sm overflow-hidden">
-                          <div className="flex items-center gap-4 p-3">
-                            <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-lg bg-muted">
-                              <Image 
-                                src={(ep.thumbnail || 'https://picsum.photos/seed/ep/320/180').trim()} 
-                                alt={ep.titleEn} 
-                                fill 
-                                className="object-cover" 
-                                data-ai-hint="anime episode"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-accent">EPISODE {ep.episodeNumber}</p>
-                              <h4 className="font-bold truncate">{ep.titleEn}</h4>
-                              <p className="text-xs text-muted-foreground">{ep.duration} • {ep.servers?.length || 0} Servers</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => handleEditEpisode(ep)} className="h-8 w-8">
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteEpisode(ep.id)} className="h-8 w-8 text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                      {!currentEpisodes?.length && (
-                        <div className="text-center py-12 border border-dashed rounded-2xl text-muted-foreground">
-                          No episodes added yet.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </TabsContent>
             </Tabs>
           </div>

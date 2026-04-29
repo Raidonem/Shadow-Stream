@@ -4,7 +4,7 @@
 import { use, useMemo } from 'react';
 import { Navbar } from "../../../components/layout/Navbar";
 import { Button } from "../../../components/ui/button";
-import { Star, Play, Heart, Calendar, Loader2, Bookmark, CheckCircle2 } from 'lucide-react';
+import { Star, Play, Heart, Calendar, Loader2, Bookmark, CheckCircle2, Eye } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '../../../components/ui/badge';
@@ -44,6 +44,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const isInWatchlist = profile?.watchlistAnimeIds?.includes(id);
   const isFavorite = profile?.favoriteAnimeIds?.includes(id);
   const isCompleted = profile?.completedAnimeIds?.includes(id);
+  const isWatching = profile?.currentlyWatchingAnimeIds?.includes(id);
 
   const title = (language === 'ar' ? anime?.titleAr : anime?.titleEn) || '';
   const description = (language === 'ar' ? anime?.descriptionAr : anime?.descriptionEn) || '';
@@ -63,20 +64,17 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
 
     const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
     
-    // 1. Look back for the most recent previous episode with a thumbnail
     const prev = sorted
       .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
       .reverse()[0];
     
     if (prev) return prev.thumbnail;
 
-    // 2. Look forward for the first following episode with a thumbnail
     const next = sorted
       .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
     
     if (next) return next.thumbnail;
 
-    // 3. Final fallback to series image
     return fallback;
   };
 
@@ -85,18 +83,10 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       toast({ title: t('login'), description: "Sign in to manage your watchlist." });
       return;
     }
-
-    try {
-      await updateDoc(profileRef, {
-        watchlistAnimeIds: isInWatchlist ? arrayRemove(id) : arrayUnion(id)
-      });
-      toast({ 
-        title: isInWatchlist ? (language === 'ar' ? 'تمت الإزالة من المشاهدة لاحقاً' : "Removed from Watch Later") : (language === 'ar' ? 'تمت الإضافة إلى المشاهدة لاحقاً' : "Added to Watch Later"),
-        description: title 
-      });
-    } catch (e) {
-      console.error(e);
-    }
+    await updateDoc(profileRef, {
+      watchlistAnimeIds: isInWatchlist ? arrayRemove(id) : arrayUnion(id)
+    });
+    toast({ title: isInWatchlist ? (language === 'ar' ? 'تمت الإزالة من المشاهدة لاحقاً' : "Removed from Watch Later") : (language === 'ar' ? 'تمت الإضافة إلى المشاهدة لاحقاً' : "Added to Watch Later") });
   };
 
   const toggleFavorite = async () => {
@@ -104,18 +94,10 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       toast({ title: t('login'), description: "Sign in to favorite this series." });
       return;
     }
-
-    try {
-      await updateDoc(profileRef, {
-        favoriteAnimeIds: isFavorite ? arrayRemove(id) : arrayUnion(id)
-      });
-      toast({ 
-        title: isFavorite ? (language === 'ar' ? 'تمت الإزالة من المفضلة' : "Removed from Favorites") : (language === 'ar' ? 'تمت الإضافة إلى المفضلة' : "Added to Favorites"),
-        description: title 
-      });
-    } catch (e) {
-      console.error(e);
-    }
+    await updateDoc(profileRef, {
+      favoriteAnimeIds: isFavorite ? arrayRemove(id) : arrayUnion(id)
+    });
+    toast({ title: isFavorite ? (language === 'ar' ? 'تمت الإزالة من المفضلة' : "Removed from Favorites") : (language === 'ar' ? 'تمت الإضافة إلى المفضلة' : "Added to Favorites") });
   };
 
   const toggleCompleted = async () => {
@@ -123,18 +105,21 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       toast({ title: t('login'), description: "Sign in to track your progress." });
       return;
     }
+    await updateDoc(profileRef, {
+      completedAnimeIds: isCompleted ? arrayRemove(id) : arrayUnion(id)
+    });
+    toast({ title: isCompleted ? (language === 'ar' ? 'تمت الإزالة من المكتملة' : "Removed from Completed") : (language === 'ar' ? 'تمت الإضافة إلى المكتملة' : "Added to Completed") });
+  };
 
-    try {
-      await updateDoc(profileRef, {
-        completedAnimeIds: isCompleted ? arrayRemove(id) : arrayUnion(id)
-      });
-      toast({ 
-        title: isCompleted ? (language === 'ar' ? 'تمت الإزالة من المكتملة' : "Removed from Completed") : (language === 'ar' ? 'تمت الإضافة إلى المكتملة' : "Added to Completed"),
-        description: title 
-      });
-    } catch (e) {
-      console.error(e);
+  const toggleWatching = async () => {
+    if (!user || !profileRef) {
+      toast({ title: t('login'), description: "Sign in to track what you're watching." });
+      return;
     }
+    await updateDoc(profileRef, {
+      currentlyWatchingAnimeIds: isWatching ? arrayRemove(id) : arrayUnion(id)
+    });
+    toast({ title: isWatching ? (language === 'ar' ? 'تمت الإزالة من المشاهدة الحالية' : "Removed from Currently Watching") : (language === 'ar' ? 'تمت الإضافة إلى المشاهدة الحالية' : "Added to Currently Watching") });
   };
 
   if (isAnimeLoading) {
@@ -154,7 +139,6 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Header / Backdrop */}
       <div className="relative h-[60vh] w-full">
         <Image
           src={bannerUrl.trim()}
@@ -221,6 +205,17 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                     {language === 'ar' ? 'قريباً' : 'Coming Soon'}
                   </Button>
                 )}
+                
+                <Button 
+                  size="lg" 
+                  variant={isWatching ? "default" : "secondary"} 
+                  className="h-14 gap-2 rounded-xl px-6 text-lg font-bold"
+                  onClick={toggleWatching}
+                >
+                  <Eye className={`h-6 w-6 ${isWatching ? 'text-primary-foreground fill-primary-foreground' : ''}`} />
+                  {t('watching')}
+                </Button>
+
                 <Button 
                   size="lg" 
                   variant={isFavorite ? "default" : "secondary"} 
@@ -230,6 +225,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                   <Heart className={`h-6 w-6 ${isFavorite ? 'fill-destructive text-destructive' : ''}`} />
                   {t('favorite')}
                 </Button>
+                
                 <Button 
                   size="lg" 
                   variant={isInWatchlist ? "default" : "secondary"} 
@@ -239,6 +235,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                   <Bookmark className={`h-6 w-6 ${isInWatchlist ? 'fill-accent text-accent' : ''}`} />
                   {t('watchLater')}
                 </Button>
+
                 <Button 
                   size="lg" 
                   variant={isCompleted ? "default" : "secondary"} 

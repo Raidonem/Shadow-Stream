@@ -47,6 +47,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
             languagePreference: localStorage.getItem('lang') || 'en',
             themePreference: localStorage.getItem('theme') || 'dark',
             watchlistAnimeIds: [],
+            currentlyWatchingAnimeIds: [],
             favoriteAnimeIds: [],
             completedAnimeIds: [],
             favoriteEpisodeIds: [],
@@ -58,14 +59,16 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('pendingUsername');
         } else {
           const data = userSnap.data();
-          // Migration for older users who might be missing the new arrays
-          if (data.favoriteAnimeIds === undefined || data.favoriteEpisodeIds === undefined || data.completedAnimeIds === undefined || data.isPremium === undefined) {
-            await setDoc(userRef, {
-              favoriteAnimeIds: data.favoriteAnimeIds || [],
-              favoriteEpisodeIds: data.favoriteEpisodeIds || [],
-              completedAnimeIds: data.completedAnimeIds || [],
-              isPremium: data.isPremium || false,
-            }, { merge: true });
+          // Migration for older users who might be missing the new fields
+          const updates: any = {};
+          if (data.favoriteAnimeIds === undefined) updates.favoriteAnimeIds = [];
+          if (data.favoriteEpisodeIds === undefined) updates.favoriteEpisodeIds = [];
+          if (data.completedAnimeIds === undefined) updates.completedAnimeIds = [];
+          if (data.currentlyWatchingAnimeIds === undefined) updates.currentlyWatchingAnimeIds = [];
+          if (data.isPremium === undefined) updates.isPremium = false;
+          
+          if (Object.keys(updates).length > 0) {
+            await setDoc(userRef, updates, { merge: true });
           }
         }
       }

@@ -44,6 +44,17 @@ export interface Episode {
   updatedAt: any;
 }
 
+export interface GlobalNotification {
+  id: string;
+  type: 'new_episode';
+  animeId: string;
+  episodeId: string;
+  animeTitleEn?: string;
+  animeTitleAr?: string;
+  episodeNumber?: number;
+  createdAt: any;
+}
+
 export interface Comment {
   id: string;
   episodeId: string;

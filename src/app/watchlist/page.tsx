@@ -6,7 +6,7 @@ import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, query, where, documentId, orderBy } from 'firebase/firestore';
 import { useLanguage } from '../../components/providers/LanguageContext';
-import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -23,6 +23,11 @@ export default function WatchlistPage() {
   }, [user, db]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+
+  const watchingQuery = useMemoFirebase(() => {
+    if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
+    return query(collection(db, 'anime'), where(documentId(), 'in', profile.currentlyWatchingAnimeIds.slice(0, 10)));
+  }, [db, profile?.currentlyWatchingAnimeIds]);
 
   const watchlistQuery = useMemoFirebase(() => {
     if (!db || !profile?.watchlistAnimeIds?.length) return null;
@@ -44,6 +49,7 @@ export default function WatchlistPage() {
     return query(collection(db, 'users', user.uid, 'history'), orderBy('watchedAt', 'desc'));
   }, [db, user]);
 
+  const { data: watchingAnime, isLoading: isWatchingLoading } = useCollection(watchingQuery);
   const { data: watchlistAnime, isLoading: isWatchlistLoading } = useCollection(watchlistQuery);
   const { data: favoritesAnime, isLoading: isFavoritesLoading } = useCollection(favoritesQuery);
   const { data: completedAnime, isLoading: isCompletedLoading } = useCollection(completedQuery);
@@ -79,8 +85,12 @@ export default function WatchlistPage() {
           <p className="text-muted-foreground">{language === 'ar' ? 'أفلامك ومسلسلاتك المفضلة والمحفوظة' : 'Your favorited and saved anime collection'}</p>
         </div>
 
-        <Tabs defaultValue="watchlist" className="w-full">
-          <TabsList className="mb-8 flex w-full max-w-xl overflow-x-auto rounded-xl bg-secondary p-1">
+        <Tabs defaultValue="watching" className="w-full">
+          <TabsList className="mb-8 flex w-full max-w-2xl overflow-x-auto rounded-xl bg-secondary p-1">
+            <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
+              <Eye className="h-4 w-4" />
+              {t('currentlyWatching')}
+            </TabsTrigger>
             <TabsTrigger value="watchlist" className="rounded-lg gap-2 flex-1">
               <Bookmark className="h-4 w-4" />
               {t('watchLater')}
@@ -98,6 +108,23 @@ export default function WatchlistPage() {
               {t('history')}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="watching">
+            {isWatchingLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : watchingAnime && watchingAnime.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {watchingAnime.map(anime => (
+                  <AnimeCard key={anime.id} anime={anime} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
+                <Eye className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">{language === 'ar' ? 'لا توجد عناصر تشاهدها حالياً' : 'No items in your currently watching list'}</p>
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="watchlist">
             {isWatchlistLoading ? (

@@ -47,6 +47,13 @@
             "type": "string"
           }
         },
+        "currentlyWatchingAnimeIds": {
+          "type": "array",
+          "description": "An array of unique identifiers for Anime entities that the user is currently watching.",
+          "items": {
+            "type": "string"
+          }
+        },
         "favoriteAnimeIds": {
           "type": "array",
           "description": "An array of unique identifiers for Anime entities that the user has favorited.",
@@ -88,6 +95,7 @@
         "languagePreference",
         "themePreference",
         "watchlistAnimeIds",
+        "currentlyWatchingAnimeIds",
         "favoriteAnimeIds",
         "completedAnimeIds",
         "favoriteEpisodeIds",
@@ -274,6 +282,21 @@
         "updatedAt"
       ]
     },
+    "GlobalNotification": {
+      "title": "GlobalNotification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["new_episode"] },
+        "animeId": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "animeTitleEn": { "type": "string" },
+        "animeTitleAr": { "type": "string" },
+        "episodeNumber": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "animeId", "episodeId", "createdAt"]
+    },
     "WatchHistory": {
       "title": "WatchHistory",
       "type": "object",
@@ -368,6 +391,10 @@
     "/anime/{animeId}/episodes/{episodeId}/comments/{commentId}": {
       "schema": "Comment",
       "description": "Stores user comments for specific anime episodes."
+    },
+    "/global_notifications/{notificationId}": {
+      "schema": "GlobalNotification",
+      "description": "Stores system-wide notifications like new episode releases."
     }
   }
 }

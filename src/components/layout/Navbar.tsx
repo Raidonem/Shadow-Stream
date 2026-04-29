@@ -17,7 +17,8 @@ import {
   LayoutDashboard,
   LogOut,
   Settings,
-  LogIn
+  LogIn,
+  Library
 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -33,6 +34,7 @@ import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 function SearchInput({ t, searchQuery, setSearchQuery, handleSearch }: any) {
   const searchParams = useSearchParams();
@@ -136,6 +138,8 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
+          {user && <NotificationBell />}
+
           <Button variant="ghost" size="icon" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} title={t('language')}>
             <Languages className="h-5 w-5" />
           </Button>
@@ -173,7 +177,7 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/watchlist" className="cursor-pointer">
-                      <Heart className="mr-2 h-4 w-4" />
+                      <Library className="mr-2 h-4 w-4" />
                       <span>{t('watchlist')}</span>
                     </Link>
                   </DropdownMenuItem>

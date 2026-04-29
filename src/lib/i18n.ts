@@ -35,6 +35,10 @@ export const translations = {
     markAsCompleted: 'Mark as Finished',
     myFavorites: 'My Favorites',
     history: 'History',
+    currentlyWatching: 'Currently Watching',
+    watching: 'Watching',
+    notifications: 'Notifications',
+    newEpisodeOut: 'New episode released!',
     animeTypes: {
       'tv': 'TV Series',
       'movie': 'Movie',
@@ -123,6 +127,10 @@ export const translations = {
     markAsCompleted: 'تمت المشاهدة',
     myFavorites: 'مفضلاتي',
     history: 'السجل',
+    currentlyWatching: 'أشاهده حالياً',
+    watching: 'مشاهدة حالية',
+    notifications: 'التنبيهات',
+    newEpisodeOut: 'صدرت حلقة جديدة!',
     animeTypes: {
       'tv': 'مسلسل',
       'movie': 'فلم',
