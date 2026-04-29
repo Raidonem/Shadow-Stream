@@ -64,9 +64,10 @@ service cloud.firestore {
 
         match /comments/{commentId} {
           allow get, list: if true;
-          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.episodeId == episodeId;
-          allow update: if isExistingOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
-          allow delete: if isExistingOwner(resource.data.userId);
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.episodeId == episodeId && request.resource.data.text.size() <= 100;
+          allow update: if (isExistingOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId && request.resource.data.text.size() <= 100) || 
+                         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'updatedAt']));
+          allow delete: if isExistingOwner(resource.data.userId) || isAdmin();
         }
       }
     }

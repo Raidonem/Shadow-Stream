@@ -61,6 +61,9 @@ export interface Comment {
   userId: string;
   userName: string;
   text: string;
+  parentId?: string;
+  upvotes?: number;
+  downvotes?: number;
   isAdmin?: boolean;
   isPremium?: boolean;
   createdAt: any;

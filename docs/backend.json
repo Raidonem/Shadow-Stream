@@ -347,7 +347,10 @@
         "userId": { "type": "string" },
         "userName": { "type": "string" },
         "episodeId": { "type": "string" },
-        "text": { "type": "string" },
+        "text": { "type": "string", "maxLength": 100 },
+        "parentId": { "type": "string" },
+        "upvotes": { "type": "number" },
+        "downvotes": { "type": "number" },
         "isPremium": { "type": "boolean" },
         "isAdmin": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" },
@@ -390,7 +393,7 @@
     },
     "/anime/{animeId}/episodes/{episodeId}/comments/{commentId}": {
       "schema": "Comment",
-      "description": "Stores user comments for specific anime episodes."
+      "description": "Stores user comments and replies for specific anime episodes."
     },
     "/global_notifications/{notificationId}": {
       "schema": "GlobalNotification",
