@@ -40,7 +40,7 @@ import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { useTheme } from '../../components/providers/ThemeContext';
 import { Badge } from '../../components/ui/badge';
-import { PayPalButtons } from "@paypal/react-paypal-js";
+import { PayPalHostedButtons } from "@paypal/react-paypal-js";
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -352,55 +352,17 @@ export default function ProfilePage() {
                           
                           <div className="space-y-4">
                             <p className="text-xs text-muted-foreground italic">Unlock all features instantly with PayPal:</p>
-                            <PayPalButtons 
-                              style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
-                              createOrder={(data, actions) => {
-                                return actions.order.create({
-                                  purchase_units: [{
-                                    amount: { 
-                                      value: "0.49",
-                                      currency_code: "USD"
-                                    },
-                                    description: "ShadowStream Premium - 1 Month"
-                                  }]
-                                });
-                              }}
+                            <PayPalHostedButtons 
+                              hostedButtonId="KAANDYZZQJRR6"
                               onApprove={async (data, actions) => {
-                                if (!actions.order) return;
-                                try {
-                                  const details = await actions.order.capture();
-                                  
-                                  // Verify that the transaction was actually completed
-                                  if (details.status === 'COMPLETED') {
-                                    handleActivatePremium();
-                                  } else {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "Payment Not Completed",
-                                      description: `The payment status is ${details.status}. Please check your account.`,
-                                    });
-                                  }
-                                } catch (err: any) {
-                                  console.error("PayPal Capture Error:", err);
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Transaction Failed",
-                                    description: err.message || "An error occurred while processing your payment.",
-                                  });
-                                }
+                                handleActivatePremium();
                               }}
                               onError={(err) => {
-                                console.error("PayPal Global Error:", err);
+                                console.error("PayPal Hosted Buttons Error:", err);
                                 toast({
                                   variant: "destructive",
-                                  title: "PayPal Error",
-                                  description: "PayPal reported an issue. Your transaction may have been denied by the provider."
-                                });
-                              }}
-                              onCancel={() => {
-                                toast({
-                                  title: "Payment Cancelled",
-                                  description: "You closed the PayPal payment window.",
+                                  title: "Payment Error",
+                                  description: "Something went wrong with the payment process."
                                 });
                               }}
                             />

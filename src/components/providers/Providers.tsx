@@ -84,9 +84,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <ThemeProvider>
           <LanguageProvider>
             <PayPalScriptProvider options={{ 
-              "client-id": "AY1-CQWyy-g4R8IHJx8_QJnGRiH2s9m713ZoRZg5vQkWXdX8NW7njEDqzL-r_E4BnIiGJUZ6APzvBW6W",
+              "client-id": "BAA09MsVQPUxScYsgL80ucjImGBIAeG-PrBxwQd2rchWfDGod7WjTvpUTrjHUXnvFGuJ3UEdIFtioWK42c",
               currency: "USD",
-              intent: "capture"
+              intent: "capture",
+              components: "hosted-buttons",
+              "disable-funding": "venmo"
             }}>
               {children}
               <Toaster />
