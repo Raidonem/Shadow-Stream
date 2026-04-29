@@ -39,7 +39,7 @@ import { translations } from '../../../lib/i18n';
 import { EpisodeServer, Anime, Comment } from '../../../lib/types';
 import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
-import Image from 'image';
+import Image from 'next/image';
 
 const COMMENT_LIMIT = 100;
 
