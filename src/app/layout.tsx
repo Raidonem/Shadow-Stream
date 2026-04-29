@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Providers } from '../components/providers/Providers';
@@ -30,22 +31,27 @@ export default function RootLayout({
       <body className="font-body antialiased selection:bg-accent selection:text-accent-foreground">
         <Providers>
           <div className="relative min-h-screen">
-            <div className="hidden 2xl:block fixed left-4 top-24 bottom-24 w-[160px] z-40">
+            {/* Left Skyscraper Ad */}
+            <div className="hidden 2xl:block fixed left-4 top-24 bottom-24 w-[160px] min-h-[600px] z-40">
               <AdBanner 
                 dataAdSlot="SIDE_LEFT_SLOT" 
                 dataAdFormat="vertical" 
                 className="h-full my-0" 
+                hideLabel
               />
             </div>
             
-            <div className="hidden 2xl:block fixed right-4 top-24 bottom-24 w-[160px] z-40">
+            {/* Right Skyscraper Ad */}
+            <div className="hidden 2xl:block fixed right-4 top-24 bottom-24 w-[160px] min-h-[600px] z-40">
               <AdBanner 
                 dataAdSlot="SIDE_RIGHT_SLOT" 
                 dataAdFormat="vertical" 
                 className="h-full my-0" 
+                hideLabel
               />
             </div>
 
+            {/* Main Content Area */}
             <div className="2xl:mx-[200px]">
               {children}
             </div>

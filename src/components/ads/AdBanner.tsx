@@ -24,7 +24,6 @@ export function AdBanner({
   hideLabel = false
 }: AdBannerProps) {
   const adRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const hasPushed = useRef(false);
   
   const { user } = useUser();
@@ -48,40 +47,24 @@ export function AdBanner({
   const shouldHideAds = isPremium || isAdmin;
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    if (shouldHideAds || hasPushed.current) return;
 
-  useEffect(() => {
-    if (!isMounted || !adRef.current || hasPushed.current || shouldHideAds) return;
-
-    const observer = new IntersectionObserver((entries) => {
-      const [entry] = entries;
-      
-      if (entry.isIntersecting && adRef.current && adRef.current.clientWidth > 0 && !hasPushed.current) {
-        const timer = setTimeout(() => {
-          try {
-            // @ts-ignore
-            if (typeof window !== 'undefined' && window.adsbygoogle && adRef.current && adRef.current.clientWidth > 0) {
-              // @ts-ignore
-              (window.adsbygoogle = window.adsbygoogle || []).push({});
-              hasPushed.current = true;
-              observer.disconnect();
-            }
-          } catch (err) {
-            console.warn("AdSense push error:", err);
-          }
-        }, 200);
-        return () => clearTimeout(timer);
+    // Small delay to ensure the DOM is ready for AdSense
+    const timer = setTimeout(() => {
+      try {
+        // @ts-ignore
+        if (typeof window !== 'undefined' && window.adsbygoogle) {
+          // @ts-ignore
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          hasPushed.current = true;
+        }
+      } catch (err) {
+        console.warn("AdSense unit initialization failed:", err);
       }
-    }, { 
-      threshold: 0.1,
-      rootMargin: '100px'
-    });
+    }, 500);
 
-    observer.observe(adRef.current);
-
-    return () => observer.disconnect();
-  }, [isMounted, dataAdSlot, shouldHideAds]);
+    return () => clearTimeout(timer);
+  }, [shouldHideAds, dataAdSlot]);
 
   if (shouldHideAds) {
     return null;
@@ -94,37 +77,33 @@ export function AdBanner({
       ref={adRef}
       className={cn(
         "overflow-hidden rounded-2xl bg-secondary/5 p-4 text-center transition-all min-h-[100px] w-full",
-        dataAdFormat === 'vertical' ? "h-full flex flex-col items-center min-w-[160px]" : "my-6",
+        dataAdFormat === 'vertical' ? "h-full min-h-[600px] flex flex-col items-center min-w-[160px]" : "my-6",
         className
       )}
     >
       {!hideLabel && (
         <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30">
-          {isPlaceholder ? "Ad Placeholder" : "Advertisement"}
+          {isPlaceholder ? "Ad Unit Detected" : "Advertisement"}
         </div>
       )}
       <div className={cn(
-        "min-h-[100px] w-full",
-        dataAdFormat === 'vertical' ? "flex-1" : "",
+        "min-h-[100px] w-full h-full",
+        dataAdFormat === 'vertical' ? "flex-1 min-h-[600px]" : "",
         isPlaceholder ? "border border-dashed border-primary/20 flex items-center justify-center italic text-xs text-muted-foreground" : ""
       )}>
-        {isMounted ? (
-          <ins
-            className="adsbygoogle"
-            style={{ 
-              display: 'block', 
-              height: dataAdFormat === 'vertical' ? '100%' : 'auto',
-              minWidth: '250px',
-              minHeight: '100px'
-            }}
-            data-ad-client={ADSENSE_PUBLISHER_ID}
-            data-ad-slot={dataAdSlot}
-            data-ad-format={dataAdFormat}
-            data-full-width-responsive={fullWidthResponsive.toString()}
-          />
-        ) : (
-          <div className="min-h-[100px] w-full animate-pulse bg-secondary/10 rounded-xl" />
-        )}
+        <ins
+          className="adsbygoogle"
+          style={{ 
+            display: 'block', 
+            height: dataAdFormat === 'vertical' ? '100%' : 'auto',
+            minWidth: dataAdFormat === 'vertical' ? '160px' : '250px',
+            minHeight: dataAdFormat === 'vertical' ? '600px' : '100px'
+          }}
+          data-ad-client={ADSENSE_PUBLISHER_ID}
+          data-ad-slot={dataAdSlot}
+          data-ad-format={dataAdFormat}
+          data-full-width-responsive={fullWidthResponsive.toString()}
+        />
       </div>
     </div>
   );
