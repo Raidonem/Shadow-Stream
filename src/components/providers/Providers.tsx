@@ -87,7 +87,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               "client-id": "AY1-CQWyy-g4R8IHJx8_QJnGRiH2s9m713ZoRZg5vQkWXdX8NW7njEDqzL-r_E4BnIiGJUZ6APzvBW6W",
               currency: "USD",
               intent: "capture",
-              components: "hosted-buttons",
+              components: "buttons",
               "disable-funding": "venmo"
             }}>
               {children}

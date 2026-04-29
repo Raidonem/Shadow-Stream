@@ -33,14 +33,12 @@ import {
   Sparkles,
   Zap,
   Loader2,
-  Lock,
-  AlertCircle
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { useTheme } from '../../components/providers/ThemeContext';
 import { Badge } from '../../components/ui/badge';
-import { PayPalHostedButtons } from "@paypal/react-paypal-js";
+import { PayPalButtons } from "@paypal/react-paypal-js";
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -352,13 +350,30 @@ export default function ProfilePage() {
                           
                           <div className="space-y-4">
                             <p className="text-xs text-muted-foreground italic">Unlock all features instantly with PayPal:</p>
-                            <PayPalHostedButtons 
-                              hostedButtonId="KAANDYZZQJRR6"
+                            <PayPalButtons 
+                              style={{ layout: "vertical" }}
+                              createOrder={(data, actions) => {
+                                return actions.order.create({
+                                  intent: "CAPTURE",
+                                  purchase_units: [
+                                    {
+                                      amount: {
+                                        currency_code: "USD",
+                                        value: "0.49",
+                                      },
+                                      description: "ShadowStream Premium Subscription",
+                                    },
+                                  ],
+                                });
+                              }}
                               onApprove={async (data, actions) => {
-                                handleActivatePremium();
+                                if (actions.order) {
+                                  await actions.order.capture();
+                                  handleActivatePremium();
+                                }
                               }}
                               onError={(err) => {
-                                console.error("PayPal Hosted Buttons Error:", err);
+                                console.error("PayPal Error:", err);
                                 toast({
                                   variant: "destructive",
                                   title: "Payment Error",
