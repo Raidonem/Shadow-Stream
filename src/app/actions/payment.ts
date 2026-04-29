@@ -11,6 +11,6 @@ const PAYPAL_SECRET = "EET2ECRQ4fypal-kTOjStNtixea4Eqzf-Y9huxDT2RRRaD64y5F75tJEb
 export async function verifyPaypalTransaction(orderId: string) {
   // In a production app, you would use the PAYPAL_SECRET here to 
   // verify the payment via the PayPal API before updating the user profile.
-  console.log(`Simulating server-side verification for Order: ${orderId}`);
+  console.log(`Simulating server-side verification for Order: ${orderId} using secret ${PAYPAL_SECRET.substring(0, 5)}...`);
   return { success: true };
 }
