@@ -84,7 +84,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <ThemeProvider>
           <LanguageProvider>
             <PayPalScriptProvider options={{ 
-              "client-id": "BAA09MsVQPuxScYsgL80ucjImGBIAeG-PrBxwQd2rchWFDGod7WjTvpUTrjHUXnvFGuij3UEdIFtioWK42c",
+              "client-id": "AY1-CQWyy-g4R8IHJx8_QJnGRiH2s9m713ZoRZg5vQkWXdX8NW7njEDqzL-r_E4BnIiGJUZ6APzvBW6W",
               currency: "USD",
               components: "hosted-buttons",
               "disable-funding": "venmo"
