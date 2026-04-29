@@ -357,6 +357,18 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "episodeId", "text", "createdAt", "updatedAt"]
+    },
+    "CommentVote": {
+      "title": "CommentVote",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "commentId": { "type": "string" },
+        "type": { "type": "string", "enum": ["up", "down"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "commentId", "type", "createdAt"]
     }
   },
   "auth": {
@@ -394,6 +406,10 @@
     "/anime/{animeId}/episodes/{episodeId}/comments/{commentId}": {
       "schema": "Comment",
       "description": "Stores user comments and replies for specific anime episodes."
+    },
+    "/comment_votes/{voteId}": {
+      "schema": "CommentVote",
+      "description": "Tracks user votes on comments to prevent duplicates."
     },
     "/global_notifications/{notificationId}": {
       "schema": "GlobalNotification",

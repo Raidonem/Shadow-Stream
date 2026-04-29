@@ -31,15 +31,15 @@ import {
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment, deleteDoc } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
-import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
+import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
 import { EpisodeServer, Anime, Comment } from '../../../lib/types';
 import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
-import Image from 'next/image';
+import Image from 'image';
 
 const COMMENT_LIMIT = 100;
 
@@ -52,7 +52,8 @@ function CommentItem({
   onReply, 
   replies, 
   language,
-  t 
+  t,
+  userVote
 }: { 
   comment: Comment; 
   user: any; 
@@ -63,6 +64,7 @@ function CommentItem({
   replies?: Comment[];
   language: string;
   t: (key: any) => string;
+  userVote?: 'up' | 'down';
 }) {
   return (
     <div className="space-y-4">
@@ -98,20 +100,26 @@ function CommentItem({
             <div className="flex items-center gap-1 bg-secondary/30 rounded-full px-2 py-0.5">
               <button 
                 onClick={() => onVote(comment.id, 'up')}
-                className="hover:text-accent transition-colors p-1"
+                className={cn(
+                  "hover:text-accent transition-colors p-1",
+                  userVote === 'up' && "text-accent"
+                )}
                 disabled={!user}
               >
-                <ThumbsUp className="h-4 w-4" />
+                <ThumbsUp className={cn("h-4 w-4", userVote === 'up' && "fill-current")} />
               </button>
               <span className="text-xs font-bold min-w-[12px] text-center">
                 {(comment.upvotes || 0) - (comment.downvotes || 0)}
               </span>
               <button 
                 onClick={() => onVote(comment.id, 'down')}
-                className="hover:text-destructive transition-colors p-1"
+                className={cn(
+                  "hover:text-destructive transition-colors p-1",
+                  userVote === 'down' && "text-destructive"
+                )}
                 disabled={!user}
               >
-                <ThumbsDown className="h-4 w-4" />
+                <ThumbsDown className={cn("h-4 w-4", userVote === 'down' && "fill-current")} />
               </button>
             </div>
             
@@ -204,12 +212,18 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return query(collection(db, 'anime'));
   }, [db]);
 
+  const userVotesQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'comment_votes'), where('userId', '==', user.uid));
+  }, [db, user]);
+
   const { data: episode, isLoading: isEpLoading } = useDoc(episodeRef);
   const { data: anime, isLoading: isAnimeLoading } = useDoc(animeRef);
   const { data: episodes } = useCollection(allEpisodesQuery);
   const { data: comments } = useCollection<Comment>(commentsQuery);
   const { data: existingRating } = useDoc(episodeRatingRef);
   const { data: allAnime } = useCollection<Anime>(allAnimeQuery);
+  const { data: userVotes } = useCollection(userVotesQuery);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -345,12 +359,44 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   };
 
   const handleVote = (commentId: string, direction: 'up' | 'down') => {
-    if (!user || !commentsRef) return;
-    const commentDoc = doc(commentsRef, commentId);
-    updateDocumentNonBlocking(commentDoc, {
-      [direction === 'up' ? 'upvotes' : 'downvotes']: increment(1),
-      updatedAt: serverTimestamp()
-    });
+    if (!user || !db || !animeId || !episodeId) return;
+    
+    const voteId = `${user.uid}_${commentId}`;
+    const voteRef = doc(db, 'comment_votes', voteId);
+    const existingVote = userVotes?.find(v => v.commentId === commentId);
+    const commentDoc = doc(db, 'anime', animeId, 'episodes', episodeId, 'comments', commentId);
+
+    if (existingVote) {
+      if (existingVote.type === direction) {
+        // Remove vote if same button clicked
+        deleteDocumentNonBlocking(voteRef);
+        updateDocumentNonBlocking(commentDoc, {
+          [direction === 'up' ? 'upvotes' : 'downvotes']: increment(-1),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Switch vote
+        updateDocumentNonBlocking(voteRef, { type: direction, updatedAt: serverTimestamp() });
+        updateDocumentNonBlocking(commentDoc, {
+          [existingVote.type === 'up' ? 'upvotes' : 'downvotes']: increment(-1),
+          [direction === 'up' ? 'upvotes' : 'downvotes']: increment(1),
+          updatedAt: serverTimestamp()
+        });
+      }
+    } else {
+      // New vote
+      setDocumentNonBlocking(voteRef, {
+        id: voteId,
+        userId: user.uid,
+        commentId,
+        type: direction,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+      updateDocumentNonBlocking(commentDoc, {
+        [direction === 'up' ? 'upvotes' : 'downvotes']: increment(1),
+        updatedAt: serverTimestamp()
+      });
+    }
   };
 
   const handleRate = (rating: number) => {
@@ -491,6 +537,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       replies={getReplies(c.id)}
                       language={language}
                       t={t}
+                      userVote={userVotes?.find(v => v.commentId === c.id)?.type}
                     />
                     
                     {activeReplyId === c.id && (
