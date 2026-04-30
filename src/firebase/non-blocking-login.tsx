@@ -5,6 +5,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
+  confirmPasswordReset,
   UserCredential,
 } from 'firebase/auth';
 
@@ -28,4 +30,18 @@ export async function sendVerification(authInstance: Auth): Promise<void> {
   if (authInstance.currentUser) {
     await sendEmailVerification(authInstance.currentUser);
   }
+}
+
+/** Sends a password reset email. */
+export function initiatePasswordReset(authInstance: Auth, email: string): Promise<void> {
+  const actionCodeSettings = {
+    url: window.location.origin + '/forgot-password',
+    handleCodeInApp: true,
+  };
+  return sendPasswordResetEmail(authInstance, email, actionCodeSettings);
+}
+
+/** Completes the password reset process. */
+export function completePasswordReset(authInstance: Auth, oobCode: string, newPassword: string): Promise<void> {
+  return confirmPasswordReset(authInstance, oobCode, newPassword);
 }

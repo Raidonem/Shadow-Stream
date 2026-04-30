@@ -14,6 +14,8 @@ import { initiateEmailSignIn, initiateEmailSignUp, sendVerification } from '../.
 import { LogIn, UserPlus } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useLanguage } from '../../components/providers/LanguageContext';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export default function LoginPage() {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -117,8 +120,8 @@ export default function LoginPage() {
                 Enter your credentials to access your ShadowStream account
               </CardDescription>
               <TabsList className="mt-6 grid w-full grid-cols-2 rounded-xl bg-secondary p-1">
-                <TabsTrigger value="login" className="rounded-lg">Login</TabsTrigger>
-                <TabsTrigger value="register" className="rounded-lg">Register</TabsTrigger>
+                <TabsTrigger value="login" className="rounded-lg">{t('login')}</TabsTrigger>
+                <TabsTrigger value="register" className="rounded-lg">{t('register')}</TabsTrigger>
               </TabsList>
             </CardHeader>
             
@@ -138,7 +141,15 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Password</Label>
+                      <Link 
+                        href="/forgot-password" 
+                        className="text-xs text-accent hover:underline font-medium"
+                      >
+                        {t('forgotPassword')}
+                      </Link>
+                    </div>
                     <Input 
                       id="login-password" 
                       type="password" 
@@ -150,7 +161,7 @@ export default function LoginPage() {
                   </div>
                   <Button type="submit" className="w-full gap-2 rounded-xl bg-accent font-bold text-accent-foreground hover:bg-accent/90" disabled={isSubmitting}>
                     <LogIn className="h-4 w-4" />
-                    {isSubmitting ? "Signing In..." : "Sign In"}
+                    {isSubmitting ? "Signing In..." : t('login')}
                   </Button>
                 </form>
               </TabsContent>
@@ -204,7 +215,7 @@ export default function LoginPage() {
                   </div>
                   <Button type="submit" className="w-full gap-2 rounded-xl bg-primary font-bold text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
                     <UserPlus className="h-4 w-4" />
-                    {isSubmitting ? "Creating Account..." : "Create Account"}
+                    {isSubmitting ? "Creating Account..." : t('register')}
                   </Button>
                 </form>
               </TabsContent>
