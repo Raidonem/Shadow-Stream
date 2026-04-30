@@ -4,10 +4,10 @@
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId, orderBy, serverTimestamp } from 'firebase/firestore';
-import { deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { doc, collection, query, where, documentId, orderBy, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { useLanguage } from '../../components/providers/LanguageContext';
-import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users, UserPlus, UserMinus, Check, X, Clock } from 'lucide-react';
+import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users, UserPlus, UserMinus, Check, X, Clock, ShieldAlert } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,6 +17,17 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../../components/ui/alert-dialog";
 
 export default function WatchlistPage() {
   const { user, isUserLoading } = useUser();
@@ -125,6 +136,32 @@ export default function WatchlistPage() {
     const requestId = `${senderId}_${user.uid}`;
     deleteDocumentNonBlocking(doc(db, 'friend_requests', requestId));
     toast({ title: "Friend Request Declined." });
+  };
+
+  const handleUnfriend = (friendId: string) => {
+    if (!db || !user) return;
+    const friendshipId = user.uid < friendId ? `${user.uid}_${friendId}` : `${friendId}_${user.uid}`;
+    deleteDocumentNonBlocking(doc(db, 'friendships', friendshipId));
+    toast({ title: "Unfriended user." });
+  };
+
+  const handleBlock = (targetId: string) => {
+    if (!db || !user || !profileRef) return;
+    
+    // 1. Unfriend if they are friends
+    const friendshipId = user.uid < targetId ? `${user.uid}_${targetId}` : `${targetId}_${user.uid}`;
+    deleteDocumentNonBlocking(doc(db, 'friendships', friendshipId));
+
+    // 2. Delete any requests
+    deleteDocumentNonBlocking(doc(db, 'friend_requests', `${user.uid}_${targetId}`));
+    deleteDocumentNonBlocking(doc(db, 'friend_requests', `${targetId}_${user.uid}`));
+
+    // 3. Add to blocked list
+    updateDocumentNonBlocking(profileRef, {
+      blockedUserIds: arrayUnion(targetId)
+    });
+
+    toast({ title: "User Blocked", description: "They can no longer send you requests." });
   };
 
   if (isUserLoading || isProfileLoading) {
@@ -343,20 +380,76 @@ export default function WatchlistPage() {
               ) : friendProfiles && friendProfiles.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {friendProfiles.map(friend => (
-                    <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <UIAvatar className="h-12 w-12 ring-2 ring-primary/20">
-                          <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                            {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
-                          </AvatarFallback>
-                        </UIAvatar>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold truncate">{friend.displayName || friend.username}</h3>
-                          <p className="text-xs text-accent">@{friend.username}</p>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
-                            <Users className="h-3 w-3" /> Friend
-                            {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                    <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4 mb-4">
+                          <UIAvatar className="h-12 w-12 ring-2 ring-primary/20 cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
+                            <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                              {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </UIAvatar>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold truncate cursor-pointer hover:text-accent" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
+                              {friend.displayName || friend.username}
+                            </h3>
+                            <p className="text-xs text-accent">@{friend.username}</p>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                              <Users className="h-3 w-3" /> Friend
+                              {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                            </div>
                           </div>
+                        </div>
+                        <div className="flex gap-2 w-full">
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="flex-1 rounded-lg text-xs"
+                            onClick={() => router.push(`/profile?uid=${friend.id}`)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" /> View
+                          </Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="rounded-lg text-xs text-destructive hover:bg-destructive/10">
+                                <UserMinus className="h-3 w-3 mr-1" /> Remove
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Unfriend User?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to remove {friend.displayName || friend.username} from your friends? They will lose access to your private library.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleUnfriend(friend.id)}>Unfriend</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" title="Block">
+                                <ShieldAlert className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Block User?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Block {friend.displayName || friend.username}? This will unfriend them and prevent them from sending you future friend requests.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleBlock(friend.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Block
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </CardContent>
                     </Card>

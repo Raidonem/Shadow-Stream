@@ -16,7 +16,7 @@ import {
   SelectValue 
 } from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { 
   User as UserIcon, 
@@ -44,7 +44,8 @@ import {
   UserMinus,
   Users,
   Clock,
-  Check
+  Check,
+  ShieldAlert
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -54,6 +55,17 @@ import { usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import { useSearchParams } from 'next/navigation';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../../components/ui/alert-dialog";
 
 function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const [{ isResolved }] = usePayPalScriptReducer();
@@ -122,7 +134,16 @@ function ProfileContent() {
     return doc(db, 'users', targetUid);
   }, [targetUid, db]);
 
+  const authProfileRef = useMemoFirebase(() => {
+    if (!authUser || !db) return null;
+    return doc(db, 'users', authUser.uid);
+  }, [authUser, db]);
+
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+  const { data: authProfile } = useDoc(authProfileRef);
+
+  const isBlocked = authProfile?.blockedUserIds?.includes(targetUid || '');
+  const amIBlocked = profile?.blockedUserIds?.includes(authUser?.uid || '');
 
   const friendshipId = useMemo(() => {
     if (!authUser || !targetUid || isOwnProfile) return null;
@@ -259,7 +280,10 @@ function ProfileContent() {
   };
 
   const handleSendRequest = () => {
-    if (!requestRef || !authUser || !targetUid || !db) return;
+    if (!requestRef || !authUser || !targetUid || !db || amIBlocked) {
+      if (amIBlocked) toast({ title: "Error", description: "You cannot interact with this user.", variant: "destructive" });
+      return;
+    }
     setDocumentNonBlocking(requestRef, {
       id: requestId,
       senderId: authUser.uid,
@@ -272,10 +296,10 @@ function ProfileContent() {
     addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
       type: 'friend_request',
       fromId: authUser.uid,
-      fromName: profile?.displayName || profile?.username,
+      fromName: authProfile?.displayName || authProfile?.username,
       link: `/watchlist?tab=friends`,
-      messageEn: `${profile?.displayName || profile?.username} sent you a friend request.`,
-      messageAr: `أرسل لك ${profile?.displayName || profile?.username} طلب صداقة.`,
+      messageEn: `${authProfile?.displayName || authProfile?.username} sent you a friend request.`,
+      messageAr: `أرسل لك ${authProfile?.displayName || authProfile?.username} طلب صداقة.`,
       read: false,
       createdAt: serverTimestamp()
     });
@@ -298,10 +322,10 @@ function ProfileContent() {
     addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
       type: 'friend_accepted',
       fromId: authUser.uid,
-      fromName: profile?.displayName || profile?.username,
+      fromName: authProfile?.displayName || authProfile?.username,
       link: `/profile?uid=${authUser.uid}`,
-      messageEn: `${profile?.displayName || profile?.username} accepted your friend request.`,
-      messageAr: `قبول ${profile?.displayName || profile?.username} طلب الصداقة الخاص بك.`,
+      messageEn: `${authProfile?.displayName || authProfile?.username} accepted your friend request.`,
+      messageAr: `قبول ${authProfile?.displayName || authProfile?.username} طلب الصداقة الخاص بك.`,
       read: false,
       createdAt: serverTimestamp()
     });
@@ -319,6 +343,25 @@ function ProfileContent() {
     if (!friendshipRef) return;
     deleteDocumentNonBlocking(friendshipRef);
     toast({ title: "Removed Friend" });
+  };
+
+  const handleBlock = () => {
+    if (!authProfileRef || !targetUid) return;
+    handleRemoveFriend();
+    deleteDocumentNonBlocking(requestRef);
+    deleteDocumentNonBlocking(reverseRequestRef);
+    updateDocumentNonBlocking(authProfileRef, {
+      blockedUserIds: arrayUnion(targetUid)
+    });
+    toast({ title: "User Blocked" });
+  };
+
+  const handleUnblock = () => {
+    if (!authProfileRef || !targetUid) return;
+    updateDocumentNonBlocking(authProfileRef, {
+      blockedUserIds: arrayRemove(targetUid)
+    });
+    toast({ title: "User Unblocked" });
   };
 
   const handleActivatePremium = () => {
@@ -348,6 +391,19 @@ function ProfileContent() {
     );
   }
 
+  if (amIBlocked) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
+        <ShieldAlert className="h-12 w-12 text-destructive" />
+        <h1 className="text-2xl font-bold">Access Denied</h1>
+        <p className="text-muted-foreground">You cannot view this profile.</p>
+        <Button variant="outline" asChild>
+          <a href="/">Back to Home</a>
+        </Button>
+      </div>
+    );
+  }
+
   const canView = isOwnProfile || profile?.isPublic || isFriend;
 
   if (!profile || (!canView && !isOwnProfile)) {
@@ -356,26 +412,33 @@ function ProfileContent() {
         <Lock className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-2xl font-bold">This profile is private.</h1>
         <p className="text-muted-foreground">You must be friends with this user to see their library.</p>
-        <div className="flex gap-4">
-          <Button variant="outline" asChild>
-            <a href="/">Back to Home</a>
-          </Button>
-          {!isOwnProfile && authUser && !isFriend && (
-            <>
-              {incomingRequest ? (
-                <Button onClick={handleAcceptRequest} className="gap-2 bg-green-500 hover:bg-green-600">
-                  <Check className="h-4 w-4" /> Accept Request
-                </Button>
-              ) : outgoingRequest ? (
-                <Button disabled className="gap-2">
-                  <Clock className="h-4 w-4" /> Request Sent
-                </Button>
-              ) : (
-                <Button onClick={handleSendRequest} className="gap-2 bg-accent text-accent-foreground">
-                  <UserPlus className="h-4 w-4" /> Add Friend
-                </Button>
-              )}
-            </>
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-4">
+            <Button variant="outline" asChild>
+              <a href="/">Back to Home</a>
+            </Button>
+            {!isOwnProfile && authUser && !isFriend && (
+              <>
+                {incomingRequest ? (
+                  <Button onClick={handleAcceptRequest} className="gap-2 bg-green-500 hover:bg-green-600">
+                    <Check className="h-4 w-4" /> Accept Request
+                  </Button>
+                ) : outgoingRequest ? (
+                  <Button disabled className="gap-2">
+                    <Clock className="h-4 w-4" /> Request Sent
+                  </Button>
+                ) : (
+                  <Button onClick={handleSendRequest} className="gap-2 bg-accent text-accent-foreground">
+                    <UserPlus className="h-4 w-4" /> Add Friend
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+          {!isOwnProfile && authUser && (
+            <Button variant="ghost" className="text-destructive hover:bg-destructive/10 gap-2" onClick={handleBlock}>
+              <ShieldAlert className="h-4 w-4" /> Block User
+            </Button>
           )}
         </div>
       </div>
@@ -420,6 +483,11 @@ function ProfileContent() {
                     <Users className="h-3 w-3" /> Friend
                   </Badge>
                 )}
+                {isBlocked && (
+                  <Badge className="bg-destructive/20 text-destructive border-none gap-1">
+                    <ShieldAlert className="h-3 w-3" /> Blocked
+                  </Badge>
+                )}
               </div>
             )}
           </div>
@@ -437,29 +505,69 @@ function ProfileContent() {
           </div>
         </div>
         {!isOwnProfile && authUser && (
-          <div className="flex gap-2">
-            {isFriend ? (
-              <Button variant="outline" className="rounded-xl gap-2 text-destructive border-destructive/20 hover:bg-destructive/10" onClick={handleRemoveFriend}>
-                <UserMinus className="h-4 w-4" /> Remove Friend
-              </Button>
-            ) : incomingRequest ? (
-              <div className="flex gap-2">
-                <Button onClick={handleAcceptRequest} className="rounded-xl gap-2 bg-green-500 text-white hover:bg-green-600">
-                  <Check className="h-4 w-4" /> Accept
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              {isFriend ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="rounded-xl gap-2 text-destructive border-destructive/20 hover:bg-destructive/10">
+                      <UserMinus className="h-4 w-4" /> Unfriend
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Unfriend User?</AlertDialogTitle>
+                      <AlertDialogDescription>Are you sure you want to remove this connection?</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRemoveFriend}>Unfriend</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : incomingRequest ? (
+                <div className="flex gap-2">
+                  <Button onClick={handleAcceptRequest} className="rounded-xl gap-2 bg-green-500 text-white hover:bg-green-600">
+                    <Check className="h-4 w-4" /> Accept
+                  </Button>
+                  <Button onClick={handleDeclineRequest} variant="ghost" className="rounded-xl text-destructive">
+                    Decline
+                  </Button>
+                </div>
+              ) : outgoingRequest ? (
+                <Button disabled className="rounded-xl gap-2">
+                  <Clock className="h-4 w-4" /> Request Sent
                 </Button>
-                <Button onClick={handleDeclineRequest} variant="ghost" className="rounded-xl text-destructive">
-                  Decline
+              ) : !isBlocked && (
+                <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSendRequest}>
+                  <UserPlus className="h-4 w-4" /> Add Friend
                 </Button>
-              </div>
-            ) : outgoingRequest ? (
-              <Button disabled className="rounded-xl gap-2">
-                <Clock className="h-4 w-4" /> Request Sent
-              </Button>
-            ) : (
-              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSendRequest}>
-                <UserPlus className="h-4 w-4" /> Add Friend
-              </Button>
-            )}
+              )}
+              
+              {isBlocked ? (
+                <Button variant="outline" className="rounded-xl" onClick={handleUnblock}>Unblock</Button>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" className="rounded-xl text-destructive h-10 w-10 p-0">
+                      <ShieldAlert className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Block User?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Blocking this user will remove any current friendship and prevent them from sending you future requests.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleBlock} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Block</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
         )}
         {isOwnProfile && (

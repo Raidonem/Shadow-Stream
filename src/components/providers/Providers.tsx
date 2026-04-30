@@ -62,6 +62,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
             favoriteAnimeIds: [],
             completedAnimeIds: [],
             favoriteEpisodeIds: [],
+            blockedUserIds: [],
             isPremium: false,
             isPublic: false,
             createdAt: serverTimestamp(),
@@ -78,6 +79,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
           if (data.favoriteEpisodeIds === undefined) updates.favoriteEpisodeIds = [];
           if (data.completedAnimeIds === undefined) updates.completedAnimeIds = [];
           if (data.currentlyWatchingAnimeIds === undefined) updates.currentlyWatchingAnimeIds = [];
+          if (data.blockedUserIds === undefined) updates.blockedUserIds = [];
           if (data.isPremium === undefined) updates.isPremium = false;
           if (data.isPublic === undefined) updates.isPublic = false;
           

@@ -40,6 +40,7 @@ export interface UserProfile {
   favoriteAnimeIds: string[];
   completedAnimeIds: string[];
   favoriteEpisodeIds: string[];
+  blockedUserIds: string[];
   createdAt: any;
   updatedAt: any;
 }

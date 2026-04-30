@@ -33,6 +33,11 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/friendships/$(friendshipId));
     }
 
+    function isBlockedBy(userId) {
+      let targetProfile = get(/databases/$(database)/documents/users/$(userId));
+      return isSignedIn() && request.auth.uid in targetProfile.data.blockedUserIds;
+    }
+
     // --- Collection Rules ---
 
     match /users/{userId} {
@@ -54,7 +59,8 @@ service cloud.firestore {
         // Only owner can read/manage their own notifications
         allow read, update, delete: if isOwner(userId);
         // Any signed-in user can create a notification for another user (e.g., friend request, reply)
-        allow create: if isSignedIn();
+        // Unless they are blocked
+        allow create: if isSignedIn() && !isBlockedBy(userId);
       }
     }
 
@@ -72,7 +78,10 @@ service cloud.firestore {
 
     match /friend_requests/{requestId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && request.auth.uid != request.resource.data.receiverId;
+      // Prevent requests if blocked
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && 
+                    request.auth.uid != request.resource.data.receiverId &&
+                    !isBlockedBy(request.resource.data.receiverId);
       allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId);
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
     }
@@ -118,7 +127,7 @@ service cloud.firestore {
     match /ratings/{ratingId} {
       allow get, list: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
+      allow update: if isExistingOwner(resource.data.userId) && request.resource.data.userId == request.auth.uid;
       allow delete: if isExistingOwner(resource.data.userId);
     }
 
