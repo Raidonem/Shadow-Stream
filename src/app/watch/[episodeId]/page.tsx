@@ -29,7 +29,8 @@ import {
   ThumbsDown,
   Reply as ReplyIcon,
   AtSign,
-  ChevronDown
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -50,7 +51,6 @@ import {
 } from "../../../components/ui/popover";
 
 const COMMENT_LIMIT = 100;
-const INITIAL_REPLIES_VISIBLE = 3;
 
 function CommentItem({ 
   comment, 
@@ -76,7 +76,7 @@ function CommentItem({
   userVotes?: any[];
 }) {
   const router = useRouter();
-  const [visibleRepliesCount, setVisibleRepliesCount] = useState(INITIAL_REPLIES_VISIBLE);
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null);
   
   const isOwnComment = user && comment.userId === user.uid;
   const currentDisplayName = isOwnComment ? (profile?.displayName || comment.userDisplayName) : (comment.userDisplayName || 'User');
@@ -89,9 +89,47 @@ function CommentItem({
     return [...replies].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   }, [replies]);
 
-  const displayedReplies = sortedReplies.slice(0, visibleRepliesCount);
-  const hasMoreReplies = sortedReplies.length > visibleRepliesCount;
+  useEffect(() => {
+    if (!sortedReplies.length) return;
+    
+    // Check for deep link mention
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    const targetId = hash.replace('#comment-', '');
+    const targetIndex = sortedReplies.findIndex(r => r.id === targetId);
+
+    if (targetIndex !== -1 && !visibleRange) {
+      // Focus on the specific mentioned reply
+      setVisibleRange({ start: targetIndex, end: targetIndex + 1 });
+    } else if (!visibleRange) {
+      // Default view: last 3 replies
+      const start = Math.max(0, sortedReplies.length - 3);
+      setVisibleRange({ start, end: sortedReplies.length });
+    }
+  }, [sortedReplies, visibleRange]);
+
+  const showPrevious = () => {
+    if (!visibleRange) return;
+    setVisibleRange({
+      start: Math.max(0, visibleRange.start - 5),
+      end: visibleRange.end
+    });
+  };
+
+  const showMore = () => {
+    if (!visibleRange) return;
+    setVisibleRange({
+      start: visibleRange.start,
+      end: Math.min(sortedReplies.length, visibleRange.end + 5)
+    });
+  };
+
+  const displayedReplies = visibleRange 
+    ? sortedReplies.slice(visibleRange.start, visibleRange.end) 
+    : [];
   
+  const hasPrevious = (visibleRange?.start || 0) > 0;
+  const hasMore = (visibleRange?.end || 0) < sortedReplies.length;
+
   return (
     <div className="space-y-4" id={`comment-${comment.id}`}>
       <div className="flex gap-4">
@@ -183,9 +221,19 @@ function CommentItem({
 
       {replies && replies.length > 0 && (
         <div className={cn(
-          "space-y-6 pt-2 border-l-2",
+          "space-y-4 pt-2 border-l-2",
           language === 'ar' ? "mr-6 pr-6 ml-0 border-r-2 border-l-0" : "ml-6 pl-6"
         )}>
+          {hasPrevious && (
+            <button 
+              onClick={showPrevious}
+              className="text-xs font-bold text-accent hover:underline flex items-center gap-2 py-2"
+            >
+              <ChevronUp className="h-3 w-3" />
+              {language === 'ar' ? 'عرض 5 ردود سابقة' : 'Show 5 previous replies'}
+            </button>
+          )}
+
           {displayedReplies.map(reply => (
             <CommentItem 
               key={reply.id} 
@@ -200,15 +248,14 @@ function CommentItem({
               userVotes={userVotes}
             />
           ))}
-          {hasMoreReplies && (
+
+          {hasMore && (
             <button 
-              onClick={() => setVisibleRepliesCount(prev => prev + 10)}
-              className="text-xs font-bold text-accent hover:underline flex items-center gap-2 pt-2"
+              onClick={showMore}
+              className="text-xs font-bold text-accent hover:underline flex items-center gap-2 py-2"
             >
               <ChevronDown className="h-3 w-3" />
-              {language === 'ar' 
-                ? `عرض ${sortedReplies.length - visibleRepliesCount} ردود إضافية` 
-                : `Show ${sortedReplies.length - visibleRepliesCount} more replies`}
+              {language === 'ar' ? 'عرض 5 ردود تالية' : 'Show 5 more replies'}
             </button>
           )}
         </div>
