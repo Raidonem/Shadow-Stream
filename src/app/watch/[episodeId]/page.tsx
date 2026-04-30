@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
 import { Badge } from '../../../components/ui/badge';
+import { ScrollArea } from '../../../components/ui/scroll-area';
 import { 
   Heart, 
   MessageSquare,
@@ -589,7 +590,26 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
           <aside className="space-y-8">
             <section className="rounded-2xl border bg-card p-6"><h3 className="mb-4 font-headline text-xl font-bold">{language === 'ar' ? 'مزيد من المعلومات' : 'More Info'}</h3><div className="space-y-4"><div className="flex justify-between text-sm"><span className="text-muted-foreground">{t('year')}</span><span className="font-bold">{anime.releaseYear}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">{language === 'ar' ? 'التصنيفات' : 'Genres'}</span><span className="font-bold truncate max-w-[150px]">{anime.genres?.map(g => tTags[g as keyof typeof tTags]).join(', ')}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">{t('status')}</span><Badge variant="outline" className="text-accent border-accent">{anime.status}</Badge></div></div></section>
-            <section className="space-y-4"><h3 className="font-headline text-xl font-bold">{t('episodes')}</h3><div className="space-y-2">{episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}><div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted"><Image src={getEpisodeThumbnail(ep).trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" /></div><div className="flex-1 min-w-0"><p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p><h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4></div></Link>)}</div></section>
+            
+            <section className="space-y-4">
+              <h3 className="font-headline text-xl font-bold">{t('episodes')}</h3>
+              <ScrollArea className="h-[600px] pr-4">
+                <div className="space-y-2">
+                  {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => (
+                    <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}>
+                      <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                        <Image src={getEpisodeThumbnail(ep).trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
+                        <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </ScrollArea>
+            </section>
+            
             <AdBanner dataAdSlot="0987654321" />
           </aside>
         </div>
