@@ -68,8 +68,11 @@ function CommentItem({
 }) {
   const router = useRouter();
   
-  // Use a fallback display name if the captured one is somehow empty
-  const displayName = comment.userDisplayName || comment.userName || 'User';
+  // LIVE UPDATE TRICK: If this is the current user's comment, use the local 'profile' data 
+  // which is reactive to changes in the Profile page. Otherwise, fallback to the snapshot.
+  const isOwnComment = user && comment.userId === user.uid;
+  const displayName = isOwnComment ? (profile?.displayName || profile?.username || comment.userDisplayName) : (comment.userDisplayName || comment.userName || 'User');
+  const userName = isOwnComment ? (profile?.username || comment.userName) : comment.userName;
   
   return (
     <div className="space-y-4">
@@ -80,7 +83,7 @@ function CommentItem({
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
-            <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{displayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </button>
         <div className="flex-1 space-y-2">
@@ -92,7 +95,7 @@ function CommentItem({
               >
                 {displayName}
               </button>
-              <span className="text-xs text-muted-foreground font-medium">@{comment.userName}</span>
+              <span className="text-xs text-muted-foreground font-medium">@{userName}</span>
               {comment.isAdmin && (
                 <Badge className="bg-primary/20 text-primary border-none gap-1 px-2 py-0 h-5 text-[10px] font-bold">
                   <ShieldCheck className="h-3 w-3" />
@@ -168,6 +171,7 @@ function CommentItem({
               onReply={onReply}
               language={language}
               t={t}
+              userVote={userVote}
             />
           ))}
         </div>
@@ -347,13 +351,16 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   }, [user, db, anime, episode, episodeId, isAdminUser, episodes]);
 
   const handlePostComment = (parentId?: string) => {
-    if (!user || !commentsRef || !episodeId) return;
+    if (!user || !commentsRef || !episodeId || !profile) {
+      toast({ title: "Please wait", description: "Loading profile data..." });
+      return;
+    }
     const text = parentId ? replyText : commentText;
     if (!text.trim() || text.length > COMMENT_LIMIT) return;
 
-    // Use absolute latest data from profile if available, otherwise fallback
-    const finalUserName = profile?.username || user.displayName || 'user';
-    const finalDisplayName = profile?.displayName || finalUserName;
+    // Use absolute latest data from the reactive profile object
+    const finalUserName = profile.username;
+    const finalDisplayName = profile.displayName || profile.username;
 
     addDocumentNonBlocking(commentsRef, {
       userId: user.uid,
