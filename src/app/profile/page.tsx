@@ -66,7 +66,6 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
             hostedButtonId: "X3C6F5887MPCG",
           }).render("#paypal-container-X3C6F5887MPCG")
             .catch((err: any) => {
-              console.warn("PayPal Hosted Button render error:", err);
               renderedRef.current = false;
             });
         }
@@ -195,14 +194,11 @@ function ProfileContent() {
         }
       } catch (indexError: any) {
         if (indexError.message?.includes('index')) {
-          console.error("Index required for Collection Group query:", indexError.message);
           toast({
             title: "Index Required",
             description: "Identity sync across old comments requires a one-time index creation. Profile updated, but old comments will sync after index is ready.",
             variant: "destructive"
           });
-        } else {
-          throw indexError;
         }
       }
 
@@ -216,7 +212,6 @@ function ProfileContent() {
         description: "Your settings have been saved successfully."
       });
     } catch (err: any) {
-      console.error("Profile update failure:", err);
       toast({
         title: "Update failed",
         description: "Something went wrong while saving your profile.",
