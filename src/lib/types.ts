@@ -36,6 +36,8 @@ export interface UserProfile {
   languagePreference: string;
   themePreference: string;
   lastUsernameChange?: any;
+  commentRestrictionUntil?: string;
+  suspensionUntil?: string;
   watchlistAnimeIds: string[];
   currentlyWatchingAnimeIds: string[];
   favoriteAnimeIds: string[];
@@ -44,6 +46,18 @@ export interface UserProfile {
   blockedUserIds: string[];
   createdAt: any;
   updatedAt: any;
+}
+
+export interface Report {
+  id: string;
+  type: 'episode_server' | 'comment';
+  reporterId: string;
+  targetId: string;
+  targetUserId?: string;
+  reason: string;
+  context?: any;
+  status: 'pending' | 'resolved';
+  createdAt: any;
 }
 
 export interface Friendship {
@@ -93,13 +107,14 @@ export interface GlobalNotification {
 
 export interface UserNotification {
   id: string;
-  type: 'friend_request' | 'friend_accepted' | 'comment_reply' | 'comment_mention' | 'comment_like' | 'comment_dislike';
+  type: 'friend_request' | 'friend_accepted' | 'comment_reply' | 'comment_mention' | 'comment_like' | 'comment_dislike' | 'warning';
   fromId: string;
   fromName: string;
   messageEn: string;
   messageAr: string;
   link: string;
   read: boolean;
+  customMessage?: string;
   createdAt: any;
 }
 

@@ -53,6 +53,16 @@
           "description": "Timestamp of the last time the user changed their unique username.",
           "format": "date-time"
         },
+        "commentRestrictionUntil": {
+          "type": "string",
+          "description": "ISO timestamp until which the user is restricted from commenting.",
+          "format": "date-time"
+        },
+        "suspensionUntil": {
+          "type": "string",
+          "description": "ISO timestamp until which the user account is suspended.",
+          "format": "date-time"
+        },
         "watchlistAnimeIds": {
           "type": "array",
           "description": "An array of unique identifiers for Anime entities that the user has added to their personal watchlist.",
@@ -125,256 +135,21 @@
         "updatedAt"
       ]
     },
-    "Anime": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Anime",
-      "type": "object",
-      "description": "Represents an anime series available on the platform, including its metadata and general information.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Anime entity."
-        },
-        "titleEn": {
-          "type": "string",
-          "description": "The main title of the anime series in English."
-        },
-        "titleAr": {
-          "type": "string",
-          "description": "The main title of the anime series in Arabic."
-        },
-        "alternativeTitles": {
-          "type": "array",
-          "description": "Optional list of alternative titles (e.g., Japanese names) for better searchability.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "descriptionEn": {
-          "type": "string",
-          "description": "A brief summary or synopsis of the anime's plot in English."
-        },
-        "descriptionAr": {
-          "type": "string",
-          "description": "A brief summary or synopsis of the anime's plot in Arabic."
-        },
-        "releaseYear": {
-          "type": "number",
-          "description": "The original release year of the anime series."
-        },
-        "coverImage": {
-          "type": "string",
-          "description": "URL to the primary poster image for the anime series.",
-          "format": "uri"
-        },
-        "bannerImage": {
-          "type": "string",
-          "description": "URL to the banner image for the anime series.",
-          "format": "uri"
-        },
-        "genres": {
-          "type": "array",
-          "description": "An array of genres associated with this anime.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "rating": {
-          "type": "number",
-          "description": "The calculated average rating for this anime."
-        },
-        "views": {
-          "type": "number",
-          "description": "The total number of views for this anime."
-        },
-        "lastEpisodeNumber": {
-          "type": "number",
-          "description": "The number of the most recently added episode."
-        },
-        "status": {
-          "type": "string",
-          "description": "The airing status of the anime.",
-          "enum": ["Airing", "Finished"]
-        },
-        "type": {
-          "type": "string",
-          "description": "The production type of the anime.",
-          "enum": ["tv", "movie", "ova", "ona", "special"]
-        },
-        "season": {
-          "type": "string",
-          "description": "The release season of the anime.",
-          "enum": ["spring", "summer", "fall", "winter"]
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the anime entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the anime entry was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "titleEn",
-        "titleAr",
-        "descriptionEn",
-        "descriptionAr",
-        "releaseYear",
-        "coverImage",
-        "bannerImage",
-        "genres",
-        "type",
-        "season",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Episode": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Episode",
-      "type": "object",
-      "description": "Represents a single episode within an anime series, containing multiple streaming servers and metadata.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Episode entity."
-        },
-        "animeId": {
-          "type": "string",
-          "description": "Reference to the parent Anime entity."
-        },
-        "episodeNumber": {
-          "type": "number",
-          "description": "The sequential number of the episode."
-        },
-        "titleEn": {
-          "type": "string",
-          "description": "The title of the episode in English."
-        },
-        "titleAr": {
-          "type": "string",
-          "description": "The title of the episode in Arabic."
-        },
-        "servers": {
-          "type": "array",
-          "description": "A list of streaming servers for this episode.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "lang": { "type": "string", "enum": ["ar", "en"] },
-              "name": { "type": "string" },
-              "url": { "type": "string", "format": "uri" }
-            },
-            "required": ["lang", "name", "url"]
-          }
-        },
-        "duration": {
-          "type": "string",
-          "description": "The duration of the episode (e.g., '24:00')."
-        },
-        "thumbnail": {
-          "type": "string",
-          "description": "URL to a thumbnail image for the episode.",
-          "format": "uri"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the episode entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the episode entry was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "animeId",
-        "episodeNumber",
-        "titleEn",
-        "titleAr",
-        "servers",
-        "duration",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "GlobalNotification": {
-      "title": "GlobalNotification",
+    "Report": {
+      "title": "Report",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["new_episode"] },
-        "animeId": { "type": "string" },
-        "episodeId": { "type": "string" },
-        "animeTitleEn": { "type": "string" },
-        "animeTitleAr": { "type": "string" },
-        "episodeNumber": { "type": "number" },
+        "type": { "type": "string", "enum": ["episode_server", "comment"] },
+        "reporterId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetUserId": { "type": "string" },
+        "reason": { "type": "string" },
+        "context": { "type": "object" },
+        "status": { "type": "string", "enum": ["pending", "resolved"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "type", "animeId", "episodeId", "createdAt"]
-    },
-    "UserNotification": {
-      "title": "UserNotification",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["friend_request", "friend_accepted", "comment_reply", "comment_mention", "comment_like", "comment_dislike"] },
-        "fromId": { "type": "string" },
-        "fromName": { "type": "string" },
-        "messageEn": { "type": "string" },
-        "messageAr": { "type": "string" },
-        "link": { "type": "string" },
-        "read": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "type", "fromId", "messageEn", "messageAr", "read", "createdAt"]
-    },
-    "WatchHistory": {
-      "title": "WatchHistory",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "animeId": { "type": "string" },
-        "episodeId": { "type": "string" },
-        "animeTitleEn": { "type": "string" },
-        "animeTitleAr": { "type": "string" },
-        "episodeTitleEn": { "type": "string" },
-        "episodeTitleAr": { "type": "string" },
-        "episodeNumber": { "type": "number" },
-        "thumbnail": { "type": "string" },
-        "watchedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "animeId", "episodeId", "watchedAt"]
-    },
-    "Friendship": {
-      "title": "Friendship",
-      "type": "object",
-      "description": "Represents a friendship link between two users.",
-      "properties": {
-        "id": { "type": "string" },
-        "userIds": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userIds", "createdAt"]
-    },
-    "FriendRequest": {
-      "title": "FriendRequest",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "senderId", "receiverId", "status", "createdAt"]
+      "required": ["id", "type", "reporterId", "targetId", "status", "createdAt"]
     }
   },
   "auth": {
@@ -385,13 +160,17 @@
       "schema": "UserProfile",
       "description": "Stores user profiles, preferences, and watchlist."
     },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Stores user reports for episodes or comments."
+    },
     "/users/{userId}/history/{historyId}": {
       "schema": "WatchHistory",
       "description": "Stores user's watched episodes history. Always private."
     },
     "/users/{userId}/notifications/{notifId}": {
       "schema": "UserNotification",
-      "description": "Personal notifications for friend requests, replies, etc."
+      "description": "Personal notifications for friend requests, replies, warnings, etc."
     },
     "/friendships/{friendshipId}": {
       "schema": "Friendship",
@@ -408,30 +187,6 @@
     "/anime/{animeId}": {
       "schema": "Anime",
       "description": "Stores public information about anime series."
-    },
-    "/anime/{animeId}/episodes/{episodeId}": {
-      "schema": "Episode",
-      "description": "Stores details for individual episodes."
-    },
-    "/tags/{tagId}": {
-      "schema": "Tag",
-      "description": "Stores categorical tags/genres for anime."
-    },
-    "/ratings/{ratingId}": {
-      "schema": "Rating",
-      "description": "Stores individual user ratings for anime episodes."
-    },
-    "/anime/{animeId}/episodes/{episodeId}/comments/{commentId}": {
-      "schema": "Comment",
-      "description": "Stores user comments and replies for specific anime episodes."
-    },
-    "/comment_votes/{voteId}": {
-      "schema": "CommentVote",
-      "description": "Tracks user votes on comments to prevent duplicates."
-    },
-    "/global_notifications/{notificationId}": {
-      "schema": "GlobalNotification",
-      "description": "Stores system-wide notifications like new episode releases."
     }
   }
 }
