@@ -16,7 +16,7 @@ import {
   SelectValue 
 } from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId } from 'firebase/firestore';
+import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { 
   User as UserIcon, 
@@ -100,6 +100,7 @@ function ProfileContent() {
 
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editData, setEditData] = useState({
     username: '',
     displayName: '',
@@ -149,8 +150,8 @@ function ProfileContent() {
     }
   }, [profile, isOwnProfile]);
 
-  const handleSave = () => {
-    if (!profileRef || !editData.displayName.trim()) {
+  const handleSave = async () => {
+    if (!profileRef || !db || !targetUid || !editData.displayName.trim()) {
       toast({
         title: "Error",
         description: "Display Name cannot be empty.",
@@ -159,23 +160,54 @@ function ProfileContent() {
       return;
     }
 
-    updateDocumentNonBlocking(profileRef, {
-      displayName: editData.displayName,
-      languagePreference: editData.languagePreference,
-      themePreference: editData.themePreference,
-      isPublic: editData.isPublic,
-      updatedAt: new Date().toISOString()
-    });
+    setIsSaving(true);
 
-    if (editData.languagePreference !== language) {
-      setLanguage(editData.languagePreference as any);
+    try {
+      // 1. Update Profile
+      updateDocumentNonBlocking(profileRef, {
+        displayName: editData.displayName,
+        languagePreference: editData.languagePreference,
+        themePreference: editData.themePreference,
+        isPublic: editData.isPublic,
+        updatedAt: new Date().toISOString()
+      });
+
+      // 2. Sync Names Across All User Comments
+      // This ensures everyone sees the updated name globally
+      const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
+      const commentsSnapshot = await getDocs(commentsQuery);
+      
+      if (!commentsSnapshot.empty) {
+        const batch = writeBatch(db);
+        commentsSnapshot.docs.forEach((commentDoc) => {
+          batch.update(commentDoc.ref, {
+            userName: profile?.username, // Username is immutable for now, but good to include
+            userDisplayName: editData.displayName,
+            updatedAt: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+
+      if (editData.languagePreference !== language) {
+        setLanguage(editData.languagePreference as any);
+      }
+      
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your changes and comments have been synchronized."
+      });
+    } catch (err: any) {
+      console.error("Failed to sync profile:", err);
+      toast({
+        title: "Partial Success",
+        description: "Profile updated, but comment sync encountered an error.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
-    
-    setIsEditing(false);
-    toast({
-      title: "Profile Updated",
-      description: "Your changes have been saved successfully."
-    });
   };
 
   const handleActivatePremium = () => {
@@ -270,6 +302,7 @@ function ProfileContent() {
               variant={isEditing ? "outline" : "default"} 
               className="rounded-xl gap-2"
               onClick={() => setIsEditing(!isEditing)}
+              disabled={isSaving}
             >
               {isEditing ? <X className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
               {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -297,6 +330,7 @@ function ProfileContent() {
                     value={editData.displayName}
                     onChange={(e) => setEditData({...editData, displayName: e.target.value})}
                     className="rounded-xl border-none bg-secondary/50"
+                    disabled={isSaving}
                   />
                 </div>
                 <div className="space-y-2">
@@ -313,6 +347,7 @@ function ProfileContent() {
                   <Select 
                     value={editData.languagePreference}
                     onValueChange={(val) => setEditData({...editData, languagePreference: val})}
+                    disabled={isSaving}
                   >
                     <SelectTrigger className="rounded-xl border-none bg-secondary/50">
                       <SelectValue />
@@ -333,15 +368,16 @@ function ProfileContent() {
                   <Switch 
                     checked={editData.isPublic}
                     onCheckedChange={(val) => setEditData({...editData, isPublic: val})}
+                    disabled={isSaving}
                   />
                 </div>
               </div>
             </CardContent>
             <CardFooter className="justify-end gap-3">
-              <Button variant="ghost" onClick={() => setIsEditing(false)}>Discard</Button>
-              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSave}>
-                <Save className="h-4 w-4" />
-                Save Changes
+              <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={isSaving}>Discard</Button>
+              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {isSaving ? 'Syncing...' : 'Save Changes'}
               </Button>
             </CardFooter>
           </Card>
