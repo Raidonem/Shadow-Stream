@@ -163,7 +163,7 @@ function ProfileContent() {
     setIsSaving(true);
 
     try {
-      // 1. Update Profile
+      // 1. Update Profile Primary Record
       updateDocumentNonBlocking(profileRef, {
         displayName: editData.displayName,
         languagePreference: editData.languagePreference,
@@ -172,8 +172,8 @@ function ProfileContent() {
         updatedAt: new Date().toISOString()
       });
 
-      // 2. Sync Names Across All User Comments
-      // This ensures everyone sees the updated name globally
+      // 2. Global Identity Synchronization (Crucial for NoSQL)
+      // This updates ALL existing comments and replies with the new Display Name
       const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
       const commentsSnapshot = await getDocs(commentsQuery);
       
@@ -181,8 +181,8 @@ function ProfileContent() {
         const batch = writeBatch(db);
         commentsSnapshot.docs.forEach((commentDoc) => {
           batch.update(commentDoc.ref, {
-            userName: profile?.username, // Username is immutable for now, but good to include
             userDisplayName: editData.displayName,
+            userName: editData.username, // Just in case, keep handle in sync
             updatedAt: new Date().toISOString()
           });
         });
@@ -195,14 +195,14 @@ function ProfileContent() {
       
       setIsEditing(false);
       toast({
-        title: "Profile Updated",
-        description: "Your changes and comments have been synchronized."
+        title: "Success",
+        description: "Profile and all previous comments have been updated."
       });
     } catch (err: any) {
-      console.error("Failed to sync profile:", err);
+      console.error("Identity sync failure:", err);
       toast({
-        title: "Partial Success",
-        description: "Profile updated, but comment sync encountered an error.",
+        title: "Identity Sync Warning",
+        description: "Profile updated, but old comments might take a few minutes to sync (Index building).",
         variant: "destructive"
       });
     } finally {

@@ -68,11 +68,10 @@ function CommentItem({
 }) {
   const router = useRouter();
   
-  // LIVE UPDATE TRICK: If this is the current user's comment, use the local 'profile' data 
-  // which is reactive to changes in the Profile page. Otherwise, fallback to the snapshot.
+  // Use reactive local profile data for current user's comments to show instant updates
   const isOwnComment = user && comment.userId === user.uid;
-  const displayName = isOwnComment ? (profile?.displayName || profile?.username || comment.userDisplayName) : (comment.userDisplayName || comment.userName || 'User');
-  const userName = isOwnComment ? (profile?.username || comment.userName) : comment.userName;
+  const currentDisplayName = isOwnComment ? (profile?.displayName || comment.userDisplayName) : (comment.userDisplayName || 'User');
+  const currentUserName = isOwnComment ? (profile?.username || comment.userName) : (comment.userName || 'user');
   
   return (
     <div className="space-y-4">
@@ -83,7 +82,7 @@ function CommentItem({
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
-            <AvatarFallback>{displayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+            <AvatarFallback>{currentDisplayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </button>
         <div className="flex-1 space-y-2">
@@ -93,9 +92,9 @@ function CommentItem({
                 onClick={() => router.push(`/profile?uid=${comment.userId}`)}
                 className="font-bold text-sm md:text-base hover:text-accent transition-colors"
               >
-                {displayName}
+                {currentDisplayName}
               </button>
-              <span className="text-xs text-muted-foreground font-medium">@{userName}</span>
+              <span className="text-xs text-muted-foreground font-medium">@{currentUserName}</span>
               {comment.isAdmin && (
                 <Badge className="bg-primary/20 text-primary border-none gap-1 px-2 py-0 h-5 text-[10px] font-bold">
                   <ShieldCheck className="h-3 w-3" />
@@ -358,7 +357,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     const text = parentId ? replyText : commentText;
     if (!text.trim() || text.length > COMMENT_LIMIT) return;
 
-    // Use absolute latest data from the reactive profile object
+    // Capture absolute latest identity snapshots from profile
     const finalUserName = profile.username;
     const finalDisplayName = profile.displayName || profile.username;
 
