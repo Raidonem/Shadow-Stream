@@ -125,9 +125,9 @@ export default function AdminPage() {
   const { data: currentEpisodes } = useCollection(episodesQuery);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || !adminDoc) return null;
     return query(collection(db, 'reports'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
-  }, [db]);
+  }, [db, adminDoc]);
   const { data: pendingReports } = useCollection<Report>(reportsQuery);
 
   const availableTags = Object.keys(translations.en.tags) as GenreKey[];
