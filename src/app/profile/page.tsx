@@ -74,24 +74,42 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const renderedRef = useRef(false);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     if (isResolved && !renderedRef.current) {
-      const timer = setTimeout(() => {
+      // Small delay to ensure the container <div> is definitely in the DOM
+      timeoutId = setTimeout(() => {
         const paypal = (window as any).paypal;
         const container = document.getElementById("paypal-container-X3C6F5887MPCG");
         
         if (paypal && paypal.HostedButtons && container) {
-          renderedRef.current = true;
-          paypal.HostedButtons({
-            hostedButtonId: "X3C6F5887MPCG",
-          }).render("#paypal-container-X3C6F5887MPCG")
-            .catch((err: any) => {
-              renderedRef.current = false;
-            });
+          try {
+            // CRITICAL: Clear container before rendering to avoid duplicate button error
+            container.innerHTML = ''; 
+            
+            renderedRef.current = true;
+            paypal.HostedButtons({
+              hostedButtonId: "X3C6F5887MPCG",
+            }).render("#paypal-container-X3C6F5887MPCG")
+              .catch((err: any) => {
+                console.warn("PayPal render catch:", err);
+                renderedRef.current = false;
+              });
+          } catch (err) {
+            console.error("PayPal button initialization failed:", err);
+            renderedRef.current = false;
+          }
         }
-      }, 100);
-
-      return () => clearTimeout(timer);
+      }, 500);
     }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      // We don't reset renderedRef.current here because the script is already loaded globally,
+      // but we should clear the container if it unmounts
+      const container = document.getElementById("paypal-container-X3C6F5887MPCG");
+      if (container) container.innerHTML = '';
+    };
   }, [isResolved]);
 
   return (
