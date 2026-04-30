@@ -45,7 +45,8 @@ import {
   Users,
   Clock,
   Check,
-  ShieldAlert
+  ShieldAlert,
+  AtSign
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -66,6 +67,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
+import { differenceInDays } from 'date-fns';
 
 function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const [{ isResolved }] = usePayPalScriptReducer();
@@ -218,10 +220,10 @@ function ProfileContent() {
   }, [profile, isOwnProfile]);
 
   const handleSave = async () => {
-    if (!profileRef || !db || !targetUid || !editData.displayName.trim()) {
+    if (!profileRef || !db || !targetUid || !editData.displayName.trim() || !editData.username.trim()) {
       toast({
         title: "Error",
-        description: "Display Name cannot be empty.",
+        description: "Display Name and Username cannot be empty.",
         variant: "destructive"
       });
       return;
@@ -230,14 +232,52 @@ function ProfileContent() {
     setIsSaving(true);
 
     try {
-      updateDocumentNonBlocking(profileRef, {
+      const usernameChanged = editData.username.toLowerCase() !== profile?.username?.toLowerCase();
+      
+      if (usernameChanged) {
+        // 1. Check Cooldown
+        const lastChange = profile?.lastUsernameChange?.toDate?.() || new Date(0);
+        const now = new Date();
+        const daysSinceLastChange = differenceInDays(now, lastChange);
+        const requiredCooldown = isPremium ? 2 : 30;
+
+        if (daysSinceLastChange < requiredCooldown) {
+          const errorMsg = isPremium 
+            ? t('usernamePremiumCooldown') 
+            : t('usernameCooldown').replace('{days}', '30');
+          toast({ title: "Cooldown Active", description: errorMsg, variant: "destructive" });
+          setIsSaving(false);
+          return;
+        }
+
+        // 2. Check Uniqueness
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('username', '==', editData.username.toLowerCase()));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          toast({ title: "Error", description: t('usernameTaken'), variant: "destructive" });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      const profileUpdate: any = {
         displayName: editData.displayName,
         languagePreference: editData.languagePreference,
         themePreference: editData.themePreference,
         isPublic: editData.isPublic,
-        updatedAt: new Date().toISOString()
-      });
+        updatedAt: serverTimestamp()
+      };
 
+      if (usernameChanged) {
+        profileUpdate.username = editData.username.toLowerCase();
+        profileUpdate.lastUsernameChange = serverTimestamp();
+      }
+
+      updateDocumentNonBlocking(profileRef, profileUpdate);
+
+      // Sync name and username across comments
       try {
         const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
         const commentsSnapshot = await getDocs(commentsQuery);
@@ -245,17 +285,20 @@ function ProfileContent() {
         if (!commentsSnapshot.empty) {
           const batch = writeBatch(db);
           commentsSnapshot.docs.forEach((commentDoc) => {
-            batch.update(commentDoc.ref, {
+            const commentUpdate: any = {
               userDisplayName: editData.displayName,
-              userName: editData.username,
-              updatedAt: new Date().toISOString()
-            });
+              updatedAt: serverTimestamp()
+            };
+            if (usernameChanged) {
+              commentUpdate.userName = editData.username.toLowerCase();
+            }
+            batch.update(commentDoc.ref, commentUpdate);
           });
           await batch.commit();
         }
       } catch (indexError: any) {
         if (!indexError.message?.includes('index')) {
-          console.warn("Name sync skipped:", indexError.message);
+          console.warn("Activity sync skipped:", indexError.message);
         }
       }
 
@@ -266,12 +309,12 @@ function ProfileContent() {
       setIsEditing(false);
       toast({
         title: "Profile Updated",
-        description: "Your settings and comments have been synced successfully."
+        description: usernameChanged ? t('usernameChanged') : "Your settings have been synced successfully."
       });
     } catch (err: any) {
       toast({
         title: "Update failed",
-        description: "Something went wrong while saving your profile.",
+        description: err.message || "Something went wrong while saving your profile.",
         variant: "destructive"
       });
     } finally {
@@ -605,16 +648,27 @@ function ProfileContent() {
                     onChange={(e) => setEditData({...editData, displayName: e.target.value})}
                     className="rounded-xl border-none bg-secondary/50"
                     disabled={isSaving}
+                    placeholder="Shadow King"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username (Handle - Cannot be changed)</Label>
+                  <Label htmlFor="username" className="flex items-center gap-2">
+                    <AtSign className="h-3 w-3" />
+                    Username (Unique handle)
+                  </Label>
                   <Input 
                     id="username"
-                    value={profile.username}
-                    disabled
-                    className="rounded-xl border-none bg-secondary/20 cursor-not-allowed opacity-70"
+                    value={editData.username}
+                    onChange={(e) => setEditData({...editData, username: e.target.value})}
+                    className="rounded-xl border-none bg-secondary/50"
+                    disabled={isSaving}
+                    placeholder="shadowmaster"
                   />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {isPremium 
+                      ? "Premium: Change every 2 days." 
+                      : "Regular: Change every 30 days."}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lang">Interface Language</Label>

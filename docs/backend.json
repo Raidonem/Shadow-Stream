@@ -48,6 +48,11 @@
           "type": "string",
           "description": "User's preferred color theme for the application interface (e.g., 'dark', 'light')."
         },
+        "lastUsernameChange": {
+          "type": "string",
+          "description": "Timestamp of the last time the user changed their unique username.",
+          "format": "date-time"
+        },
         "watchlistAnimeIds": {
           "type": "array",
           "description": "An array of unique identifiers for Anime entities that the user has added to their personal watchlist.",

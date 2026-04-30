@@ -58,6 +58,10 @@ export const translations = {
     newPassword: 'New Password',
     updatePassword: 'Update Password',
     passwordUpdated: 'Password updated successfully!',
+    usernameTaken: 'This username is already taken.',
+    usernameCooldown: 'You can only change your username every {days} days.',
+    usernamePremiumCooldown: 'Premium users can change their username every 2 days.',
+    usernameChanged: 'Username updated and synced across all your activity.',
     animeTypes: {
       'tv': 'TV Series',
       'movie': 'Movie',
@@ -169,6 +173,10 @@ export const translations = {
     newPassword: 'كلمة السر الجديدة',
     updatePassword: 'تحديث كلمة السر',
     passwordUpdated: 'تم تحديث كلمة السر بنجاح!',
+    usernameTaken: 'اسم المستخدم هذا مستخدم بالفعل.',
+    usernameCooldown: 'يمكنك تغيير اسم المستخدم كل {days} يوماً.',
+    usernamePremiumCooldown: 'يمكن لمشتركي بريميوم تغيير اسم المستخدم كل يومين.',
+    usernameChanged: 'تم تحديث اسم المستخدم ومزامنته في جميع نشاطاتك.',
     animeTypes: {
       'tv': 'مسلسل',
       'movie': 'فلم',

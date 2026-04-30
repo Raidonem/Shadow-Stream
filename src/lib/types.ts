@@ -35,6 +35,7 @@ export interface UserProfile {
   isPublic: boolean;
   languagePreference: string;
   themePreference: string;
+  lastUsernameChange?: any;
   watchlistAnimeIds: string[];
   currentlyWatchingAnimeIds: string[];
   favoriteAnimeIds: string[];
