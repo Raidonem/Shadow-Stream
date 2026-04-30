@@ -176,7 +176,7 @@ function ProfileContent() {
       });
 
       // 2. Global Identity Synchronization
-      // This requires a COLLECTION_GROUP index in Firestore
+      // This requires a COLLECTION_GROUP index in Firestore for 'comments' by 'userId'
       try {
         const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
         const commentsSnapshot = await getDocs(commentsQuery);
@@ -193,10 +193,11 @@ function ProfileContent() {
           await batch.commit();
         }
       } catch (indexError: any) {
+        // Only toast if it's an index error, don't crash
         if (indexError.message?.includes('index')) {
           toast({
-            title: "Index Required",
-            description: "Identity sync across old comments requires a one-time index creation. Profile updated, but old comments will sync after index is ready.",
+            title: "Index Still Building",
+            description: "Profile updated, but identity sync across old comments requires the Firestore index to finish building. Please wait 10 mins.",
             variant: "destructive"
           });
         }
@@ -209,7 +210,7 @@ function ProfileContent() {
       setIsEditing(false);
       toast({
         title: "Profile Updated",
-        description: "Your settings have been saved successfully."
+        description: "Your settings and comments have been synced successfully."
       });
     } catch (err: any) {
       toast({

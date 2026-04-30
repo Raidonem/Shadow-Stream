@@ -101,6 +101,9 @@ service cloud.firestore {
     match /{path=**}/comments/{commentId} {
       allow list: if isSignedIn();
       allow read: if true;
+      // Re-state update rule for collection group context
+      allow update: if (isSignedIn() && request.auth.uid == resource.data.userId) || 
+                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'updatedAt', 'userName', 'userDisplayName']));
     }
 
     match /global_notifications/{notificationId} {
