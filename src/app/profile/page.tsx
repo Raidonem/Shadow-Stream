@@ -112,7 +112,7 @@ function ProfileContent() {
   const db = useFirestore();
   const { toast } = useToast();
   const { language, setLanguage, t } = useLanguage();
-  const { toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const searchParams = useSearchParams();
   
   const targetUid = searchParams.get('uid') || authUser?.uid;
@@ -137,7 +137,7 @@ function ProfileContent() {
   const authProfileRef = useMemoFirebase(() => {
     if (!authUser || !db) return null;
     return doc(db, 'users', authUser.uid);
-  }, [authUser, db]);
+  }, [authUser?.uid, db]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
   const { data: authProfile } = useDoc(authProfileRef);
@@ -150,7 +150,7 @@ function ProfileContent() {
     return authUser.uid < targetUid 
       ? `${authUser.uid}_${targetUid}` 
       : `${targetUid}_${authUser.uid}`;
-  }, [authUser, targetUid, isOwnProfile]);
+  }, [authUser?.uid, targetUid, isOwnProfile]);
 
   const friendshipRef = useMemoFirebase(() => {
     if (!db || !friendshipId) return null;
@@ -163,12 +163,12 @@ function ProfileContent() {
   const requestId = useMemo(() => {
     if (!authUser || !targetUid || isOwnProfile) return null;
     return `${authUser.uid}_${targetUid}`;
-  }, [authUser, targetUid, isOwnProfile]);
+  }, [authUser?.uid, targetUid, isOwnProfile]);
 
   const reverseRequestId = useMemo(() => {
     if (!authUser || !targetUid || isOwnProfile) return null;
     return `${targetUid}_${authUser.uid}`;
-  }, [authUser, targetUid, isOwnProfile]);
+  }, [authUser?.uid, targetUid, isOwnProfile]);
 
   const requestRef = useMemoFirebase(() => {
     if (!db || !requestId) return null;
@@ -186,17 +186,17 @@ function ProfileContent() {
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.currentlyWatchingAnimeIds.slice(0, 10)));
-  }, [db, profile?.currentlyWatchingAnimeIds]);
+  }, [db, profile?.currentlyWatchingAnimeIds?.join(',')]);
 
   const watchlistQuery = useMemoFirebase(() => {
     if (!db || !profile?.watchlistAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.watchlistAnimeIds.slice(0, 10)));
-  }, [db, profile?.watchlistAnimeIds]);
+  }, [db, profile?.watchlistAnimeIds?.join(',')]);
 
   const favoritesQuery = useMemoFirebase(() => {
     if (!db || !profile?.favoriteAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.favoriteAnimeIds.slice(0, 10)));
-  }, [db, profile?.favoriteAnimeIds]);
+  }, [db, profile?.favoriteAnimeIds?.join(',')]);
 
   const { data: watchingAnime } = useCollection(watchingQuery);
   const { data: watchlistAnime } = useCollection(watchlistQuery);

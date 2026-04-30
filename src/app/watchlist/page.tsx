@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
@@ -50,44 +50,44 @@ function WatchlistContent() {
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
-  }, [user, db]);
+  }, [user?.uid, db]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.currentlyWatchingAnimeIds.slice(0, 10)));
-  }, [db, profile?.currentlyWatchingAnimeIds]);
+  }, [db, profile?.currentlyWatchingAnimeIds?.join(',')]);
 
   const watchlistQuery = useMemoFirebase(() => {
     if (!db || !profile?.watchlistAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.watchlistAnimeIds.slice(0, 10)));
-  }, [db, profile?.watchlistAnimeIds]);
+  }, [db, profile?.watchlistAnimeIds?.join(',')]);
 
   const favoritesQuery = useMemoFirebase(() => {
     if (!db || !profile?.favoriteAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.favoriteAnimeIds.slice(0, 10)));
-  }, [db, profile?.favoriteAnimeIds]);
+  }, [db, profile?.favoriteAnimeIds?.join(',')]);
 
   const completedQuery = useMemoFirebase(() => {
     if (!db || !profile?.completedAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.completedAnimeIds.slice(0, 10)));
-  }, [db, profile?.completedAnimeIds]);
+  }, [db, profile?.completedAnimeIds?.join(',')]);
 
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'history'), orderBy('watchedAt', 'desc'));
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const friendshipsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'friendships'), where('userIds', 'array-contains', user.uid));
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const incomingRequestsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'friend_requests'), where('receiverId', '==', user.uid), where('status', '==', 'pending'));
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: watchingAnime, isLoading: isWatchingLoading } = useCollection(watchingQuery);
   const { data: watchlistAnime, isLoading: isWatchlistLoading } = useCollection(watchlistQuery);
@@ -97,20 +97,25 @@ function WatchlistContent() {
   const { data: friendships, isLoading: isFriendsLoading } = useCollection(friendshipsQuery);
   const { data: incomingRequests } = useCollection(incomingRequestsQuery);
 
-  const friendIds = friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
+  const friendIds = useMemo(() => {
+    return friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
+  }, [friendships, user?.uid]);
   
   const friendsProfilesQuery = useMemoFirebase(() => {
     if (!db || !friendIds.length) return null;
     return query(collection(db, 'users'), where(documentId(), 'in', friendIds.slice(0, 10)));
-  }, [db, friendIds]);
+  }, [db, friendIds.join(',')]);
   
   const { data: friendProfiles } = useCollection(friendsProfilesQuery);
 
-  const requesterIds = incomingRequests?.map(r => r.senderId) || [];
+  const requesterIds = useMemo(() => {
+    return incomingRequests?.map(r => r.senderId) || [];
+  }, [incomingRequests]);
+
   const requesterProfilesQuery = useMemoFirebase(() => {
     if (!db || !requesterIds.length) return null;
     return query(collection(db, 'users'), where(documentId(), 'in', requesterIds.slice(0, 10)));
-  }, [db, requesterIds]);
+  }, [db, requesterIds.join(',')]);
 
   const { data: requesterProfiles } = useCollection(requesterProfilesQuery);
 
