@@ -51,16 +51,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 
 function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const [{ isResolved }] = usePayPalScriptReducer();
-  const containerRef = useRef<HTMLDivElement>(null);
   const renderedRef = useRef(false);
 
   useEffect(() => {
-    if (isResolved && containerRef.current && !renderedRef.current) {
+    // Check if the script is resolved and the button hasn't been rendered yet
+    if (isResolved && !renderedRef.current) {
       const paypal = (window as any).paypal;
-      if (paypal && paypal.HostedButtons) {
+      // Ensure the container exists in the DOM before attempting to render
+      const container = document.getElementById("paypal-container-X3C6F5887MPCG");
+      
+      if (paypal && paypal.HostedButtons && container) {
         paypal.HostedButtons({
           hostedButtonId: "X3C6F5887MPCG",
-        }).render(containerRef.current)
+        }).render("#paypal-container-X3C6F5887MPCG")
           .then(() => {
             renderedRef.current = true;
           })
@@ -73,7 +76,7 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div ref={containerRef} id="paypal-container-X3C6F5887MPCG" className="min-h-[150px]" />
+      <div id="paypal-container-X3C6F5887MPCG" className="min-h-[150px]" />
       <Button 
         variant="ghost" 
         size="sm" 
