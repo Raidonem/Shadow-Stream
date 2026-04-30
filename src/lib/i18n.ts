@@ -157,7 +157,7 @@ export const translations = {
     profilePrivacyDesc: 'عندما يكون عاماً، يمكن للمستخدمين الآخرين رؤية مكتبتك ومفضلاتك.',
     viewProfile: 'عرض الملف الشخصي',
     userLibrary: 'مكتبة المستخدم',
-    noPublicUsers: 'لم يتم العثور على مستخدمين يطابقون بحثك.',
+    noPublicUsers: 'لم يتم العور على مستخدمين يطابقون بحثك.',
     filterUsers: 'المستخدمين',
     filterAnime: 'الأنمي',
     forgotPassword: 'نسيت كلمة السر؟',
