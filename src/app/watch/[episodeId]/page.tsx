@@ -67,7 +67,7 @@ function CommentItem({
   profile: any; 
   isAdminUser: boolean; 
   onVote: (commentId: string, direction: 'up' | 'down') => void;
-  onReply: (parentId: string, targetUserName: string) => void;
+  onReply: (parentId: string, targetUserName: string, isReply: boolean) => void;
   replies?: Comment[];
   language: string;
   t: (key: any) => string;
@@ -157,7 +157,7 @@ function CommentItem({
             
             {user && (
               <button 
-                onClick={() => onReply(comment.parentId || comment.id, comment.userName)}
+                onClick={() => onReply(comment.parentId || comment.id, comment.userName, !!comment.parentId)}
                 className="text-xs text-muted-foreground hover:text-accent flex items-center gap-1 font-medium transition-colors"
               >
                 <ReplyIcon className="h-3.5 w-3.5" />
@@ -272,9 +272,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   const friendsProfilesQuery = useMemoFirebase(() => {
     if (!db || !friendIds.length) return null;
-    const stringifiedIds = friendIds.sort().join(',');
     return query(collection(db, 'users'), where(documentId(), 'in', friendIds.slice(0, 10)));
-  }, [db, friendIds.sort().join(',')]);
+  }, [db, (friendIds || []).sort().join(',')]);
 
   const { data: friendProfiles } = useCollection<UserProfile>(friendsProfilesQuery);
 
@@ -557,9 +556,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     setShowTagSuggestions(null);
   };
 
-  const handleReplyInitiation = (parentId: string, targetUserName: string) => {
+  const handleReplyInitiation = (parentId: string, targetUserName: string, isReply: boolean) => {
     setActiveReplyId(parentId);
-    setReplyText(`@${targetUserName} `);
+    // Only pre-fill with a tag if the user is replying to an existing reply (sub-comment)
+    setReplyText(isReply ? `@${targetUserName} ` : "");
     // Use timeout to ensure the textarea is rendered before focusing
     setTimeout(() => {
       replyTextareaRef.current?.focus();
