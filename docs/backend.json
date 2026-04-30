@@ -32,6 +32,10 @@
           "type": "boolean",
           "description": "Indicates if the user has an active premium subscription to remove ads."
         },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Indicates if the user's profile and libraries are visible to other users."
+        },
         "languagePreference": {
           "type": "string",
           "description": "User's preferred language for the application interface (e.g., 'en' for English, 'ar' for Arabic)."
@@ -381,7 +385,7 @@
     },
     "/users/{userId}/history/{historyId}": {
       "schema": "WatchHistory",
-      "description": "Stores user's watched episodes history."
+      "description": "Stores user's watched episodes history. Always private."
     },
     "/admins/{adminId}": {
       "schema": "object",

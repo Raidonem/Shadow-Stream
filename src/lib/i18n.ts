@@ -4,6 +4,7 @@ export type Language = 'en' | 'ar';
 export const translations = {
   en: {
     search: 'Search anime...',
+    searchUsers: 'Search users...',
     watchlist: 'My Library',
     favorites: 'Favorites',
     profile: 'Profile',
@@ -39,6 +40,15 @@ export const translations = {
     watching: 'Watching',
     notifications: 'Notifications',
     newEpisodeOut: 'New episode released!',
+    publicProfile: 'Public Profile',
+    privateProfile: 'Private Profile',
+    profilePrivacy: 'Profile Privacy',
+    profilePrivacyDesc: 'When public, other users can see your library and favorites.',
+    viewProfile: 'View Profile',
+    userLibrary: 'User Library',
+    noPublicUsers: 'No public users found matching your search.',
+    filterUsers: 'Users',
+    filterAnime: 'Anime',
     animeTypes: {
       'tv': 'TV Series',
       'movie': 'Movie',
@@ -96,6 +106,7 @@ export const translations = {
   },
   ar: {
     search: 'البحث عن أنمي...',
+    searchUsers: 'البحث عن مستخدمين...',
     watchlist: 'مكتبتي',
     favorites: 'المفضلة',
     profile: 'الملف الشخصي',
@@ -131,6 +142,15 @@ export const translations = {
     watching: 'مشاهدة حالية',
     notifications: 'التنبيهات',
     newEpisodeOut: 'صدرت حلقة جديدة!',
+    publicProfile: 'ملف شخصي عام',
+    privateProfile: 'ملف شخصي خاص',
+    profilePrivacy: 'خصوصية الملف الشخصي',
+    profilePrivacyDesc: 'عندما يكون عاماً، يمكن للمستخدمين الآخرين رؤية مكتبتك ومفضلاتك.',
+    viewProfile: 'عرض الملف الشخصي',
+    userLibrary: 'مكتبة المستخدم',
+    noPublicUsers: 'لم يتم العثور على مستخدمين يطابقون بحثك.',
+    filterUsers: 'المستخدمين',
+    filterAnime: 'الأنمي',
     animeTypes: {
       'tv': 'مسلسل',
       'movie': 'فلم',

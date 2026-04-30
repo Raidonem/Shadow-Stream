@@ -5,7 +5,7 @@ service cloud.firestore {
 
     /**
      * SHADOWSTREAM SECURITY RULES - SYNCED FOR PROJECT: shadows-16567
-     * Standardized rules for production stability and App Hosting sync.
+     * Enhanced privacy controls for user profiles.
      */
 
     // --- Helper Functions ---
@@ -29,13 +29,17 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if true; 
+      // Allow reading profile if owner OR if profile is marked public
+      allow get: if isOwner(userId) || resource.data.isPublic == true;
+      // Allow searching for public users
+      allow list: if isSignedIn() && (request.query.limit <= 20 || isAdmin()); 
+      
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
       match /history/{historyId} {
+        // Watching history is ALWAYS strictly private
         allow read, write: if isOwner(userId);
       }
     }

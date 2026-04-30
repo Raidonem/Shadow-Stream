@@ -29,7 +29,7 @@ import {
   Reply as ReplyIcon
 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
 import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment, deleteDoc } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
@@ -66,17 +66,29 @@ function CommentItem({
   t: (key: any) => string;
   userVote?: 'up' | 'down';
 }) {
+  const router = useRouter();
+  
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
-          <AvatarFallback>{comment.userName?.[0] || 'U'}</AvatarFallback>
-        </Avatar>
+        <button 
+          onClick={() => router.push(`/profile?uid=${comment.userId}`)}
+          className="h-10 w-10 shrink-0 hover:opacity-80 transition-opacity"
+        >
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
+            <AvatarFallback>{comment.userName?.[0] || 'U'}</AvatarFallback>
+          </Avatar>
+        </button>
         <div className="flex-1 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm md:text-base">{comment.userName}</span>
+              <button 
+                onClick={() => router.push(`/profile?uid=${comment.userId}`)}
+                className="font-bold text-sm md:text-base hover:text-accent transition-colors"
+              >
+                {comment.userName}
+              </button>
               {comment.isAdmin && (
                 <Badge className="bg-primary/20 text-primary border-none gap-1 px-2 py-0 h-5 text-[10px] font-bold">
                   <ShieldCheck className="h-3 w-3" />
@@ -368,14 +380,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
     if (existingVote) {
       if (existingVote.type === direction) {
-        // Remove vote if same button clicked
         deleteDocumentNonBlocking(voteRef);
         updateDocumentNonBlocking(commentDoc, {
           [direction === 'up' ? 'upvotes' : 'downvotes']: increment(-1),
           updatedAt: serverTimestamp()
         });
       } else {
-        // Switch vote
         updateDocumentNonBlocking(voteRef, { type: direction, updatedAt: serverTimestamp() });
         updateDocumentNonBlocking(commentDoc, {
           [existingVote.type === 'up' ? 'upvotes' : 'downvotes']: increment(-1),
@@ -384,7 +394,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         });
       }
     } else {
-      // New vote
       setDocumentNonBlocking(voteRef, {
         id: voteId,
         userId: user.uid,
@@ -491,9 +500,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <h1 className="font-headline text-2xl font-bold md:text-3xl">{epTitle}</h1>
                   <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                     <Link href={`/anime/${anime.id}`} className="text-accent hover:underline font-bold">{animeTitle}</Link>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1 text-yellow-400"><Star className="h-4 w-4 fill-current" /><span className="text-sm font-bold">{anime.rating?.toFixed(1) || '0.0'}</span></div>
-                    </div>
+                    <div className="flex items-center gap-1 text-yellow-400"><Star className="h-4 w-4 fill-current" /><span className="text-sm font-bold">{anime.rating?.toFixed(1) || '0.0'}</span></div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
