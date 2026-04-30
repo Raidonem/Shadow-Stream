@@ -5,7 +5,7 @@ import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, query, where, documentId, orderBy, serverTimestamp } from 'firebase/firestore';
-import { deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users, UserPlus, UserMinus, Check, X, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -75,7 +75,6 @@ export default function WatchlistPage() {
   const { data: friendships, isLoading: isFriendsLoading } = useCollection(friendshipsQuery);
   const { data: incomingRequests } = useCollection(incomingRequestsQuery);
 
-  // Fetch friend profile data
   const friendIds = friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
   
   const friendsProfilesQuery = useMemoFirebase(() => {
@@ -85,7 +84,6 @@ export default function WatchlistPage() {
   
   const { data: friendProfiles } = useCollection(friendsProfilesQuery);
 
-  // Fetch requester profile data
   const requesterIds = incomingRequests?.map(r => r.senderId) || [];
   const requesterProfilesQuery = useMemoFirebase(() => {
     if (!db || !requesterIds.length) return null;
@@ -106,6 +104,19 @@ export default function WatchlistPage() {
     }, { merge: true });
 
     deleteDocumentNonBlocking(doc(db, 'friend_requests', requestId));
+
+    // Send notification to sender
+    addDocumentNonBlocking(collection(db, 'users', senderId, 'notifications'), {
+      type: 'friend_accepted',
+      fromId: user.uid,
+      fromName: profile?.displayName || profile?.username,
+      link: `/profile?uid=${user.uid}`,
+      messageEn: `${profile?.displayName || profile?.username} accepted your friend request.`,
+      messageAr: `قبول ${profile?.displayName || profile?.username} طلب الصداقة الخاص بك.`,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+
     toast({ title: "Friend Request Accepted!" });
   };
 
@@ -286,7 +297,6 @@ export default function WatchlistPage() {
           </TabsContent>
 
           <TabsContent value="friends" className="space-y-12">
-            {/* Incoming Requests Section */}
             {requesterProfiles && requesterProfiles.length > 0 && (
               <div className="space-y-4">
                 <h2 className="flex items-center gap-2 font-headline text-xl font-bold">
@@ -323,7 +333,6 @@ export default function WatchlistPage() {
               </div>
             )}
 
-            {/* Existing Friends Section */}
             <div className="space-y-4">
               <h2 className="flex items-center gap-2 font-headline text-xl font-bold">
                 <Users className="h-5 w-5 text-primary" />

@@ -74,7 +74,7 @@ function CommentItem({
   const currentUserName = isOwnComment ? (profile?.username || comment.userName) : (comment.userName || 'user');
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" id={`comment-${comment.id}`}>
       <div className="flex gap-4">
         <button 
           onClick={() => router.push(`/profile?uid=${comment.userId}`)}
@@ -116,7 +116,6 @@ function CommentItem({
           
           <div className="flex items-center gap-4 pt-1">
             <div className="flex items-center gap-3">
-              {/* LIKES COUNTER */}
               <div className="flex items-center gap-1 bg-secondary/30 rounded-full px-2 py-0.5">
                 <button 
                   onClick={() => onVote(comment.id, 'up')}
@@ -133,7 +132,6 @@ function CommentItem({
                 </span>
               </div>
 
-              {/* DISLIKES COUNTER */}
               <div className="flex items-center gap-1 bg-secondary/30 rounded-full px-2 py-0.5">
                 <button 
                   onClick={() => onVote(comment.id, 'down')}
@@ -360,7 +358,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   }, [user, db, anime, episode, episodeId, isAdminUser, episodes]);
 
   const handlePostComment = (parentId?: string) => {
-    if (!user || !commentsRef || !episodeId || !profile) {
+    if (!user || !commentsRef || !episodeId || !profile || !db) {
       toast({ title: "Please wait", description: "Loading profile data..." });
       return;
     }
@@ -383,6 +381,23 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       isPremium: profile?.isPremium || false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
+    }).then((newDoc) => {
+      // Notification logic for replies
+      if (parentId) {
+        const parentComment = comments?.find(c => c.id === parentId);
+        if (parentComment && parentComment.userId !== user.uid) {
+          addDocumentNonBlocking(collection(db, 'users', parentComment.userId, 'notifications'), {
+            type: 'comment_reply',
+            fromId: user.uid,
+            fromName: finalDisplayName,
+            link: `/watch/${episodeId}?animeId=${animeId}#comment-${parentId}`,
+            messageEn: `${finalDisplayName} replied to your comment.`,
+            messageAr: `قام ${finalDisplayName} بالرد على تعليقك.`,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      }
     });
 
     if (parentId) {

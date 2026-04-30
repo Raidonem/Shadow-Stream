@@ -89,6 +89,18 @@ export interface GlobalNotification {
   createdAt: any;
 }
 
+export interface UserNotification {
+  id: string;
+  type: 'friend_request' | 'friend_accepted' | 'comment_reply';
+  fromId: string;
+  fromName: string;
+  messageEn: string;
+  messageAr: string;
+  link: string;
+  read: boolean;
+  createdAt: any;
+}
+
 export interface Comment {
   id: string;
   episodeId: string;

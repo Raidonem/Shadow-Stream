@@ -49,6 +49,13 @@ service cloud.firestore {
         // Watching history is ALWAYS strictly private
         allow read, write: if isOwner(userId);
       }
+
+      match /notifications/{notifId} {
+        // Only owner can read/manage their own notifications
+        allow read, update, delete: if isOwner(userId);
+        // Any signed-in user can create a notification for another user (e.g., friend request, reply)
+        allow create: if isSignedIn();
+      }
     }
 
     match /friendships/{friendshipId} {

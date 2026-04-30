@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { Bell, PlayCircle, Loader2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase/index';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import { Button } from '../ui/button';
 import { useLanguage } from '../providers/LanguageContext';
 import { translations } from '../../lib/i18n';
 import Link from 'next/link';
-import { GlobalNotification } from '../../lib/types';
+import { GlobalNotification, UserNotification } from '../../lib/types';
 import { Badge } from '../ui/badge';
 
 export function NotificationBell() {
@@ -26,12 +26,20 @@ export function NotificationBell() {
   const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
-  const notificationsQuery = useMemoFirebase(() => {
+  // Global Notifications (New Episodes)
+  const globalQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(10));
   }, [db]);
 
-  const { data: notifications, isLoading } = useCollection<GlobalNotification>(notificationsQuery);
+  // Personal Notifications (Friend Requests, Replies)
+  const personalQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(10));
+  }, [db, user]);
+
+  const { data: globals, isLoading: isGlobalsLoading } = useCollection<GlobalNotification>(globalQuery);
+  const { data: personals, isLoading: isPersonalsLoading } = useCollection<UserNotification>(personalQuery);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -40,18 +48,42 @@ export function NotificationBell() {
 
   const { data: profile } = useDoc(profileRef);
 
-  const unreadCount = notifications?.filter(n => {
-    // Basic unread logic based on local storage of last seen timestamp
-    const lastSeen = localStorage.getItem('last_notif_seen') || '0';
-    return (n.createdAt?.seconds || 0) > parseInt(lastSeen);
-  }).length || 0;
+  // Merge and sort notifications
+  const allNotifications = useMemo(() => {
+    const merged = [
+      ...(globals || []).map(n => ({ ...n, category: 'global' as const })),
+      ...(personals || []).map(n => ({ ...n, category: 'personal' as const }))
+    ];
+    return merged.sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    }).slice(0, 15);
+  }, [globals, personals]);
+
+  const unreadCount = useMemo(() => {
+    const lastSeen = parseInt(localStorage.getItem('last_notif_seen') || '0');
+    return allNotifications.filter(n => (n.createdAt?.seconds || 0) > lastSeen).length;
+  }, [allNotifications]);
 
   const handleOpen = () => {
     setIsOpen(!isOpen);
-    if (notifications && notifications.length > 0) {
-      localStorage.setItem('last_notif_seen', notifications[0].createdAt?.seconds.toString() || '0');
+    if (allNotifications.length > 0) {
+      localStorage.setItem('last_notif_seen', allNotifications[0].createdAt?.seconds.toString() || '0');
     }
   };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'new_episode': return <PlayCircle className="h-4 w-4 text-accent" />;
+      case 'comment_reply': return <MessageSquare className="h-4 w-4 text-primary" />;
+      case 'friend_request': return <UserPlus className="h-4 w-4 text-green-500" />;
+      case 'friend_accepted': return <Users className="h-4 w-4 text-accent" />;
+      default: return <Bell className="h-4 w-4" />;
+    }
+  };
+
+  const isLoading = isGlobalsLoading || isPersonalsLoading;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpen}>
@@ -72,36 +104,56 @@ export function NotificationBell() {
         
         {isLoading ? (
           <div className="flex p-4 justify-center"><Loader2 className="h-4 w-4 animate-spin" /></div>
-        ) : notifications && notifications.length > 0 ? (
+        ) : allNotifications.length > 0 ? (
           <div className="max-h-96 overflow-y-auto">
-            {notifications.map((n) => {
-              const isWatching = profile?.currentlyWatchingAnimeIds?.includes(n.animeId);
-              const title = language === 'ar' ? n.animeTitleAr : n.animeTitleEn;
-              
-              return (
-                <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0">
-                  <Link href={`/watch/${n.episodeId}?animeId=${n.animeId}`} className="flex flex-col gap-1 p-3 hover:bg-secondary/50">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="text-sm font-bold leading-none">
-                          {title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {t('newEpisodeOut')} ({t('episodes')} {n.episodeNumber})
-                        </p>
+            {allNotifications.map((n: any) => {
+              if (n.category === 'global') {
+                const isWatching = profile?.currentlyWatchingAnimeIds?.includes(n.animeId);
+                const title = language === 'ar' ? n.animeTitleAr : n.animeTitleEn;
+                return (
+                  <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0">
+                    <Link href={`/watch/${n.episodeId}?animeId=${n.animeId}`} className="flex flex-col gap-1 p-3 hover:bg-secondary/50">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {getIcon(n.type)}
+                          <div className="flex-1">
+                            <p className="text-sm font-bold leading-none">{title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('newEpisodeOut')} ({t('episodes')} {n.episodeNumber})
+                            </p>
+                          </div>
+                        </div>
+                        {isWatching && (
+                          <Badge variant="outline" className="text-[9px] border-accent text-accent uppercase px-1 py-0 h-4">
+                            {t('watching')}
+                          </Badge>
+                        )}
                       </div>
-                      {isWatching && (
-                        <Badge variant="outline" className="text-[9px] border-accent text-accent uppercase px-1 py-0 h-4">
-                          {t('watching')}
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">
-                      {n.createdAt?.toDate?.()?.toLocaleString() || 'Recently'}
-                    </span>
-                  </Link>
-                </DropdownMenuItem>
-              );
+                      <span className="text-[10px] text-muted-foreground ml-6">
+                        {n.createdAt?.toDate?.()?.toLocaleString() || 'Recently'}
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              } else {
+                return (
+                  <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0">
+                    <Link href={n.link} className="flex flex-col gap-1 p-3 hover:bg-secondary/50">
+                      <div className="flex items-start gap-2">
+                        {getIcon(n.type)}
+                        <div className="flex-1">
+                          <p className="text-sm font-bold leading-none">
+                            {language === 'ar' ? n.messageAr : n.messageEn}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground ml-6">
+                        {n.createdAt?.toDate?.()?.toLocaleString() || 'Recently'}
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              }
             })}
           </div>
         ) : (

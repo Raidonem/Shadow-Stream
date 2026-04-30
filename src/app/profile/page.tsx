@@ -17,7 +17,7 @@ import {
 } from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
-import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { 
   User as UserIcon, 
   Mail, 
@@ -124,7 +124,6 @@ function ProfileContent() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // Friendship source of truth for security rules
   const friendshipId = useMemo(() => {
     if (!authUser || !targetUid || isOwnProfile) return null;
     return authUser.uid < targetUid 
@@ -140,7 +139,6 @@ function ProfileContent() {
   const { data: friendshipData } = useDoc(friendshipRef);
   const isFriend = !!friendshipData;
 
-  // Friend Request logic
   const requestId = useMemo(() => {
     if (!authUser || !targetUid || isOwnProfile) return null;
     return `${authUser.uid}_${targetUid}`;
@@ -261,7 +259,7 @@ function ProfileContent() {
   };
 
   const handleSendRequest = () => {
-    if (!requestRef || !authUser || !targetUid) return;
+    if (!requestRef || !authUser || !targetUid || !db) return;
     setDocumentNonBlocking(requestRef, {
       id: requestId,
       senderId: authUser.uid,
@@ -269,21 +267,44 @@ function ProfileContent() {
       status: 'pending',
       createdAt: serverTimestamp()
     }, { merge: true });
+
+    // Send notification to recipient
+    addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
+      type: 'friend_request',
+      fromId: authUser.uid,
+      fromName: profile?.displayName || profile?.username,
+      link: `/watchlist?tab=friends`,
+      messageEn: `${profile?.displayName || profile?.username} sent you a friend request.`,
+      messageAr: `أرسل لك ${profile?.displayName || profile?.username} طلب صداقة.`,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+
     toast({ title: "Request Sent", description: "Waiting for them to accept." });
   };
 
   const handleAcceptRequest = async () => {
     if (!reverseRequestRef || !friendshipRef || !authUser || !targetUid || !db) return;
     
-    // 1. Create the mutual friendship
     setDocumentNonBlocking(friendshipRef, {
       id: friendshipId,
       userIds: [authUser.uid, targetUid].sort(),
       createdAt: serverTimestamp()
     }, { merge: true });
 
-    // 2. Delete the request
     deleteDocumentNonBlocking(reverseRequestRef);
+
+    // Send notification to sender
+    addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
+      type: 'friend_accepted',
+      fromId: authUser.uid,
+      fromName: profile?.displayName || profile?.username,
+      link: `/profile?uid=${authUser.uid}`,
+      messageEn: `${profile?.displayName || profile?.username} accepted your friend request.`,
+      messageAr: `قبول ${profile?.displayName || profile?.username} طلب الصداقة الخاص بك.`,
+      read: false,
+      createdAt: serverTimestamp()
+    });
 
     toast({ title: "Friend Added", description: "You are now friends!" });
   };
@@ -327,7 +348,6 @@ function ProfileContent() {
     );
   }
 
-  // Private profile check: owners can see, friends can see, public profiles can be seen
   const canView = isOwnProfile || profile?.isPublic || isFriend;
 
   if (!profile || (!canView && !isOwnProfile)) {

@@ -306,6 +306,22 @@
       },
       "required": ["id", "type", "animeId", "episodeId", "createdAt"]
     },
+    "UserNotification": {
+      "title": "UserNotification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["friend_request", "friend_accepted", "comment_reply"] },
+        "fromId": { "type": "string" },
+        "fromName": { "type": "string" },
+        "messageEn": { "type": "string" },
+        "messageAr": { "type": "string" },
+        "link": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "fromId", "messageEn", "messageAr", "read", "createdAt"]
+    },
     "WatchHistory": {
       "title": "WatchHistory",
       "type": "object",
@@ -359,6 +375,10 @@
     "/users/{userId}/history/{historyId}": {
       "schema": "WatchHistory",
       "description": "Stores user's watched episodes history. Always private."
+    },
+    "/users/{userId}/notifications/{notifId}": {
+      "schema": "UserNotification",
+      "description": "Personal notifications for friend requests, replies, etc."
     },
     "/friendships/{friendshipId}": {
       "schema": "Friendship",
