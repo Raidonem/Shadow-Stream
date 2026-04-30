@@ -5,6 +5,7 @@ import { firebaseConfig } from './config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
+import { getRemoteConfig } from 'firebase/remote-config';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -34,10 +35,23 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  const firestore = getFirestore(firebaseApp);
+  const auth = getAuth(firebaseApp);
+  
+  // Remote Config is client-only and requires a window object. 
+  // We initialize it here, but it should be accessed via safe patterns in React components.
+  let remoteConfig = null;
+  if (typeof window !== 'undefined') {
+    remoteConfig = getRemoteConfig(firebaseApp);
+    // Set default settings
+    remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1 hour
+  }
+
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    auth,
+    firestore,
+    remoteConfig
   };
 }
 
