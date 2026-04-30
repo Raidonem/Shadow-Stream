@@ -54,10 +54,8 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const renderedRef = useRef(false);
 
   useEffect(() => {
-    // Check if the script is resolved and the button hasn't been rendered yet
     if (isResolved && !renderedRef.current) {
       const paypal = (window as any).paypal;
-      // Ensure the container exists in the DOM before attempting to render
       const container = document.getElementById("paypal-container-X3C6F5887MPCG");
       
       if (paypal && paypal.HostedButtons && container) {
@@ -104,6 +102,7 @@ function ProfileContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     username: '',
+    displayName: '',
     languagePreference: 'en',
     themePreference: 'dark',
     isPublic: false
@@ -116,7 +115,6 @@ function ProfileContent() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // Fetch libraries for the profile being viewed
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.currentlyWatchingAnimeIds.slice(0, 10)));
@@ -143,6 +141,7 @@ function ProfileContent() {
     if (profile && isOwnProfile) {
       setEditData({
         username: profile.username || '',
+        displayName: profile.displayName || profile.username || '',
         languagePreference: profile.languagePreference || 'en',
         themePreference: profile.themePreference || 'dark',
         isPublic: profile.isPublic || false
@@ -151,17 +150,17 @@ function ProfileContent() {
   }, [profile, isOwnProfile]);
 
   const handleSave = () => {
-    if (!profileRef || !editData.username.trim()) {
+    if (!profileRef || !editData.displayName.trim()) {
       toast({
         title: "Error",
-        description: "Username cannot be empty.",
+        description: "Display Name cannot be empty.",
         variant: "destructive"
       });
       return;
     }
 
     updateDocumentNonBlocking(profileRef, {
-      username: editData.username,
+      displayName: editData.displayName,
       languagePreference: editData.languagePreference,
       themePreference: editData.themePreference,
       isPublic: editData.isPublic,
@@ -218,7 +217,7 @@ function ProfileContent() {
     );
   }
 
-  const userInitial = profile.username?.[0] || 'U';
+  const userInitial = (profile.displayName || profile.username || 'U')[0];
 
   return (
     <div className="space-y-8">
@@ -234,16 +233,19 @@ function ProfileContent() {
           )}
         </div>
         <div className="flex-1 space-y-2">
-          <div className="flex items-center justify-center gap-3 md:justify-start">
-            <h1 className="font-headline text-4xl font-bold">{profile.username || 'User'}</h1>
-            {isAdmin && <ShieldCheck className="h-6 w-6 text-accent" />}
-            {isPremium && (
-              <Badge className="bg-accent text-accent-foreground gap-1 px-3 py-1 font-bold">
-                PREMIUM
-              </Badge>
-            )}
+          <div className="flex flex-col md:items-start items-center">
+            <div className="flex items-center gap-3">
+              <h1 className="font-headline text-4xl font-bold">{profile.displayName || profile.username}</h1>
+              {isAdmin && <ShieldCheck className="h-6 w-6 text-accent" />}
+              {isPremium && (
+                <Badge className="bg-accent text-accent-foreground gap-1 px-3 py-1 font-bold">
+                  PREMIUM
+                </Badge>
+              )}
+            </div>
+            <p className="text-accent font-medium text-lg">@{profile.username}</p>
             {!isOwnProfile && (
-              <Badge variant="outline" className="gap-1">
+              <Badge variant="outline" className="gap-1 mt-2">
                 {profile.isPublic ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                 {profile.isPublic ? t('publicProfile') : t('privateProfile')}
               </Badge>
@@ -289,12 +291,21 @@ function ProfileContent() {
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Display Username</Label>
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input 
+                    id="displayName"
+                    value={editData.displayName}
+                    onChange={(e) => setEditData({...editData, displayName: e.target.value})}
+                    className="rounded-xl border-none bg-secondary/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username (Handle - Cannot be changed)</Label>
                   <Input 
                     id="username"
-                    value={editData.username}
-                    onChange={(e) => setEditData({...editData, username: e.target.value})}
-                    className="rounded-xl border-none bg-secondary/50"
+                    value={profile.username}
+                    disabled
+                    className="rounded-xl border-none bg-secondary/20 cursor-not-allowed opacity-70"
                   />
                 </div>
                 <div className="space-y-2">

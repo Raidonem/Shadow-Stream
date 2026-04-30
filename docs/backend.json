@@ -17,7 +17,11 @@
         },
         "username": {
           "type": "string",
-          "description": "Display name chosen by the user."
+          "description": "Unique handle chosen by the user for identification and search."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Non-unique display name chosen by the user."
         },
         "email": {
           "type": "string",
@@ -94,6 +98,7 @@
         "id",
         "externalAuthId",
         "username",
+        "displayName",
         "email",
         "role",
         "languagePreference",
@@ -350,6 +355,7 @@
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "userName": { "type": "string" },
+        "userDisplayName": { "type": "string" },
         "episodeId": { "type": "string" },
         "text": { "type": "string", "maxLength": 100 },
         "parentId": { "type": "string" },

@@ -24,6 +24,26 @@ export interface Anime {
   updatedAt: any;
 }
 
+export interface UserProfile {
+  id: string;
+  externalAuthId: string;
+  username: string;
+  displayName: string;
+  email: string;
+  role: string;
+  isPremium: boolean;
+  isPublic: boolean;
+  languagePreference: string;
+  themePreference: string;
+  watchlistAnimeIds: string[];
+  currentlyWatchingAnimeIds: string[];
+  favoriteAnimeIds: string[];
+  completedAnimeIds: string[];
+  favoriteEpisodeIds: string[];
+  createdAt: any;
+  updatedAt: any;
+}
+
 export interface EpisodeServer {
   lang: 'ar' | 'en';
   name: string;
@@ -60,6 +80,7 @@ export interface Comment {
   episodeId: string;
   userId: string;
   userName: string;
+  userDisplayName: string;
   text: string;
   parentId?: string;
   upvotes?: number;

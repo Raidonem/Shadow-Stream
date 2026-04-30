@@ -17,11 +17,11 @@ import {
   Type, 
   Filter, 
   X, 
-  ChevronDown,
-  ChevronUp,
-  FilterX,
-  User as UserIcon,
-  Tv
+  ChevronDown, 
+  ChevronUp, 
+  FilterX, 
+  User as UserIcon, 
+  Tv 
 } from 'lucide-react';
 import { normalizeSearchString } from '../../lib/utils';
 import { 
@@ -34,7 +34,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { translations } from '../../lib/i18n';
-import { Anime, GenreKey } from '../../lib/types';
+import { Anime, GenreKey, UserProfile } from '../../lib/types';
 import { cn } from '../../lib/utils';
 import { Card, CardContent } from '../../components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
@@ -68,7 +68,7 @@ function SearchResults() {
   }, [db, searchType]);
 
   const { data: animeList, isLoading: isAnimeLoading } = useCollection<Anime>(animeQuery);
-  const { data: usersList, isLoading: isUsersLoading } = useCollection(usersQuery);
+  const { data: usersList, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const availableYears = useMemo(() => {
     if (!animeList) return [];
@@ -125,6 +125,7 @@ function SearchResults() {
 
     if (queryParam) {
       const normalizedQuery = normalizeSearchString(queryParam);
+      // SEARCH ONLY BY USERNAME
       filtered = filtered.filter(user => 
         normalizeSearchString(user.username).includes(normalizedQuery)
       );
@@ -283,12 +284,13 @@ function SearchResults() {
                   <CardContent className="p-4 flex items-center gap-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                        {user.username?.[0]?.toUpperCase()}
+                        {(user.displayName || user.username || 'U')[0]?.toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold truncate">{user.username}</h3>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <h3 className="font-bold truncate">{user.displayName || user.username}</h3>
+                      <p className="text-xs text-accent">@{user.username}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
                         {user.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
                         <span>{user.favoriteAnimeIds?.length || 0} Favorites</span>
                       </div>

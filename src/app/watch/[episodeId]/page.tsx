@@ -77,18 +77,19 @@ function CommentItem({
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
-            <AvatarFallback>{comment.userName?.[0] || 'U'}</AvatarFallback>
+            <AvatarFallback>{(comment.userDisplayName || comment.userName)?.[0] || 'U'}</AvatarFallback>
           </Avatar>
         </button>
         <div className="flex-1 space-y-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button 
                 onClick={() => router.push(`/profile?uid=${comment.userId}`)}
                 className="font-bold text-sm md:text-base hover:text-accent transition-colors"
               >
-                {comment.userName}
+                {comment.userDisplayName || comment.userName}
               </button>
+              <span className="text-xs text-muted-foreground font-medium">@{comment.userName}</span>
               {comment.isAdmin && (
                 <Badge className="bg-primary/20 text-primary border-none gap-1 px-2 py-0 h-5 text-[10px] font-bold">
                   <ShieldCheck className="h-3 w-3" />
@@ -101,7 +102,7 @@ function CommentItem({
                   PREMIUM
                 </Badge>
               )}
-              <span className="text-xs text-muted-foreground ml-2">
+              <span className="text-[10px] text-muted-foreground ml-2">
                 {comment.createdAt?.toDate?.()?.toLocaleDateString() || 'Just now'}
               </span>
             </div>
@@ -350,6 +351,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     addDocumentNonBlocking(commentsRef, {
       userId: user.uid,
       userName: profile?.username || user.displayName || 'User',
+      userDisplayName: profile?.displayName || profile?.username || user.displayName || 'User',
       episodeId: episodeId,
       text: text.trim(),
       parentId: parentId || null,
@@ -518,7 +520,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               <div className="flex items-center gap-2"><MessageSquare className="h-6 w-6 text-accent" /><h2 className="font-headline text-2xl font-bold">{t('comments')} ({comments?.length || 0})</h2></div>
               {user ? (
                 <div className="flex gap-4">
-                  <Avatar className="h-10 w-10 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user.uid}/100`} /><AvatarFallback>{profile?.username?.[0] || 'U'}</AvatarFallback></Avatar>
+                  <Avatar className="h-10 w-10 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user.uid}/100`} /><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
                   <div className="flex-1 space-y-2">
                     <Textarea placeholder={language === 'ar' ? 'انضم إلى المناقشة...' : "Join the discussion..."} className="min-h-[80px] rounded-xl bg-secondary/30 focus:ring-accent border-none" value={commentText} onChange={(e) => setCommentText(e.target.value)} maxLength={COMMENT_LIMIT} />
                     <div className="flex items-center justify-between">
@@ -549,7 +551,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     
                     {activeReplyId === c.id && (
                       <div className={cn("flex gap-3 pt-2", language === 'ar' ? "mr-12" : "ml-12")}>
-                        <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user?.uid}/100`} /><AvatarFallback>{profile?.username?.[0] || 'U'}</AvatarFallback></Avatar>
+                        <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user?.uid}/100`} /><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
                         <div className="flex-1 space-y-2">
                           <Textarea placeholder={language === 'ar' ? 'اكتب رداً...' : "Write a reply..."} className="min-h-[60px] text-sm rounded-xl bg-secondary/30 focus:ring-accent border-none" value={replyText} onChange={(e) => setReplyText(e.target.value)} maxLength={COMMENT_LIMIT} />
                           <div className="flex items-center justify-between">

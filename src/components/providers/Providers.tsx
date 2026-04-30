@@ -12,6 +12,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 /**
+ * Generates a random display name for legacy accounts missing it.
+ */
+function generateRandomDisplayName() {
+  const prefixes = ['Shadow', 'User', 'Neko', 'Kira', 'Mecha', 'Spirit'];
+  const randomSuffix = Math.random().toString(36).substring(2, 6);
+  return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${randomSuffix}`.substring(0, 10);
+}
+
+/**
  * Syncs the user's Auth state with their Firestore UserProfile document.
  * Sets default role to 'user' and does NOT automatically grant admin status.
  */
@@ -36,12 +45,14 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          const pendingUsername = localStorage.getItem('pendingUsername') || user.displayName || user.email?.split('@')[0] || 'User';
+          const pendingUsername = localStorage.getItem('pendingUsername') || user.email?.split('@')[0] || 'User';
+          const pendingDisplayName = localStorage.getItem('pendingDisplayName') || pendingUsername;
           
           await setDoc(userRef, {
             id: user.uid,
             externalAuthId: user.uid,
             username: pendingUsername,
+            displayName: pendingDisplayName,
             email: user.email || '',
             role: 'user', 
             languagePreference: localStorage.getItem('lang') || 'en',
@@ -52,21 +63,29 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
             completedAnimeIds: [],
             favoriteEpisodeIds: [],
             isPremium: false,
+            isPublic: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
           
           localStorage.removeItem('pendingUsername');
+          localStorage.removeItem('pendingDisplayName');
         } else {
           const data = userSnap.data();
-          // Migration for older users who might be missing the new fields
+          // Migration for older users who might be missing fields
           const updates: any = {};
           if (data.favoriteAnimeIds === undefined) updates.favoriteAnimeIds = [];
           if (data.favoriteEpisodeIds === undefined) updates.favoriteEpisodeIds = [];
           if (data.completedAnimeIds === undefined) updates.completedAnimeIds = [];
           if (data.currentlyWatchingAnimeIds === undefined) updates.currentlyWatchingAnimeIds = [];
           if (data.isPremium === undefined) updates.isPremium = false;
+          if (data.isPublic === undefined) updates.isPublic = false;
           
+          // Handle missing display name for legacy users
+          if (data.displayName === undefined) {
+            updates.displayName = generateRandomDisplayName();
+          }
+
           if (Object.keys(updates).length > 0) {
             await setDoc(userRef, updates, { merge: true });
           }

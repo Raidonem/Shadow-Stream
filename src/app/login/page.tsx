@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -51,26 +52,37 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    if (!username.trim() || !displayName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Username and Display Name are required.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // 1. Check if username is unique
       const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('username', '==', username));
+      const q = query(usersRef, where('username', '==', username.toLowerCase()));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         toast({
           variant: "destructive",
           title: "Username Taken",
-          description: "This username is already in use. Please choose another one.",
+          description: "This unique username is already in use. Please choose another one.",
         });
         setIsSubmitting(false);
         return;
       }
 
-      // 2. Store username for profile creation BEFORE auth call
-      localStorage.setItem('pendingUsername', username);
+      // 2. Store details for profile creation BEFORE auth call
+      localStorage.setItem('pendingUsername', username.toLowerCase());
+      localStorage.setItem('pendingDisplayName', displayName.trim());
 
-      // 3. Proceed with sign-up (Email uniqueness is handled by Firebase Auth automatically)
+      // 3. Proceed with sign-up
       await initiateEmailSignUp(auth, email, password);
       
       // 4. Send verification email
@@ -146,10 +158,21 @@ export default function LoginPage() {
               <TabsContent value="register">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="reg-username">Username</Label>
+                    <Label htmlFor="reg-displayName">Display Name</Label>
+                    <Input 
+                      id="reg-displayName" 
+                      placeholder="Shadow King" 
+                      className="rounded-xl border-none bg-secondary/50"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      required 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-username">Username (Unique handle)</Label>
                     <Input 
                       id="reg-username" 
-                      placeholder="ShadowMaster" 
+                      placeholder="shadowmaster" 
                       className="rounded-xl border-none bg-secondary/50"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
