@@ -18,7 +18,8 @@ import {
   LogOut,
   Settings,
   LogIn,
-  Library
+  Library,
+  Users
 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -31,9 +32,9 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { NotificationBell } from '../notifications/NotificationBell';
 
 function SearchInput({ t, searchQuery, setSearchQuery, handleSearch }: any) {
@@ -88,6 +89,13 @@ export function Navbar() {
 
   const { data: userProfile } = useDoc(profileRef);
 
+  // Check for pending friend requests for the badge
+  const requestsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'friend_requests'), where('receiverId', '==', user.uid), where('status', '==', 'pending'));
+  }, [db, user]);
+  const { data: incomingRequests } = useCollection(requestsQuery);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/');
@@ -138,7 +146,19 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          {user && <NotificationBell />}
+          {user && (
+            <div className="flex items-center gap-1">
+              <Link href="/watchlist?tab=friends">
+                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full" title={language === 'ar' ? 'الأصدقاء' : 'Friends'}>
+                  <Users className="h-5 w-5" />
+                  {(incomingRequests?.length || 0) > 0 && (
+                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                  )}
+                </Button>
+              </Link>
+              <NotificationBell />
+            </div>
+          )}
 
           <Button variant="ghost" size="icon" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} title={t('language')}>
             <Languages className="h-5 w-5" />

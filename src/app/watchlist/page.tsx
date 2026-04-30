@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect, Suspense } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
@@ -13,7 +14,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '../../components/ui/card';
 import { Avatar as UIAvatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
@@ -29,12 +30,22 @@ import {
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
 
-export default function WatchlistPage() {
+function WatchlistContent() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const [activeTab, setActiveTab] = useState('watching');
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -116,7 +127,6 @@ export default function WatchlistPage() {
 
     deleteDocumentNonBlocking(doc(db, 'friend_requests', requestId));
 
-    // Send notification to sender
     addDocumentNonBlocking(collection(db, 'users', senderId, 'notifications'), {
       type: 'friend_accepted',
       fromId: user.uid,
@@ -148,15 +158,11 @@ export default function WatchlistPage() {
   const handleBlock = (targetId: string) => {
     if (!db || !user || !profileRef) return;
     
-    // 1. Unfriend if they are friends
     const friendshipId = user.uid < targetId ? `${user.uid}_${targetId}` : `${targetId}_${user.uid}`;
     deleteDocumentNonBlocking(doc(db, 'friendships', friendshipId));
-
-    // 2. Delete any requests
     deleteDocumentNonBlocking(doc(db, 'friend_requests', `${user.uid}_${targetId}`));
     deleteDocumentNonBlocking(doc(db, 'friend_requests', `${targetId}_${user.uid}`));
 
-    // 3. Add to blocked list
     updateDocumentNonBlocking(profileRef, {
       blockedUserIds: arrayUnion(targetId)
     });
@@ -194,7 +200,7 @@ export default function WatchlistPage() {
           <p className="text-muted-foreground">{language === 'ar' ? 'أفلامك ومسلسلاتك المفضلة والمحفوظة' : 'Your favorited and saved anime collection'}</p>
         </div>
 
-        <Tabs defaultValue="watching" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-8 flex w-full max-w-4xl overflow-x-auto rounded-xl bg-secondary p-1">
             <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
               <Eye className="h-4 w-4" />
@@ -466,5 +472,13 @@ export default function WatchlistPage() {
         </Tabs>
       </main>
     </div>
+  );
+}
+
+export default function WatchlistPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <WatchlistContent />
+    </Suspense>
   );
 }
