@@ -50,6 +50,14 @@ export interface Friendship {
   createdAt: any;
 }
 
+export interface FriendRequest {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: any;
+}
+
 export interface EpisodeServer {
   lang: 'ar' | 'en';
   name: string;

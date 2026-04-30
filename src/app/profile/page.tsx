@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
@@ -42,7 +42,9 @@ import {
   AlertCircle,
   UserPlus,
   UserMinus,
-  Users
+  Users,
+  Clock,
+  Check
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -122,7 +124,7 @@ function ProfileContent() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
-  // Friendship logic
+  // Friendship source of truth for security rules
   const friendshipId = useMemo(() => {
     if (!authUser || !targetUid || isOwnProfile) return null;
     return authUser.uid < targetUid 
@@ -137,6 +139,30 @@ function ProfileContent() {
 
   const { data: friendshipData } = useDoc(friendshipRef);
   const isFriend = !!friendshipData;
+
+  // Friend Request logic
+  const requestId = useMemo(() => {
+    if (!authUser || !targetUid || isOwnProfile) return null;
+    return `${authUser.uid}_${targetUid}`;
+  }, [authUser, targetUid, isOwnProfile]);
+
+  const reverseRequestId = useMemo(() => {
+    if (!authUser || !targetUid || isOwnProfile) return null;
+    return `${targetUid}_${authUser.uid}`;
+  }, [authUser, targetUid, isOwnProfile]);
+
+  const requestRef = useMemoFirebase(() => {
+    if (!db || !requestId) return null;
+    return doc(db, 'friend_requests', requestId);
+  }, [db, requestId]);
+
+  const reverseRequestRef = useMemoFirebase(() => {
+    if (!db || !reverseRequestId) return null;
+    return doc(db, 'friend_requests', reverseRequestId);
+  }, [db, reverseRequestId]);
+
+  const { data: outgoingRequest } = useDoc(requestRef);
+  const { data: incomingRequest } = useDoc(reverseRequestRef);
 
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
@@ -209,12 +235,8 @@ function ProfileContent() {
           await batch.commit();
         }
       } catch (indexError: any) {
-        if (indexError.message?.includes('index')) {
-          toast({
-            title: "Index Still Building",
-            description: "Profile updated, but identity sync across old comments requires the Firestore index to finish building. Please wait 10 mins.",
-            variant: "destructive"
-          });
+        if (!indexError.message?.includes('index')) {
+          console.warn("Name sync skipped:", indexError.message);
         }
       }
 
@@ -238,14 +260,38 @@ function ProfileContent() {
     }
   };
 
-  const handleAddFriend = () => {
-    if (!friendshipRef || !authUser || !targetUid) return;
+  const handleSendRequest = () => {
+    if (!requestRef || !authUser || !targetUid) return;
+    setDocumentNonBlocking(requestRef, {
+      id: requestId,
+      senderId: authUser.uid,
+      receiverId: targetUid,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    }, { merge: true });
+    toast({ title: "Request Sent", description: "Waiting for them to accept." });
+  };
+
+  const handleAcceptRequest = async () => {
+    if (!reverseRequestRef || !friendshipRef || !authUser || !targetUid || !db) return;
+    
+    // 1. Create the mutual friendship
     setDocumentNonBlocking(friendshipRef, {
       id: friendshipId,
       userIds: [authUser.uid, targetUid].sort(),
       createdAt: serverTimestamp()
     }, { merge: true });
+
+    // 2. Delete the request
+    deleteDocumentNonBlocking(reverseRequestRef);
+
     toast({ title: "Friend Added", description: "You are now friends!" });
+  };
+
+  const handleDeclineRequest = () => {
+    if (!reverseRequestRef) return;
+    deleteDocumentNonBlocking(reverseRequestRef);
+    toast({ title: "Request Declined" });
   };
 
   const handleRemoveFriend = () => {
@@ -294,10 +340,22 @@ function ProfileContent() {
           <Button variant="outline" asChild>
             <a href="/">Back to Home</a>
           </Button>
-          {!isOwnProfile && authUser && (
-            <Button onClick={handleAddFriend} className="gap-2">
-              <UserPlus className="h-4 w-4" /> Add Friend
-            </Button>
+          {!isOwnProfile && authUser && !isFriend && (
+            <>
+              {incomingRequest ? (
+                <Button onClick={handleAcceptRequest} className="gap-2 bg-green-500 hover:bg-green-600">
+                  <Check className="h-4 w-4" /> Accept Request
+                </Button>
+              ) : outgoingRequest ? (
+                <Button disabled className="gap-2">
+                  <Clock className="h-4 w-4" /> Request Sent
+                </Button>
+              ) : (
+                <Button onClick={handleSendRequest} className="gap-2 bg-accent text-accent-foreground">
+                  <UserPlus className="h-4 w-4" /> Add Friend
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -364,8 +422,21 @@ function ProfileContent() {
               <Button variant="outline" className="rounded-xl gap-2 text-destructive border-destructive/20 hover:bg-destructive/10" onClick={handleRemoveFriend}>
                 <UserMinus className="h-4 w-4" /> Remove Friend
               </Button>
+            ) : incomingRequest ? (
+              <div className="flex gap-2">
+                <Button onClick={handleAcceptRequest} className="rounded-xl gap-2 bg-green-500 text-white hover:bg-green-600">
+                  <Check className="h-4 w-4" /> Accept
+                </Button>
+                <Button onClick={handleDeclineRequest} variant="ghost" className="rounded-xl text-destructive">
+                  Decline
+                </Button>
+              </div>
+            ) : outgoingRequest ? (
+              <Button disabled className="rounded-xl gap-2">
+                <Clock className="h-4 w-4" /> Request Sent
+              </Button>
             ) : (
-              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleAddFriend}>
+              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSendRequest}>
                 <UserPlus className="h-4 w-4" /> Add Friend
               </Button>
             )}

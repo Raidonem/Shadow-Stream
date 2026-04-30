@@ -334,6 +334,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userIds", "createdAt"]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderId", "receiverId", "status", "createdAt"]
     }
   },
   "auth": {
@@ -351,6 +363,10 @@
     "/friendships/{friendshipId}": {
       "schema": "Friendship",
       "description": "Stores mutual friendship connections."
+    },
+    "/friend_requests/{requestId}": {
+      "schema": "FriendRequest",
+      "description": "Stores pending friend requests."
     },
     "/admins/{adminId}": {
       "schema": "object",

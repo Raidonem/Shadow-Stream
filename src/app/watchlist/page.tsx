@@ -4,20 +4,25 @@
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId, orderBy, Avatar } from 'firebase/firestore';
+import { doc, collection, query, where, documentId, orderBy, serverTimestamp } from 'firebase/firestore';
+import { deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { useLanguage } from '../../components/providers/LanguageContext';
-import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users } from 'lucide-react';
+import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users, UserPlus, UserMinus, Check, X, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '../../components/ui/card';
 import { Avatar as UIAvatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { useRouter } from 'next/navigation';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { useToast } from '../../hooks/use-toast';
 
 export default function WatchlistPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { t, language } = useLanguage();
+  const { toast } = useToast();
   const router = useRouter();
 
   const profileRef = useMemoFirebase(() => {
@@ -57,12 +62,18 @@ export default function WatchlistPage() {
     return query(collection(db, 'friendships'), where('userIds', 'array-contains', user.uid));
   }, [db, user]);
 
+  const incomingRequestsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'friend_requests'), where('receiverId', '==', user.uid), where('status', '==', 'pending'));
+  }, [db, user]);
+
   const { data: watchingAnime, isLoading: isWatchingLoading } = useCollection(watchingQuery);
   const { data: watchlistAnime, isLoading: isWatchlistLoading } = useCollection(watchlistQuery);
   const { data: favoritesAnime, isLoading: isFavoritesLoading } = useCollection(favoritesQuery);
   const { data: completedAnime, isLoading: isCompletedLoading } = useCollection(completedQuery);
   const { data: watchHistory, isLoading: isHistoryLoading } = useCollection(historyQuery);
   const { data: friendships, isLoading: isFriendsLoading } = useCollection(friendshipsQuery);
+  const { data: incomingRequests } = useCollection(incomingRequestsQuery);
 
   // Fetch friend profile data
   const friendIds = friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
@@ -73,6 +84,37 @@ export default function WatchlistPage() {
   }, [db, friendIds]);
   
   const { data: friendProfiles } = useCollection(friendsProfilesQuery);
+
+  // Fetch requester profile data
+  const requesterIds = incomingRequests?.map(r => r.senderId) || [];
+  const requesterProfilesQuery = useMemoFirebase(() => {
+    if (!db || !requesterIds.length) return null;
+    return query(collection(db, 'users'), where(documentId(), 'in', requesterIds.slice(0, 10)));
+  }, [db, requesterIds]);
+
+  const { data: requesterProfiles } = useCollection(requesterProfilesQuery);
+
+  const handleAccept = (senderId: string) => {
+    if (!db || !user) return;
+    const friendshipId = user.uid < senderId ? `${user.uid}_${senderId}` : `${senderId}_${user.uid}`;
+    const requestId = `${senderId}_${user.uid}`;
+
+    setDocumentNonBlocking(doc(db, 'friendships', friendshipId), {
+      id: friendshipId,
+      userIds: [user.uid, senderId].sort(),
+      createdAt: serverTimestamp()
+    }, { merge: true });
+
+    deleteDocumentNonBlocking(doc(db, 'friend_requests', requestId));
+    toast({ title: "Friend Request Accepted!" });
+  };
+
+  const handleDecline = (senderId: string) => {
+    if (!db || !user) return;
+    const requestId = `${senderId}_${user.uid}`;
+    deleteDocumentNonBlocking(doc(db, 'friend_requests', requestId));
+    toast({ title: "Friend Request Declined." });
+  };
 
   if (isUserLoading || isProfileLoading) {
     return (
@@ -105,7 +147,7 @@ export default function WatchlistPage() {
         </div>
 
         <Tabs defaultValue="watching" className="w-full">
-          <TabsList className="mb-8 flex w-full max-w-3xl overflow-x-auto rounded-xl bg-secondary p-1">
+          <TabsList className="mb-8 flex w-full max-w-4xl overflow-x-auto rounded-xl bg-secondary p-1">
             <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
               <Eye className="h-4 w-4" />
               {t('currentlyWatching')}
@@ -129,6 +171,7 @@ export default function WatchlistPage() {
             <TabsTrigger value="friends" className="rounded-lg gap-2 flex-1">
               <Users className="h-4 w-4" />
               {language === 'ar' ? 'الأصدقاء' : 'Friends'}
+              {(incomingRequests?.length || 0) > 0 && <span className="ml-1 flex h-2 w-2 rounded-full bg-accent" />}
             </TabsTrigger>
           </TabsList>
 
@@ -242,37 +285,81 @@ export default function WatchlistPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="friends">
-            {isFriendsLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
-            ) : friendProfiles && friendProfiles.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {friendProfiles.map(friend => (
-                  <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <UIAvatar className="h-12 w-12 ring-2 ring-primary/20">
-                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                          {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </UIAvatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold truncate">{friend.displayName || friend.username}</h3>
-                        <p className="text-xs text-accent">@{friend.username}</p>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
-                          <Users className="h-3 w-3" /> Friend
-                          {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+          <TabsContent value="friends" className="space-y-12">
+            {/* Incoming Requests Section */}
+            {requesterProfiles && requesterProfiles.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="flex items-center gap-2 font-headline text-xl font-bold">
+                  <Clock className="h-5 w-5 text-accent" />
+                  {language === 'ar' ? 'طلبات الصداقة المعلقة' : 'Pending Invites'}
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {requesterProfiles.map(requester => (
+                    <Card key={requester.id} className="overflow-hidden bg-accent/5 border border-accent/20">
+                      <CardContent className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <UIAvatar className="h-10 w-10">
+                            <AvatarFallback className="bg-accent/20 text-accent font-bold">
+                              {(requester.displayName || requester.username || 'U')[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </UIAvatar>
+                          <div className="min-w-0">
+                            <h3 className="font-bold truncate text-sm">{requester.displayName || requester.username}</h3>
+                            <p className="text-xs text-muted-foreground">@{requester.username}</p>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
-                <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">{language === 'ar' ? 'ليس لديك أصدقاء بعد' : 'You have no friends added yet'}</p>
+                        <div className="flex gap-2 shrink-0">
+                          <Button size="icon" className="h-8 w-8 rounded-full bg-accent hover:bg-accent/90" onClick={() => handleAccept(requester.id)}>
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDecline(requester.id)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Existing Friends Section */}
+            <div className="space-y-4">
+              <h2 className="flex items-center gap-2 font-headline text-xl font-bold">
+                <Users className="h-5 w-5 text-primary" />
+                {language === 'ar' ? 'الأصدقاء' : 'My Friends'}
+              </h2>
+              {isFriendsLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+              ) : friendProfiles && friendProfiles.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {friendProfiles.map(friend => (
+                    <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
+                      <CardContent className="p-4 flex items-center gap-4">
+                        <UIAvatar className="h-12 w-12 ring-2 ring-primary/20">
+                          <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                            {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </UIAvatar>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold truncate">{friend.displayName || friend.username}</h3>
+                          <p className="text-xs text-accent">@{friend.username}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                            <Users className="h-3 w-3" /> Friend
+                            {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">{language === 'ar' ? 'ليس لديك أصدقاء بعد' : 'You have no friends added yet'}</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </main>
