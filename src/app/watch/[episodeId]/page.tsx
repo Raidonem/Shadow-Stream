@@ -67,7 +67,7 @@ function CommentItem({
   profile: any; 
   isAdminUser: boolean; 
   onVote: (commentId: string, direction: 'up' | 'down') => void;
-  onReply: (parentId: string) => void;
+  onReply: (parentId: string, targetUserName: string) => void;
   replies?: Comment[];
   language: string;
   t: (key: any) => string;
@@ -155,9 +155,9 @@ function CommentItem({
               </div>
             </div>
             
-            {user && !comment.parentId && (
+            {user && (
               <button 
-                onClick={() => onReply(comment.id)}
+                onClick={() => onReply(comment.parentId || comment.id, comment.userName)}
                 className="text-xs text-muted-foreground hover:text-accent flex items-center gap-1 font-medium transition-colors"
               >
                 <ReplyIcon className="h-3.5 w-3.5" />
@@ -210,6 +210,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const [showTagSuggestions, setShowTagSuggestions] = useState<string | null>(null); // 'main' or commentId
   const loadedEpisodeId = useRef<string | null>(null);
   const incrementedViews = useRef<string | null>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const episodeRef = useMemoFirebase(() => {
     if (!db || !animeId || !episodeId) return null;
@@ -271,8 +272,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   const friendsProfilesQuery = useMemoFirebase(() => {
     if (!db || !friendIds.length) return null;
+    const stringifiedIds = friendIds.sort().join(',');
     return query(collection(db, 'users'), where(documentId(), 'in', friendIds.slice(0, 10)));
-  }, [db, friendIds.join(',')]);
+  }, [db, friendIds.sort().join(',')]);
 
   const { data: friendProfiles } = useCollection<UserProfile>(friendsProfilesQuery);
 
@@ -555,6 +557,15 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     setShowTagSuggestions(null);
   };
 
+  const handleReplyInitiation = (parentId: string, targetUserName: string) => {
+    setActiveReplyId(parentId);
+    setReplyText(`@${targetUserName} `);
+    // Use timeout to ensure the textarea is rendered before focusing
+    setTimeout(() => {
+      replyTextareaRef.current?.focus();
+    }, 50);
+  };
+
   if (!animeId) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-4 text-center">
@@ -664,7 +675,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       profile={profile} 
                       isAdminUser={isAdminUser} 
                       onVote={handleVote}
-                      onReply={(id) => setActiveReplyId(id === activeReplyId ? null : id)}
+                      onReply={handleReplyInitiation}
                       replies={getReplies(c.id)}
                       language={language}
                       t={t}
@@ -675,7 +686,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div className={cn("flex gap-3 pt-2 relative", language === 'ar' ? "mr-12" : "ml-12")}>
                         <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user?.uid}/100`} /><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
                         <div className="flex-1 space-y-2">
-                          <Textarea placeholder={language === 'ar' ? 'اكتب رداً...' : "Write a reply..."} className="min-h-[60px] text-sm rounded-xl bg-secondary/30 focus:ring-accent border-none" value={replyText} onChange={(e) => onTextChange(e.target.value, c.id)} maxLength={COMMENT_LIMIT} />
+                          <Textarea 
+                            ref={replyTextareaRef}
+                            placeholder={language === 'ar' ? 'اكتب رداً...' : "Write a reply..."} 
+                            className="min-h-[60px] text-sm rounded-xl bg-secondary/30 focus:ring-accent border-none" 
+                            value={replyText} 
+                            onChange={(e) => onTextChange(e.target.value, c.id)} 
+                            maxLength={COMMENT_LIMIT} 
+                          />
                           
                           {showTagSuggestions === c.id && friendProfiles && friendProfiles.length > 0 && (
                             <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-xl border bg-card p-1 shadow-2xl">
