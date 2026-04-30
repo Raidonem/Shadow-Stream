@@ -68,6 +68,9 @@ function CommentItem({
 }) {
   const router = useRouter();
   
+  // Use a fallback display name if the captured one is somehow empty
+  const displayName = comment.userDisplayName || comment.userName || 'User';
+  
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -77,7 +80,7 @@ function CommentItem({
         >
           <Avatar className="h-10 w-10">
             <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
-            <AvatarFallback>{(comment.userDisplayName || comment.userName)?.[0] || 'U'}</AvatarFallback>
+            <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
           </Avatar>
         </button>
         <div className="flex-1 space-y-2">
@@ -87,7 +90,7 @@ function CommentItem({
                 onClick={() => router.push(`/profile?uid=${comment.userId}`)}
                 className="font-bold text-sm md:text-base hover:text-accent transition-colors"
               >
-                {comment.userDisplayName || comment.userName}
+                {displayName}
               </button>
               <span className="text-xs text-muted-foreground font-medium">@{comment.userName}</span>
               {comment.isAdmin && (
@@ -348,10 +351,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     const text = parentId ? replyText : commentText;
     if (!text.trim() || text.length > COMMENT_LIMIT) return;
 
+    // Use absolute latest data from profile if available, otherwise fallback
+    const finalUserName = profile?.username || user.displayName || 'user';
+    const finalDisplayName = profile?.displayName || finalUserName;
+
     addDocumentNonBlocking(commentsRef, {
       userId: user.uid,
-      userName: profile?.username || user.displayName || 'User',
-      userDisplayName: profile?.displayName || profile?.username || user.displayName || 'User',
+      userName: finalUserName,
+      userDisplayName: finalDisplayName,
       episodeId: episodeId,
       text: text.trim(),
       parentId: parentId || null,

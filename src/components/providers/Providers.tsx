@@ -7,7 +7,7 @@ import { Toaster } from '../ui/toaster';
 import { FirebaseClientProvider } from '../../firebase/index';
 import { useUser, useFirestore } from '../../firebase/index';
 import { useEffect } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
@@ -82,12 +82,12 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
           if (data.isPublic === undefined) updates.isPublic = false;
           
           // Handle missing display name for legacy users
-          if (data.displayName === undefined) {
+          if (!data.displayName || data.displayName.trim() === '') {
             updates.displayName = generateRandomDisplayName();
           }
 
           if (Object.keys(updates).length > 0) {
-            await setDoc(userRef, updates, { merge: true });
+            await updateDoc(userRef, updates);
           }
         }
       }
