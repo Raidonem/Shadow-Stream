@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from "../../components/layout/Navbar";
 import { Button } from '../../components/ui/button';
@@ -39,7 +39,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, serverTimestamp, query, orderBy, getDoc, where, writeBatch } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy, getDoc, where, writeBatch, limit } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
@@ -108,9 +108,12 @@ export default function AdminPage() {
   const adminRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'admins', user.uid);
-  }, [user, db]);
+  }, [user?.uid, db]);
 
   const { data: adminDoc, isLoading: isAdminChecking } = useDoc(adminRef);
+
+  // We are confirmed admin only if we finished loading and the doc exists
+  const isConfirmedAdmin = !isAdminChecking && !!adminDoc;
   
   const animeQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -125,9 +128,15 @@ export default function AdminPage() {
   const { data: currentEpisodes } = useCollection(episodesQuery);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!db || !adminDoc) return null;
-    return query(collection(db, 'reports'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
-  }, [db, adminDoc]);
+    // CRITICAL: Do not run the query until admin status is absolutely confirmed
+    if (!db || !isConfirmedAdmin) return null;
+    return query(
+      collection(db, 'reports'), 
+      where('status', '==', 'pending'), 
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+  }, [db, isConfirmedAdmin]);
   const { data: pendingReports } = useCollection<Report>(reportsQuery);
 
   const availableTags = Object.keys(translations.en.tags) as GenreKey[];

@@ -60,7 +60,9 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isAdmin();
+      // Explicitly define list and get to ensure isAdmin check is robust for queries
+      allow list: if isAdmin();
+      allow get: if isAdmin();
       allow create: if isSignedIn() && !isSuspended();
       allow update, delete: if isAdmin();
     }
@@ -68,7 +70,7 @@ service cloud.firestore {
     match /friendships/{friendshipId} {
       allow read: if isSignedIn() && request.auth.uid in resource.data.userIds;
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.userIds && !isSuspended();
-      allow delete: if isSignedIn() && request.auth.uid in resource.data.userIds;
+      allow delete: if isSignedIn() && request.auth.uid in request.resource.data.userIds;
     }
 
     match /friend_requests/{requestId} {
@@ -106,14 +108,14 @@ service cloud.firestore {
     match /ratings/{ratingId} {
       allow get, list: if true;
       allow create: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && !isSuspended() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
       allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
     match /comment_votes/{voteId} {
       allow read: if true;
       allow create: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && !isSuspended() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
       allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
