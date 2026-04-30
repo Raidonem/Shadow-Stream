@@ -54,27 +54,34 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const renderedRef = useRef(false);
 
   useEffect(() => {
+    // If the script is resolved and we haven't rendered yet
     if (isResolved && !renderedRef.current) {
-      const paypal = (window as any).paypal;
-      const container = document.getElementById("paypal-container-X3C6F5887MPCG");
-      
-      if (paypal && paypal.HostedButtons && container) {
-        paypal.HostedButtons({
-          hostedButtonId: "X3C6F5887MPCG",
-        }).render("#paypal-container-X3C6F5887MPCG")
-          .then(() => {
-            renderedRef.current = true;
-          })
-          .catch((err: any) => {
-            console.error("PayPal Hosted Button render error:", err);
-          });
-      }
+      // Use a small timeout to ensure React has finished the paint cycle for the container div
+      const timer = setTimeout(() => {
+        const paypal = (window as any).paypal;
+        const container = document.getElementById("paypal-container-X3C6F5887MPCG");
+        
+        if (paypal && paypal.HostedButtons && container) {
+          // Set ref to true immediately to prevent double-rendering attempts
+          renderedRef.current = true;
+          
+          paypal.HostedButtons({
+            hostedButtonId: "X3C6F5887MPCG",
+          }).render("#paypal-container-X3C6F5887MPCG")
+            .catch((err: any) => {
+              console.warn("PayPal Hosted Button render error:", err);
+              renderedRef.current = false;
+            });
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
   }, [isResolved]);
 
   return (
     <div className="space-y-4">
-      <div id="paypal-container-X3C6F5887MPCG" className="min-h-[150px]" />
+      <div id="paypal-container-X3C6F5887MPCG" className="min-h-[150px] w-full" />
       <Button 
         variant="ghost" 
         size="sm" 
@@ -172,8 +179,8 @@ function ProfileContent() {
         updatedAt: new Date().toISOString()
       });
 
-      // 2. Global Identity Synchronization (Crucial for NoSQL)
-      // This updates ALL existing comments and replies with the new Display Name
+      // 2. Global Identity Synchronization
+      // This ensures all previous comments show the new name to everyone
       const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
       const commentsSnapshot = await getDocs(commentsQuery);
       
@@ -182,7 +189,7 @@ function ProfileContent() {
         commentsSnapshot.docs.forEach((commentDoc) => {
           batch.update(commentDoc.ref, {
             userDisplayName: editData.displayName,
-            userName: editData.username, // Just in case, keep handle in sync
+            userName: editData.username,
             updatedAt: new Date().toISOString()
           });
         });
@@ -201,8 +208,8 @@ function ProfileContent() {
     } catch (err: any) {
       console.error("Identity sync failure:", err);
       toast({
-        title: "Identity Sync Warning",
-        description: "Profile updated, but old comments might take a few minutes to sync (Index building).",
+        title: "Sync Status",
+        description: "Profile updated. Some older comments might sync later.",
         variant: "destructive"
       });
     } finally {
