@@ -69,7 +69,6 @@ function CommentItem({
 }) {
   const router = useRouter();
   
-  // Use reactive local profile data for current user's comments to show instant updates
   const isOwnComment = user && comment.userId === user.uid;
   const currentDisplayName = isOwnComment ? (profile?.displayName || comment.userDisplayName) : (comment.userDisplayName || 'User');
   const currentUserName = isOwnComment ? (profile?.username || comment.userName) : (comment.userName || 'user');
@@ -116,30 +115,40 @@ function CommentItem({
           <p className="text-muted-foreground text-sm leading-relaxed">{comment.text}</p>
           
           <div className="flex items-center gap-4 pt-1">
-            <div className="flex items-center gap-1 bg-secondary/30 rounded-full px-2 py-0.5">
-              <button 
-                onClick={() => onVote(comment.id, 'up')}
-                className={cn(
-                  "hover:text-accent transition-colors p-1",
-                  userVote === 'up' && "text-accent"
-                )}
-                disabled={!user}
-              >
-                <ThumbsUp className={cn("h-4 w-4", userVote === 'up' && "fill-current")} />
-              </button>
-              <span className="text-xs font-bold min-w-[12px] text-center">
-                {(comment.upvotes || 0) - (comment.downvotes || 0)}
-              </span>
-              <button 
-                onClick={() => onVote(comment.id, 'down')}
-                className={cn(
-                  "hover:text-destructive transition-colors p-1",
-                  userVote === 'down' && "text-destructive"
-                )}
-                disabled={!user}
-              >
-                <ThumbsDown className={cn("h-4 w-4", userVote === 'down' && "fill-current")} />
-              </button>
+            <div className="flex items-center gap-3">
+              {/* LIKES COUNTER */}
+              <div className="flex items-center gap-1 bg-secondary/30 rounded-full px-2 py-0.5">
+                <button 
+                  onClick={() => onVote(comment.id, 'up')}
+                  className={cn(
+                    "hover:text-accent transition-colors p-1",
+                    userVote === 'up' && "text-accent"
+                  )}
+                  disabled={!user}
+                >
+                  <ThumbsUp className={cn("h-4 w-4", userVote === 'up' && "fill-current")} />
+                </button>
+                <span className="text-xs font-bold min-w-[12px] text-center">
+                  {comment.upvotes || 0}
+                </span>
+              </div>
+
+              {/* DISLIKES COUNTER */}
+              <div className="flex items-center gap-1 bg-secondary/30 rounded-full px-2 py-0.5">
+                <button 
+                  onClick={() => onVote(comment.id, 'down')}
+                  className={cn(
+                    "hover:text-destructive transition-colors p-1",
+                    userVote === 'down' && "text-destructive"
+                  )}
+                  disabled={!user}
+                >
+                  <ThumbsDown className={cn("h-4 w-4", userVote === 'down' && "fill-current")} />
+                </button>
+                <span className="text-xs font-bold min-w-[12px] text-center">
+                  {comment.downvotes || 0}
+                </span>
+              </div>
             </div>
             
             {user && !comment.parentId && (
@@ -358,7 +367,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     const text = parentId ? replyText : commentText;
     if (!text.trim() || text.length > COMMENT_LIMIT) return;
 
-    // Capture absolute latest identity snapshots from profile
     const finalUserName = profile.username;
     const finalDisplayName = profile.displayName || profile.username;
 
