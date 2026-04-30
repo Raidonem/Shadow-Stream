@@ -27,7 +27,8 @@ import {
   X,
   Server,
   Eye,
-  Bell
+  Bell,
+  Clapperboard
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -248,6 +249,7 @@ export default function AdminPage() {
       animeId: episode.animeId, episodeNumber: episode.episodeNumber.toString(), titleEn: episode.titleEn,
       titleAr: episode.titleAr, servers: episode.servers || [], thumbnail: episode.thumbnail || '', duration: episode.duration || '24:00'
     });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteEpisode = (id: string) => {
@@ -414,7 +416,16 @@ export default function AdminPage() {
               </TabsContent>
               <TabsContent value="episodes" className="space-y-8">
                 <Card className="rounded-2xl border-none bg-card shadow-xl">
-                  <CardHeader><CardTitle>{editingEpisodeId ? 'Edit Episode' : 'Upload Episode'}</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      {editingEpisodeId ? 'Edit Episode' : 'Upload Episode'}
+                      {editingEpisodeId && (
+                        <Button variant="ghost" size="sm" onClick={resetEpisodeForm} className="rounded-full">
+                          <X className="h-4 w-4 mr-1" /> Cancel Edit
+                        </Button>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent>
                     <form onSubmit={handleAddEpisode} className="space-y-6">
                       <div className="space-y-2">
@@ -471,6 +482,57 @@ export default function AdminPage() {
                     </form>
                   </CardContent>
                 </Card>
+
+                {/* Existing Episodes List */}
+                {episodeData.animeId && currentEpisodes && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-headline text-2xl font-bold flex items-center gap-2">
+                        <Clapperboard className="h-6 w-6 text-primary" />
+                        Existing Episodes ({currentEpisodes.length})
+                      </h2>
+                    </div>
+                    {currentEpisodes.length === 0 ? (
+                      <div className="text-center py-12 bg-secondary/10 rounded-2xl border border-dashed">
+                        <p className="text-muted-foreground italic">No episodes found for this series.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3">
+                        {currentEpisodes.map((ep) => (
+                          <Card key={ep.id} className={cn(
+                            "group overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all",
+                            editingEpisodeId === ep.id && "ring-2 ring-primary"
+                          )}>
+                            <CardContent className="p-3 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4 min-w-0">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 font-bold text-primary">
+                                  {ep.episodeNumber}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold truncate">{ep.titleEn}</p>
+                                  <p className="text-xs text-muted-foreground truncate" dir="rtl">{ep.titleAr}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <div className="hidden sm:flex gap-1 mr-4">
+                                  {ep.servers?.map((s: any, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-[10px] px-1 h-5">{s.lang.toUpperCase()}</Badge>
+                                  ))}
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={() => handleEditEpisode(ep)} className="h-9 w-9">
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEpisode(ep.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
