@@ -6,6 +6,7 @@ service cloud.firestore {
     /**
      * SHADOWSTREAM SECURITY RULES - SYNCED FOR PROJECT: shadows-16567
      * Enhanced privacy controls for user profiles.
+     * Note: Collection Group query for 'comments' by 'userId' requires a manual index in the Firebase Console.
      */
 
     // --- Helper Functions ---
@@ -70,7 +71,7 @@ service cloud.firestore {
           allow get, list: if true;
           allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.episodeId == episodeId && request.resource.data.text.size() <= 100;
           allow update: if (isExistingOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId && request.resource.data.text.size() <= 100) || 
-                         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'updatedAt']));
+                         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'updatedAt', 'userName', 'userDisplayName']));
           allow delete: if isExistingOwner(resource.data.userId) || isAdmin();
         }
       }
@@ -94,6 +95,17 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && voteId == request.auth.uid + "_" + request.resource.data.commentId;
       allow update: if isExistingOwner(resource.data.userId) && request.resource.data.userId == request.auth.uid;
       allow delete: if isExistingOwner(resource.data.userId);
+    }
+
+    // Support for Collection Group queries on 'comments'
+    match /{path=**}/comments/{commentId} {
+      allow list: if isSignedIn();
+      allow read: if true;
+    }
+
+    match /global_notifications/{notificationId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
     }
   }
 }

@@ -39,6 +39,7 @@ import {
   Bookmark,
   Heart,
   Eye,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -54,17 +55,13 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
   const renderedRef = useRef(false);
 
   useEffect(() => {
-    // If the script is resolved and we haven't rendered yet
     if (isResolved && !renderedRef.current) {
-      // Use a small timeout to ensure React has finished the paint cycle for the container div
       const timer = setTimeout(() => {
         const paypal = (window as any).paypal;
         const container = document.getElementById("paypal-container-X3C6F5887MPCG");
         
         if (paypal && paypal.HostedButtons && container) {
-          // Set ref to true immediately to prevent double-rendering attempts
           renderedRef.current = true;
-          
           paypal.HostedButtons({
             hostedButtonId: "X3C6F5887MPCG",
           }).render("#paypal-container-X3C6F5887MPCG")
@@ -180,20 +177,33 @@ function ProfileContent() {
       });
 
       // 2. Global Identity Synchronization
-      // This ensures all previous comments show the new name to everyone
-      const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
-      const commentsSnapshot = await getDocs(commentsQuery);
-      
-      if (!commentsSnapshot.empty) {
-        const batch = writeBatch(db);
-        commentsSnapshot.docs.forEach((commentDoc) => {
-          batch.update(commentDoc.ref, {
-            userDisplayName: editData.displayName,
-            userName: editData.username,
-            updatedAt: new Date().toISOString()
+      // This requires a COLLECTION_GROUP index in Firestore
+      try {
+        const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
+        const commentsSnapshot = await getDocs(commentsQuery);
+        
+        if (!commentsSnapshot.empty) {
+          const batch = writeBatch(db);
+          commentsSnapshot.docs.forEach((commentDoc) => {
+            batch.update(commentDoc.ref, {
+              userDisplayName: editData.displayName,
+              userName: editData.username,
+              updatedAt: new Date().toISOString()
+            });
           });
-        });
-        await batch.commit();
+          await batch.commit();
+        }
+      } catch (indexError: any) {
+        if (indexError.message?.includes('index')) {
+          console.error("Index required for Collection Group query:", indexError.message);
+          toast({
+            title: "Index Required",
+            description: "Identity sync across old comments requires a one-time index creation. Profile updated, but old comments will sync after index is ready.",
+            variant: "destructive"
+          });
+        } else {
+          throw indexError;
+        }
       }
 
       if (editData.languagePreference !== language) {
@@ -202,14 +212,14 @@ function ProfileContent() {
       
       setIsEditing(false);
       toast({
-        title: "Success",
-        description: "Profile and all previous comments have been updated."
+        title: "Profile Updated",
+        description: "Your settings have been saved successfully."
       });
     } catch (err: any) {
-      console.error("Identity sync failure:", err);
+      console.error("Profile update failure:", err);
       toast({
-        title: "Sync Status",
-        description: "Profile updated. Some older comments might sync later.",
+        title: "Update failed",
+        description: "Something went wrong while saving your profile.",
         variant: "destructive"
       });
     } finally {
