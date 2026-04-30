@@ -157,7 +157,14 @@ export default function AdminPage() {
     }
     setIsSubmitting(true);
     const alternativeTitlesArr = animeData.alternativeTitles.split(',').map(t => t.trim()).filter(t => t !== '');
-    const data = { ...animeData, alternativeTitles: alternativeTitlesArr, genres: selectedGenres, releaseYear: parseInt(animeData.releaseYear), views: parseInt(animeData.views) || 0, updatedAt: serverTimestamp() };
+    const data = { 
+      ...animeData, 
+      alternativeTitles: alternativeTitlesArr, 
+      genres: selectedGenres, 
+      releaseYear: parseInt(animeData.releaseYear), 
+      views: parseInt(animeData.views) || 0, 
+      updatedAt: serverTimestamp() 
+    };
     if (editingAnimeId) {
       updateDocumentNonBlocking(doc(db, 'anime', editingAnimeId), data);
       toast({ title: "Anime Updated" });
@@ -328,32 +335,77 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="grid gap-6 md:grid-cols-2">
-                        <Input placeholder="Cover URL" value={animeData.coverImage} onChange={(e) => setAnimeData({...animeData, coverImage: e.target.value})} required />
-                        <Input placeholder="Banner URL" value={animeData.bannerImage} onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})} required />
+                        <div className="space-y-2">
+                          <Label>Cover Image URL</Label>
+                          <Input value={animeData.coverImage} onChange={(e) => setAnimeData({...animeData, coverImage: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Banner Image URL</Label>
+                          <Input value={animeData.bannerImage} onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})} required />
+                        </div>
                       </div>
-                      <div className="grid gap-6 md:grid-cols-3">
-                        <Input type="number" placeholder="Year" value={animeData.releaseYear} onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})} />
-                        <Input type="number" placeholder="Views" value={animeData.views} onChange={(e) => setAnimeData({...animeData, views: e.target.value})} />
-                        <Select value={animeData.status} onValueChange={(val: any) => setAnimeData({...animeData, status: val})}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent><SelectItem value="Airing">Airing</SelectItem><SelectItem value="Finished">Finished</SelectItem></SelectContent>
-                        </Select>
+                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+                        <div className="space-y-2">
+                          <Label>Year</Label>
+                          <Input type="number" value={animeData.releaseYear} onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Views</Label>
+                          <Input type="number" value={animeData.views} onChange={(e) => setAnimeData({...animeData, views: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select value={animeData.status} onValueChange={(val: any) => setAnimeData({...animeData, status: val})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Airing">Airing</SelectItem>
+                              <SelectItem value="Finished">Finished</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select value={animeData.type} onValueChange={(val: any) => setAnimeData({...animeData, type: val})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(translations.en.animeTypes).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>{label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Season</Label>
+                          <Select value={animeData.season} onValueChange={(val: any) => setAnimeData({...animeData, season: val})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(translations.en.animeSeasons).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>{label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <Button type="submit" className="w-full">{editingAnimeId ? 'Update' : 'Publish'}</Button>
+                      <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : editingAnimeId ? 'Update Anime' : 'Publish Anime'}
+                      </Button>
                     </form>
                   </CardContent>
                 </Card>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {allAnime?.map(anime => (
-                    <Card key={anime.id} className="overflow-hidden">
+                    <Card key={anime.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all">
                       <div className="relative aspect-video">
                         <Image src={(anime.bannerImage || anime.coverImage || '').trim()} alt={anime.titleEn} fill className="object-cover" />
                       </div>
-                      <CardContent className="p-4 flex justify-between">
-                        <span className="font-bold">{anime.titleEn}</span>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditAnime(anime)}><Edit2 className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteAnime(anime.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="min-w-0">
+                          <span className="font-bold block truncate">{anime.titleEn}</span>
+                          <span className="text-xs text-muted-foreground">{anime.releaseYear} • {translations.en.animeTypes[anime.type]}</span>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditAnime(anime)} className="h-8 w-8"><Edit2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteAnime(anime.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -365,17 +417,32 @@ export default function AdminPage() {
                   <CardHeader><CardTitle>{editingEpisodeId ? 'Edit Episode' : 'Upload Episode'}</CardTitle></CardHeader>
                   <CardContent>
                     <form onSubmit={handleAddEpisode} className="space-y-6">
-                      <Select value={episodeData.animeId} onValueChange={(val) => setEpisodeData({...episodeData, animeId: val})}>
-                        <SelectTrigger><SelectValue placeholder="Choose series" /></SelectTrigger>
-                        <SelectContent>{allAnime?.map(anime => <SelectItem key={anime.id} value={anime.id}>{anime.titleEn}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <Input placeholder="Ep Title EN" value={episodeData.titleEn} onChange={(e) => setEpisodeData({...episodeData, titleEn: e.target.value})} required />
-                        <Input dir="rtl" className="text-right" placeholder="العنوان AR" value={episodeData.titleAr} onChange={(e) => setEpisodeData({...episodeData, titleAr: e.target.value})} required />
+                      <div className="space-y-2">
+                        <Label>Select Series</Label>
+                        <Select value={episodeData.animeId} onValueChange={(val) => setEpisodeData({...episodeData, animeId: val})}>
+                          <SelectTrigger><SelectValue placeholder="Choose series" /></SelectTrigger>
+                          <SelectContent>{allAnime?.map(anime => <SelectItem key={anime.id} value={anime.id}>{anime.titleEn}</SelectItem>)}</SelectContent>
+                        </Select>
                       </div>
                       <div className="grid gap-6 md:grid-cols-2">
-                        <Input type="number" placeholder="Ep Number" value={episodeData.episodeNumber} onChange={(e) => setEpisodeData({...episodeData, episodeNumber: e.target.value})} required />
-                        <Input placeholder="Duration (MM:SS)" value={episodeData.duration} onChange={(e) => setEpisodeData({...episodeData, duration: e.target.value})} />
+                        <div className="space-y-2">
+                          <Label>Episode Title (EN)</Label>
+                          <Input placeholder="Ep Title EN" value={episodeData.titleEn} onChange={(e) => setEpisodeData({...episodeData, titleEn: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2 text-right">
+                          <Label>العنوان (AR)</Label>
+                          <Input dir="rtl" className="text-right" placeholder="العنوان AR" value={episodeData.titleAr} onChange={(e) => setEpisodeData({...episodeData, titleAr: e.target.value})} required />
+                        </div>
+                      </div>
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Episode Number</Label>
+                          <Input type="number" placeholder="Ep Number" value={episodeData.episodeNumber} onChange={(e) => setEpisodeData({...episodeData, episodeNumber: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Duration (MM:SS)</Label>
+                          <Input placeholder="Duration (MM:SS)" value={episodeData.duration} onChange={(e) => setEpisodeData({...episodeData, duration: e.target.value})} />
+                        </div>
                       </div>
                       <Card className="p-4 bg-secondary/20">
                         <Label className="mb-4 block font-bold flex items-center gap-2"><Server className="h-4 w-4" /> Servers</Label>
@@ -384,21 +451,21 @@ export default function AdminPage() {
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent><SelectItem value="ar">AR</SelectItem><SelectItem value="en">EN</SelectItem></SelectContent>
                           </Select>
-                          <Input placeholder="Name" value={newServer.name} onChange={(e) => setNewServer({...newServer, name: e.target.value})} />
-                          <Input placeholder="URL" value={newServer.url} onChange={(e) => setNewServer({...newServer, url: e.target.value})} />
+                          <Input placeholder="Server Name (e.g. Fembed)" value={newServer.name} onChange={(e) => setNewServer({...newServer, name: e.target.value})} />
+                          <Input placeholder="Video URL" value={newServer.url} onChange={(e) => setNewServer({...newServer, url: e.target.value})} />
                           <Button type="button" size="icon" onClick={addServer}><Plus className="h-4 w-4" /></Button>
                         </div>
                         <div className="space-y-2 mt-4">
                           {episodeData.servers.map((s, i) => (
-                            <div key={i} className="flex items-center justify-between p-2 bg-background rounded">
-                              <span>{s.lang.toUpperCase()} - {s.name}</span>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => removeServer(i)}><Trash2 className="h-4 w-4" /></Button>
+                            <div key={i} className="flex items-center justify-between p-2 bg-background rounded-lg border">
+                              <span className="text-sm font-medium">{s.lang.toUpperCase()} - {s.name}</span>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeServer(i)} className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           ))}
                         </div>
                       </Card>
-                      <Button type="submit" className="w-full gap-2">
-                        <Bell className="h-4 w-4" />
+                      <Button type="submit" className="w-full h-12 gap-2 rounded-xl text-lg font-bold" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Bell className="h-5 w-5" />}
                         {editingEpisodeId ? 'Update Episode' : 'Publish & Notify'}
                       </Button>
                     </form>
