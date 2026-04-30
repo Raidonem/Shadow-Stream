@@ -15,9 +15,10 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "../../components/ui/select";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useAuth } from '../../firebase/index';
 import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { updateUserPassword } from '../../firebase/non-blocking-login';
 import { 
   User as UserIcon, 
   Mail, 
@@ -46,7 +47,8 @@ import {
   Clock,
   Check,
   ShieldAlert,
-  AtSign
+  AtSign,
+  Key
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -77,14 +79,12 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
     let timeoutId: NodeJS.Timeout;
     
     if (isResolved && !renderedRef.current) {
-      // Small delay to ensure the container <div> is definitely in the DOM
       timeoutId = setTimeout(() => {
         const paypal = (window as any).paypal;
         const container = document.getElementById("paypal-container-X3C6F5887MPCG");
         
         if (paypal && paypal.HostedButtons && container) {
           try {
-            // CRITICAL: Clear container before rendering to avoid duplicate button error
             container.innerHTML = ''; 
             
             renderedRef.current = true;
@@ -105,8 +105,6 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      // We don't reset renderedRef.current here because the script is already loaded globally,
-      // but we should clear the container if it unmounts
       const container = document.getElementById("paypal-container-X3C6F5887MPCG");
       if (container) container.innerHTML = '';
     };
@@ -129,6 +127,7 @@ function PayPalButton({ onApprove }: { onApprove: () => void }) {
 
 function ProfileContent() {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const { language, setLanguage, t } = useLanguage();
@@ -141,12 +140,19 @@ function ProfileContent() {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  
   const [editData, setEditData] = useState({
     username: '',
     displayName: '',
     languagePreference: 'en',
     themePreference: 'dark',
     isPublic: false
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    current: '',
+    new: ''
   });
 
   const profileRef = useMemoFirebase(() => {
@@ -253,7 +259,6 @@ function ProfileContent() {
       const usernameChanged = editData.username.toLowerCase() !== profile?.username?.toLowerCase();
       
       if (usernameChanged) {
-        // 1. Check Cooldown
         const lastChange = profile?.lastUsernameChange?.toDate?.() || new Date(0);
         const now = new Date();
         const daysSinceLastChange = differenceInDays(now, lastChange);
@@ -268,7 +273,6 @@ function ProfileContent() {
           return;
         }
 
-        // 2. Check Uniqueness
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('username', '==', editData.username.toLowerCase()));
         const querySnapshot = await getDocs(q);
@@ -295,7 +299,6 @@ function ProfileContent() {
 
       updateDocumentNonBlocking(profileRef, profileUpdate);
 
-      // Sync name and username across comments
       try {
         const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
         const commentsSnapshot = await getDocs(commentsQuery);
@@ -340,6 +343,32 @@ function ProfileContent() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!passwordData.current || !passwordData.new) {
+      toast({ title: "Error", description: "All password fields are required.", variant: "destructive" });
+      return;
+    }
+    if (passwordData.new.length < 6) {
+      toast({ title: "Error", description: "New password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await updateUserPassword(auth, passwordData.current, passwordData.new);
+      toast({ title: t('passwordChangeSuccess') });
+      setPasswordData({ current: '', new: '' });
+    } catch (error: any) {
+      toast({ 
+        title: "Update Failed", 
+        description: error.code === 'auth/wrong-password' ? "Invalid current password." : error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   const handleSendRequest = () => {
     if (!requestRef || !authUser || !targetUid || !db || amIBlocked) {
       if (amIBlocked) toast({ title: "Error", description: "You cannot interact with this user.", variant: "destructive" });
@@ -353,7 +382,6 @@ function ProfileContent() {
       createdAt: serverTimestamp()
     }, { merge: true });
 
-    // Send notification to recipient
     addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
       type: 'friend_request',
       fromId: authUser.uid,
@@ -379,7 +407,6 @@ function ProfileContent() {
 
     deleteDocumentNonBlocking(reverseRequestRef);
 
-    // Send notification to sender
     addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
       type: 'friend_accepted',
       fromId: authUser.uid,
@@ -648,85 +675,135 @@ function ProfileContent() {
 
       <div className="grid gap-8 md:grid-cols-2">
         {isEditing && isOwnProfile ? (
-          <Card className="rounded-2xl border-none bg-card shadow-xl md:col-span-2">
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">
-                <Settings2 className="h-5 w-5" />
-                Edit Your Settings
-              </CardTitle>
-              <CardDescription>Update your public identity and app preferences.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input 
-                    id="displayName"
-                    value={editData.displayName}
-                    onChange={(e) => setEditData({...editData, displayName: e.target.value})}
-                    className="rounded-xl border-none bg-secondary/50"
-                    disabled={isSaving}
-                    placeholder="Shadow King"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="flex items-center gap-2">
-                    <AtSign className="h-3 w-3" />
-                    Username (Unique handle)
-                  </Label>
-                  <Input 
-                    id="username"
-                    value={editData.username}
-                    onChange={(e) => setEditData({...editData, username: e.target.value})}
-                    className="rounded-xl border-none bg-secondary/50"
-                    disabled={isSaving}
-                    placeholder="shadowmaster"
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {isPremium 
-                      ? "Premium: Change every 2 days." 
-                      : "Regular: Change every 30 days."}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lang">Interface Language</Label>
-                  <Select 
-                    value={editData.languagePreference}
-                    onValueChange={(val) => setEditData({...editData, languagePreference: val})}
-                    disabled={isSaving}
-                  >
-                    <SelectTrigger className="rounded-xl border-none bg-secondary/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="ar">العربية (Arabic)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between space-x-2 rounded-xl bg-secondary/30 p-4 md:col-span-2">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">{t('publicProfile')}</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {t('profilePrivacyDesc')}
+          <>
+            <Card className="rounded-2xl border-none bg-card shadow-xl md:col-span-2">
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <Settings2 className="h-5 w-5" />
+                  Edit Your Settings
+                </CardTitle>
+                <CardDescription>Update your public identity and app preferences.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <Input 
+                      id="displayName"
+                      value={editData.displayName}
+                      onChange={(e) => setEditData({...editData, displayName: e.target.value})}
+                      className="rounded-xl border-none bg-secondary/50"
+                      disabled={isSaving}
+                      placeholder="Shadow King"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="flex items-center gap-2">
+                      <AtSign className="h-3 w-3" />
+                      Username (Unique handle)
+                    </Label>
+                    <Input 
+                      id="username"
+                      value={editData.username}
+                      onChange={(e) => setEditData({...editData, username: e.target.value})}
+                      className="rounded-xl border-none bg-secondary/50"
+                      disabled={isSaving}
+                      placeholder="shadowmaster"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {isPremium 
+                        ? "Premium: Change every 2 days." 
+                        : "Regular: Change every 30 days."}
                     </p>
                   </div>
-                  <Switch 
-                    checked={editData.isPublic}
-                    onCheckedChange={(val) => setEditData({...editData, isPublic: val})}
-                    disabled={isSaving}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="lang">Interface Language</Label>
+                    <Select 
+                      value={editData.languagePreference}
+                      onValueChange={(val) => setEditData({...editData, languagePreference: val})}
+                      disabled={isSaving}
+                    >
+                      <SelectTrigger className="rounded-xl border-none bg-secondary/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between space-x-2 rounded-xl bg-secondary/30 p-4 md:col-span-2">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">{t('publicProfile')}</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {t('profilePrivacyDesc')}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={editData.isPublic}
+                      onCheckedChange={(val) => setEditData({...editData, isPublic: val})}
+                      disabled={isSaving}
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end gap-3">
-              <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={isSaving}>Discard</Button>
-              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {isSaving ? 'Syncing...' : 'Save Changes'}
-              </Button>
-            </CardFooter>
-          </Card>
+              </CardContent>
+              <CardFooter className="justify-end gap-3">
+                <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={isSaving}>Discard</Button>
+                <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {isSaving ? 'Syncing...' : 'Save Changes'}
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card className="rounded-2xl border-none bg-card shadow-xl md:col-span-2">
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  {t('security')}
+                </CardTitle>
+                <CardDescription>Update your account password for enhanced security.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">{t('currentPassword')}</Label>
+                    <Input 
+                      id="currentPassword"
+                      type="password"
+                      value={passwordData.current}
+                      onChange={(e) => setPasswordData({...passwordData, current: e.target.value})}
+                      className="rounded-xl border-none bg-secondary/50"
+                      disabled={isUpdatingPassword}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">{t('newPassword')}</Label>
+                    <Input 
+                      id="newPassword"
+                      type="password"
+                      value={passwordData.new}
+                      onChange={(e) => setPasswordData({...passwordData, new: e.target.value})}
+                      className="rounded-xl border-none bg-secondary/50"
+                      disabled={isUpdatingPassword}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="justify-end">
+                <Button 
+                  className="rounded-xl gap-2" 
+                  onClick={handleChangePassword} 
+                  disabled={isUpdatingPassword || !passwordData.current || !passwordData.new}
+                >
+                  {isUpdatingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                  {t('changePassword')}
+                </Button>
+              </CardFooter>
+            </Card>
+          </>
         ) : (
           <>
             <Card className="rounded-2xl border-none bg-card shadow-xl">

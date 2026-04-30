@@ -8,6 +8,9 @@ import {
   sendPasswordResetEmail,
   confirmPasswordReset,
   UserCredential,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in (non-blocking). */
@@ -44,4 +47,17 @@ export function initiatePasswordReset(authInstance: Auth, email: string): Promis
 /** Completes the password reset process. */
 export function completePasswordReset(authInstance: Auth, oobCode: string, newPassword: string): Promise<void> {
   return confirmPasswordReset(authInstance, oobCode, newPassword);
+}
+
+/** 
+ * Re-authenticates the user and updates their password.
+ * Required because password updates are sensitive and require a recent login.
+ */
+export async function updateUserPassword(authInstance: Auth, currentPass: string, newPass: string): Promise<void> {
+  const user = authInstance.currentUser;
+  if (!user || !user.email) throw new Error("Authentication failed: No active session found.");
+  
+  const credential = EmailAuthProvider.credential(user.email, currentPass);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPass);
 }
