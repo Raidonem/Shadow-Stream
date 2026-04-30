@@ -28,7 +28,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Reply as ReplyIcon,
-  AtSign
+  AtSign,
+  ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -49,6 +50,7 @@ import {
 } from "../../../components/ui/popover";
 
 const COMMENT_LIMIT = 100;
+const INITIAL_REPLIES_VISIBLE = 3;
 
 function CommentItem({ 
   comment, 
@@ -74,13 +76,21 @@ function CommentItem({
   userVotes?: any[];
 }) {
   const router = useRouter();
+  const [visibleRepliesCount, setVisibleRepliesCount] = useState(INITIAL_REPLIES_VISIBLE);
   
   const isOwnComment = user && comment.userId === user.uid;
   const currentDisplayName = isOwnComment ? (profile?.displayName || comment.userDisplayName) : (comment.userDisplayName || 'User');
   const currentUserName = isOwnComment ? (profile?.username || comment.userName) : (comment.userName || 'user');
   
-  // Look up the specific vote for this comment ID
   const currentVote = userVotes?.find(v => v.commentId === comment.id)?.type;
+
+  const sortedReplies = useMemo(() => {
+    if (!replies) return [];
+    return [...replies].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  }, [replies]);
+
+  const displayedReplies = sortedReplies.slice(0, visibleRepliesCount);
+  const hasMoreReplies = sortedReplies.length > visibleRepliesCount;
   
   return (
     <div className="space-y-4" id={`comment-${comment.id}`}>
@@ -176,7 +186,7 @@ function CommentItem({
           "space-y-6 pt-2 border-l-2",
           language === 'ar' ? "mr-6 pr-6 ml-0 border-r-2 border-l-0" : "ml-6 pl-6"
         )}>
-          {replies.map(reply => (
+          {displayedReplies.map(reply => (
             <CommentItem 
               key={reply.id} 
               comment={reply} 
@@ -190,6 +200,17 @@ function CommentItem({
               userVotes={userVotes}
             />
           ))}
+          {hasMoreReplies && (
+            <button 
+              onClick={() => setVisibleRepliesCount(prev => prev + 10)}
+              className="text-xs font-bold text-accent hover:underline flex items-center gap-2 pt-2"
+            >
+              <ChevronDown className="h-3 w-3" />
+              {language === 'ar' 
+                ? `عرض ${sortedReplies.length - visibleRepliesCount} ردود إضافية` 
+                : `Show ${sortedReplies.length - visibleRepliesCount} more replies`}
+            </button>
+          )}
         </div>
       )}
     </div>
