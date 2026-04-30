@@ -27,20 +27,26 @@ import {
   Layers,
   ThumbsUp,
   ThumbsDown,
-  Reply as ReplyIcon
+  Reply as ReplyIcon,
+  AtSign
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment, deleteDoc } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment, deleteDoc, documentId } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Anime, Comment } from '../../../lib/types';
+import { EpisodeServer, Anime, Comment, UserProfile } from '../../../lib/types';
 import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../components/ui/popover";
 
 const COMMENT_LIMIT = 100;
 
@@ -201,6 +207,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [activeServer, setActiveServer] = useState<EpisodeServer | null>(null);
   const [isManualServerSelection, setIsManualServerSelection] = useState(false);
+  const [showTagSuggestions, setShowTagSuggestions] = useState<string | null>(null); // 'main' or commentId
   const loadedEpisodeId = useRef<string | null>(null);
   const incrementedViews = useRef<string | null>(null);
 
@@ -244,6 +251,11 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return query(collection(db, 'comment_votes'), where('userId', '==', user.uid));
   }, [db, user]);
 
+  const friendshipsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'friendships'), where('userIds', 'array-contains', user.uid));
+  }, [db, user]);
+
   const { data: episode, isLoading: isEpLoading } = useDoc(episodeRef);
   const { data: anime, isLoading: isAnimeLoading } = useDoc(animeRef);
   const { data: episodes } = useCollection(allEpisodesQuery);
@@ -251,6 +263,18 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const { data: existingRating } = useDoc(episodeRatingRef);
   const { data: allAnime } = useCollection<Anime>(allAnimeQuery);
   const { data: userVotes } = useCollection(userVotesQuery);
+  const { data: friendships } = useCollection(friendshipsQuery);
+
+  const friendIds = useMemo(() => {
+    return friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
+  }, [friendships, user?.uid]);
+
+  const friendsProfilesQuery = useMemoFirebase(() => {
+    if (!db || !friendIds.length) return null;
+    return query(collection(db, 'users'), where(documentId(), 'in', friendIds.slice(0, 10)));
+  }, [db, friendIds.join(',')]);
+
+  const { data: friendProfiles } = useCollection<UserProfile>(friendsProfilesQuery);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -357,7 +381,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [user, db, anime, episode, episodeId, isAdminUser, episodes]);
 
-  const handlePostComment = (parentId?: string) => {
+  const handlePostComment = async (parentId?: string) => {
     if (!user || !commentsRef || !episodeId || !profile || !db) {
       toast({ title: "Please wait", description: "Loading profile data..." });
       return;
@@ -368,7 +392,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     const finalUserName = profile.username;
     const finalDisplayName = profile.displayName || profile.username;
 
-    addDocumentNonBlocking(commentsRef, {
+    const newDoc = await addDocumentNonBlocking(commentsRef, {
       userId: user.uid,
       userName: finalUserName,
       userDisplayName: finalDisplayName,
@@ -381,24 +405,46 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       isPremium: profile?.isPremium || false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    }).then((newDoc) => {
-      // Notification logic for replies
-      if (parentId) {
-        const parentComment = comments?.find(c => c.id === parentId);
-        if (parentComment && parentComment.userId !== user.uid) {
-          addDocumentNonBlocking(collection(db, 'users', parentComment.userId, 'notifications'), {
-            type: 'comment_reply',
+    });
+
+    // Handle Mentions
+    const mentionRegex = /@(\w+)/g;
+    const mentions = text.match(mentionRegex);
+    if (mentions) {
+      const uniqueMentions = Array.from(new Set(mentions.map(m => m.substring(1).toLowerCase())));
+      uniqueMentions.forEach(username => {
+        const targetFriend = friendProfiles?.find(f => f.username.toLowerCase() === username);
+        if (targetFriend && targetFriend.id !== user.uid) {
+          addDocumentNonBlocking(collection(db, 'users', targetFriend.id, 'notifications'), {
+            type: 'comment_mention',
             fromId: user.uid,
             fromName: finalDisplayName,
-            link: `/watch/${episodeId}?animeId=${animeId}#comment-${parentId}`,
-            messageEn: `${finalDisplayName} replied to your comment.`,
-            messageAr: `قام ${finalDisplayName} بالرد على تعليقك.`,
+            link: `/watch/${episodeId}?animeId=${animeId}#comment-${newDoc?.id || parentId || ''}`,
+            messageEn: `${finalDisplayName} tagged you in a comment.`,
+            messageAr: `قام ${finalDisplayName} بذكرك في تعليق.`,
             read: false,
             createdAt: serverTimestamp()
           });
         }
+      });
+    }
+
+    // Notification logic for replies
+    if (parentId) {
+      const parentComment = comments?.find(c => c.id === parentId);
+      if (parentComment && parentComment.userId !== user.uid) {
+        addDocumentNonBlocking(collection(db, 'users', parentComment.userId, 'notifications'), {
+          type: 'comment_reply',
+          fromId: user.uid,
+          fromName: finalDisplayName,
+          link: `/watch/${episodeId}?animeId=${animeId}#comment-${parentId}`,
+          messageEn: `${finalDisplayName} replied to your comment.`,
+          messageAr: `قام ${finalDisplayName} بالرد على تعليقك.`,
+          read: false,
+          createdAt: serverTimestamp()
+        });
       }
-    });
+    }
 
     if (parentId) {
       setReplyText('');
@@ -488,6 +534,27 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     toast({ title: isAnimeFavorite ? "Removed from Favorites" : "Added to Favorites" });
   };
 
+  const onTextChange = (val: string, type: 'main' | string) => {
+    if (type === 'main') setCommentText(val);
+    else setReplyText(val);
+
+    const lastChar = val[val.length - 1];
+    if (lastChar === '@') {
+      setShowTagSuggestions(type);
+    } else {
+      setShowTagSuggestions(null);
+    }
+  };
+
+  const handleTagFriend = (friend: UserProfile, type: 'main' | string) => {
+    if (type === 'main') {
+      setCommentText(prev => prev + friend.username + ' ');
+    } else {
+      setReplyText(prev => prev + friend.username + ' ');
+    }
+    setShowTagSuggestions(null);
+  };
+
   if (!animeId) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-4 text-center">
@@ -558,8 +625,26 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               {user ? (
                 <div className="flex gap-4">
                   <Avatar className="h-10 w-10 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user.uid}/100`} /><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
-                  <div className="flex-1 space-y-2">
-                    <Textarea placeholder={language === 'ar' ? 'انضم إلى المناقشة...' : "Join the discussion..."} className="min-h-[80px] rounded-xl bg-secondary/30 focus:ring-accent border-none" value={commentText} onChange={(e) => setCommentText(e.target.value)} maxLength={COMMENT_LIMIT} />
+                  <div className="flex-1 space-y-2 relative">
+                    <Textarea placeholder={language === 'ar' ? 'انضم إلى المناقشة... (استخدم @ لمنشن صديق)' : "Join the discussion... (Use @ to tag a friend)"} className="min-h-[80px] rounded-xl bg-secondary/30 focus:ring-accent border-none" value={commentText} onChange={(e) => onTextChange(e.target.value, 'main')} maxLength={COMMENT_LIMIT} />
+                    
+                    {showTagSuggestions === 'main' && friendProfiles && friendProfiles.length > 0 && (
+                      <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-xl border bg-card p-1 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="p-2 text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-2"><AtSign className="h-3 w-3" /> Tag a Friend</div>
+                        <ScrollArea className="h-40">
+                          {friendProfiles.map(friend => (
+                            <button key={friend.id} className="flex w-full items-center gap-2 rounded-lg p-2 text-left hover:bg-secondary/50 transition-colors" onClick={() => handleTagFriend(friend, 'main')}>
+                              <Avatar className="h-6 w-6"><AvatarFallback className="bg-primary/20 text-[10px] font-bold">{(friend.displayName || friend.username)[0]}</AvatarFallback></Avatar>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold truncate">{friend.displayName || friend.username}</p>
+                                <p className="text-[10px] text-accent">@{friend.username}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </ScrollArea>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                       <span className={cn("text-xs font-medium", commentText.length >= COMMENT_LIMIT ? "text-destructive" : "text-muted-foreground")}>{commentText.length}/{COMMENT_LIMIT}</span>
                       <Button onClick={() => handlePostComment()} disabled={!commentText.trim() || commentText.length > COMMENT_LIMIT} className="gap-2 rounded-xl bg-accent px-6 font-bold text-accent-foreground"><Send className="h-4 w-4" />{t('postComment')}</Button>
@@ -587,10 +672,28 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     />
                     
                     {activeReplyId === c.id && (
-                      <div className={cn("flex gap-3 pt-2", language === 'ar' ? "mr-12" : "ml-12")}>
+                      <div className={cn("flex gap-3 pt-2 relative", language === 'ar' ? "mr-12" : "ml-12")}>
                         <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={`https://picsum.photos/seed/${user?.uid}/100`} /><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
                         <div className="flex-1 space-y-2">
-                          <Textarea placeholder={language === 'ar' ? 'اكتب رداً...' : "Write a reply..."} className="min-h-[60px] text-sm rounded-xl bg-secondary/30 focus:ring-accent border-none" value={replyText} onChange={(e) => setReplyText(e.target.value)} maxLength={COMMENT_LIMIT} />
+                          <Textarea placeholder={language === 'ar' ? 'اكتب رداً...' : "Write a reply..."} className="min-h-[60px] text-sm rounded-xl bg-secondary/30 focus:ring-accent border-none" value={replyText} onChange={(e) => onTextChange(e.target.value, c.id)} maxLength={COMMENT_LIMIT} />
+                          
+                          {showTagSuggestions === c.id && friendProfiles && friendProfiles.length > 0 && (
+                            <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-xl border bg-card p-1 shadow-2xl">
+                              <div className="p-2 text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-2"><AtSign className="h-3 w-3" /> Tag a Friend</div>
+                              <ScrollArea className="h-32">
+                                {friendProfiles.map(friend => (
+                                  <button key={friend.id} className="flex w-full items-center gap-2 rounded-lg p-2 text-left hover:bg-secondary/50" onClick={() => handleTagFriend(friend, c.id)}>
+                                    <Avatar className="h-5 w-5"><AvatarFallback className="bg-primary/20 text-[10px] font-bold">{(friend.displayName || friend.username)[0]}</AvatarFallback></Avatar>
+                                    <div className="min-w-0">
+                                      <p className="text-[10px] font-bold truncate">{friend.displayName || friend.username}</p>
+                                      <p className="text-[8px] text-accent">@{friend.username}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </ScrollArea>
+                            </div>
+                          )}
+
                           <div className="flex items-center justify-between">
                             <span className={cn("text-[10px] font-medium", replyText.length >= COMMENT_LIMIT ? "text-destructive" : "text-muted-foreground")}>{replyText.length}/{COMMENT_LIMIT}</span>
                             <div className="flex gap-2">

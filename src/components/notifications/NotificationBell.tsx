@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users } from 'lucide-react';
+import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase/index';
 import { collection, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
 import {
@@ -77,6 +77,7 @@ export function NotificationBell() {
     switch (type) {
       case 'new_episode': return <PlayCircle className="h-4 w-4 text-accent" />;
       case 'comment_reply': return <MessageSquare className="h-4 w-4 text-primary" />;
+      case 'comment_mention': return <AtSign className="h-4 w-4 text-yellow-500" />;
       case 'friend_request': return <UserPlus className="h-4 w-4 text-green-500" />;
       case 'friend_accepted': return <Users className="h-4 w-4 text-accent" />;
       default: return <Bell className="h-4 w-4" />;
