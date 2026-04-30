@@ -4,18 +4,21 @@
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, documentId, orderBy, Avatar } from 'firebase/firestore';
 import { useLanguage } from '../../components/providers/LanguageContext';
-import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye } from 'lucide-react';
+import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '../../components/ui/card';
+import { Avatar as UIAvatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
+import { useRouter } from 'next/navigation';
 
 export default function WatchlistPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { t, language } = useLanguage();
+  const router = useRouter();
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -49,11 +52,27 @@ export default function WatchlistPage() {
     return query(collection(db, 'users', user.uid, 'history'), orderBy('watchedAt', 'desc'));
   }, [db, user]);
 
+  const friendshipsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'friendships'), where('userIds', 'array-contains', user.uid));
+  }, [db, user]);
+
   const { data: watchingAnime, isLoading: isWatchingLoading } = useCollection(watchingQuery);
   const { data: watchlistAnime, isLoading: isWatchlistLoading } = useCollection(watchlistQuery);
   const { data: favoritesAnime, isLoading: isFavoritesLoading } = useCollection(favoritesQuery);
   const { data: completedAnime, isLoading: isCompletedLoading } = useCollection(completedQuery);
   const { data: watchHistory, isLoading: isHistoryLoading } = useCollection(historyQuery);
+  const { data: friendships, isLoading: isFriendsLoading } = useCollection(friendshipsQuery);
+
+  // Fetch friend profile data
+  const friendIds = friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
+  
+  const friendsProfilesQuery = useMemoFirebase(() => {
+    if (!db || !friendIds.length) return null;
+    return query(collection(db, 'users'), where(documentId(), 'in', friendIds.slice(0, 10)));
+  }, [db, friendIds]);
+  
+  const { data: friendProfiles } = useCollection(friendsProfilesQuery);
 
   if (isUserLoading || isProfileLoading) {
     return (
@@ -86,7 +105,7 @@ export default function WatchlistPage() {
         </div>
 
         <Tabs defaultValue="watching" className="w-full">
-          <TabsList className="mb-8 flex w-full max-w-2xl overflow-x-auto rounded-xl bg-secondary p-1">
+          <TabsList className="mb-8 flex w-full max-w-3xl overflow-x-auto rounded-xl bg-secondary p-1">
             <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
               <Eye className="h-4 w-4" />
               {t('currentlyWatching')}
@@ -106,6 +125,10 @@ export default function WatchlistPage() {
             <TabsTrigger value="history" className="rounded-lg gap-2 flex-1">
               <History className="h-4 w-4" />
               {t('history')}
+            </TabsTrigger>
+            <TabsTrigger value="friends" className="rounded-lg gap-2 flex-1">
+              <Users className="h-4 w-4" />
+              {language === 'ar' ? 'الأصدقاء' : 'Friends'}
             </TabsTrigger>
           </TabsList>
 
@@ -215,6 +238,39 @@ export default function WatchlistPage() {
               <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
                 <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground">{language === 'ar' ? 'لم يتم العثور على سجل مشاهدة' : 'No watch history found'}</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="friends">
+            {isFriendsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : friendProfiles && friendProfiles.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {friendProfiles.map(friend => (
+                  <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <UIAvatar className="h-12 w-12 ring-2 ring-primary/20">
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                          {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </UIAvatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold truncate">{friend.displayName || friend.username}</h3>
+                        <p className="text-xs text-accent">@{friend.username}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                          <Users className="h-3 w-3" /> Friend
+                          {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
+                <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">{language === 'ar' ? 'ليس لديك أصدقاء بعد' : 'You have no friends added yet'}</p>
               </div>
             )}
           </TabsContent>

@@ -44,6 +44,12 @@ export interface UserProfile {
   updatedAt: any;
 }
 
+export interface Friendship {
+  id: string;
+  userIds: string[];
+  createdAt: any;
+}
+
 export interface EpisodeServer {
   lang: 'ar' | 'en';
   name: string;

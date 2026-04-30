@@ -16,8 +16,8 @@ import {
   SelectValue 
 } from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { 
   User as UserIcon, 
   Mail, 
@@ -39,7 +39,10 @@ import {
   Bookmark,
   Heart,
   Eye,
-  AlertCircle
+  AlertCircle,
+  UserPlus,
+  UserMinus,
+  Users
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -119,6 +122,22 @@ function ProfileContent() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
+  // Friendship logic
+  const friendshipId = useMemo(() => {
+    if (!authUser || !targetUid || isOwnProfile) return null;
+    return authUser.uid < targetUid 
+      ? `${authUser.uid}_${targetUid}` 
+      : `${targetUid}_${authUser.uid}`;
+  }, [authUser, targetUid, isOwnProfile]);
+
+  const friendshipRef = useMemoFirebase(() => {
+    if (!db || !friendshipId) return null;
+    return doc(db, 'friendships', friendshipId);
+  }, [db, friendshipId]);
+
+  const { data: friendshipData } = useDoc(friendshipRef);
+  const isFriend = !!friendshipData;
+
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
     return query(collection(db, 'anime'), where(documentId(), 'in', profile.currentlyWatchingAnimeIds.slice(0, 10)));
@@ -166,7 +185,6 @@ function ProfileContent() {
     setIsSaving(true);
 
     try {
-      // 1. Update Profile Primary Record
       updateDocumentNonBlocking(profileRef, {
         displayName: editData.displayName,
         languagePreference: editData.languagePreference,
@@ -175,8 +193,6 @@ function ProfileContent() {
         updatedAt: new Date().toISOString()
       });
 
-      // 2. Global Identity Synchronization
-      // This requires a COLLECTION_GROUP index in Firestore for 'comments' by 'userId'
       try {
         const commentsQuery = query(collectionGroup(db, 'comments'), where('userId', '==', targetUid));
         const commentsSnapshot = await getDocs(commentsQuery);
@@ -193,7 +209,6 @@ function ProfileContent() {
           await batch.commit();
         }
       } catch (indexError: any) {
-        // Only toast if it's an index error, don't crash
         if (indexError.message?.includes('index')) {
           toast({
             title: "Index Still Building",
@@ -223,6 +238,22 @@ function ProfileContent() {
     }
   };
 
+  const handleAddFriend = () => {
+    if (!friendshipRef || !authUser || !targetUid) return;
+    setDocumentNonBlocking(friendshipRef, {
+      id: friendshipId,
+      userIds: [authUser.uid, targetUid].sort(),
+      createdAt: serverTimestamp()
+    }, { merge: true });
+    toast({ title: "Friend Added", description: "You are now friends!" });
+  };
+
+  const handleRemoveFriend = () => {
+    if (!friendshipRef) return;
+    deleteDocumentNonBlocking(friendshipRef);
+    toast({ title: "Removed Friend" });
+  };
+
   const handleActivatePremium = () => {
     if (!profileRef) return;
     updateDocumentNonBlocking(profileRef, {
@@ -250,14 +281,25 @@ function ProfileContent() {
     );
   }
 
-  if (!profile) {
+  // Private profile check: owners can see, friends can see, public profiles can be seen
+  const canView = isOwnProfile || profile?.isPublic || isFriend;
+
+  if (!profile || (!canView && !isOwnProfile)) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <Lock className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">This profile is private or does not exist.</h1>
-        <Button variant="outline" asChild>
-          <a href="/">Back to Home</a>
-        </Button>
+        <h1 className="text-2xl font-bold">This profile is private.</h1>
+        <p className="text-muted-foreground">You must be friends with this user to see their library.</p>
+        <div className="flex gap-4">
+          <Button variant="outline" asChild>
+            <a href="/">Back to Home</a>
+          </Button>
+          {!isOwnProfile && authUser && (
+            <Button onClick={handleAddFriend} className="gap-2">
+              <UserPlus className="h-4 w-4" /> Add Friend
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
@@ -290,10 +332,17 @@ function ProfileContent() {
             </div>
             <p className="text-accent font-medium text-lg">@{profile.username}</p>
             {!isOwnProfile && (
-              <Badge variant="outline" className="gap-1 mt-2">
-                {profile.isPublic ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                {profile.isPublic ? t('publicProfile') : t('privateProfile')}
-              </Badge>
+              <div className="flex gap-2 mt-2">
+                <Badge variant="outline" className="gap-1">
+                  {profile.isPublic ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                  {profile.isPublic ? t('publicProfile') : t('privateProfile')}
+                </Badge>
+                {isFriend && (
+                  <Badge className="bg-green-500/20 text-green-500 border-none gap-1">
+                    <Users className="h-3 w-3" /> Friend
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 text-muted-foreground md:justify-start">
@@ -309,6 +358,19 @@ function ProfileContent() {
             </span>
           </div>
         </div>
+        {!isOwnProfile && authUser && (
+          <div className="flex gap-2">
+            {isFriend ? (
+              <Button variant="outline" className="rounded-xl gap-2 text-destructive border-destructive/20 hover:bg-destructive/10" onClick={handleRemoveFriend}>
+                <UserMinus className="h-4 w-4" /> Remove Friend
+              </Button>
+            ) : (
+              <Button className="rounded-xl gap-2 bg-accent text-accent-foreground" onClick={handleAddFriend}>
+                <UserPlus className="h-4 w-4" /> Add Friend
+              </Button>
+            )}
+          </div>
+        )}
         {isOwnProfile && (
           <div className="flex gap-2">
             <Button 
@@ -487,7 +549,7 @@ function ProfileContent() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground italic py-12 text-center bg-secondary/10 rounded-2xl">No public items in this category.</p>
+                    <p className="text-muted-foreground italic py-12 text-center bg-secondary/10 rounded-2xl">No items in this category.</p>
                   )}
                 </TabsContent>
 
@@ -499,7 +561,7 @@ function ProfileContent() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground italic py-12 text-center bg-secondary/10 rounded-2xl">No public items in this category.</p>
+                    <p className="text-muted-foreground italic py-12 text-center bg-secondary/10 rounded-2xl">No items in this category.</p>
                   )}
                 </TabsContent>
 
@@ -511,7 +573,7 @@ function ProfileContent() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground italic py-12 text-center bg-secondary/10 rounded-2xl">No public items in this category.</p>
+                    <p className="text-muted-foreground italic py-12 text-center bg-secondary/10 rounded-2xl">No items in this category.</p>
                   )}
                 </TabsContent>
               </Tabs>

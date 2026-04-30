@@ -324,61 +324,16 @@
       },
       "required": ["id", "userId", "animeId", "episodeId", "watchedAt"]
     },
-    "Tag": {
-      "title": "Tag",
+    "Friendship": {
+      "title": "Friendship",
       "type": "object",
+      "description": "Represents a friendship link between two users.",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "createdAt", "updatedAt"]
-    },
-    "Rating": {
-      "title": "Rating",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "animeId": { "type": "string" },
-        "episodeId": { "type": "string" },
-        "value": { "type": "number" },
+        "userIds": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "userId", "animeId", "episodeId", "value", "createdAt"]
-    },
-    "Comment": {
-      "title": "Comment",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userDisplayName": { "type": "string" },
-        "episodeId": { "type": "string" },
-        "text": { "type": "string", "maxLength": 100 },
-        "parentId": { "type": "string" },
-        "upvotes": { "type": "number" },
-        "downvotes": { "type": "number" },
-        "isPremium": { "type": "boolean" },
-        "isAdmin": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "episodeId", "text", "createdAt", "updatedAt"]
-    },
-    "CommentVote": {
-      "title": "CommentVote",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "commentId": { "type": "string" },
-        "type": { "type": "string", "enum": ["up", "down"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "commentId", "type", "createdAt"]
+      "required": ["id", "userIds", "createdAt"]
     }
   },
   "auth": {
@@ -392,6 +347,10 @@
     "/users/{userId}/history/{historyId}": {
       "schema": "WatchHistory",
       "description": "Stores user's watched episodes history. Always private."
+    },
+    "/friendships/{friendshipId}": {
+      "schema": "Friendship",
+      "description": "Stores mutual friendship connections."
     },
     "/admins/{adminId}": {
       "schema": "object",
