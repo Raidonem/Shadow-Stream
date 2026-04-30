@@ -66,6 +66,10 @@ export const translations = {
     currentPassword: 'Current Password',
     passwordChangeSuccess: 'Password changed successfully!',
     security: 'Security',
+    changeEmail: 'Change Email Address',
+    newEmail: 'New Email Address',
+    verifyEmailLinkSent: 'Verification link sent! Check your new inbox. After verifying, come back and Save Changes.',
+    emailSyncNotice: 'Your new email address is verified! Click "Save Changes" to finalize the update in your profile.',
     animeTypes: {
       'tv': 'TV Series',
       'movie': 'Movie',
@@ -185,6 +189,10 @@ export const translations = {
     currentPassword: 'كلمة السر الحالية',
     passwordChangeSuccess: 'تم تغيير كلمة السر بنجاح!',
     security: 'الأمان',
+    changeEmail: 'تغيير البريد الإلكتروني',
+    newEmail: 'البريد الإلكتروني الجديد',
+    verifyEmailLinkSent: 'تم إرسال رابط التحقق! تفقد بريدك الجديد. بعد التحقق، عد واضغط على حفظ التغييرات.',
+    emailSyncNotice: 'تم التحقق من بريد إلكتروني جديد! اضغط على "حفظ التغييرات" لتحديث ملفك الشخصي.',
     animeTypes: {
       'tv': 'مسلسل',
       'movie': 'فلم',

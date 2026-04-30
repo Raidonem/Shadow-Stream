@@ -18,7 +18,7 @@ import {
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useAuth } from '../../firebase/index';
 import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
-import { updateUserPassword } from '../../firebase/non-blocking-login';
+import { updateUserPassword, initiateEmailUpdate } from '../../firebase/non-blocking-login';
 import { 
   User as UserIcon, 
   Mail, 
@@ -141,6 +141,7 @@ function ProfileContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isSendingEmailLink, setIsSendingEmailLink] = useState(false);
   
   const [editData, setEditData] = useState({
     username: '',
@@ -153,6 +154,11 @@ function ProfileContent() {
   const [passwordData, setPasswordData] = useState({
     current: '',
     new: ''
+  });
+
+  const [emailUpdateData, setEmailUpdateData] = useState({
+    new: '',
+    password: ''
   });
 
   const profileRef = useMemoFirebase(() => {
@@ -256,6 +262,12 @@ function ProfileContent() {
     setIsSaving(true);
 
     try {
+      // Reload auth user to check for verification status in case they verified in another tab
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+      }
+      const freshAuthUser = auth.currentUser;
+
       const usernameChanged = editData.username.toLowerCase() !== profile?.username?.toLowerCase();
       
       if (usernameChanged) {
@@ -291,6 +303,11 @@ function ProfileContent() {
         isPublic: editData.isPublic,
         updatedAt: serverTimestamp()
       };
+
+      // Check for verified email mismatch to sync with Firestore
+      if (freshAuthUser && freshAuthUser.emailVerified && freshAuthUser.email !== profile?.email) {
+        profileUpdate.email = freshAuthUser.email;
+      }
 
       if (usernameChanged) {
         profileUpdate.username = editData.username.toLowerCase();
@@ -366,6 +383,30 @@ function ProfileContent() {
       });
     } finally {
       setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleRequestEmailUpdate = async () => {
+    if (!emailUpdateData.new || !emailUpdateData.password) {
+      toast({ title: "Error", description: "Email and password are required.", variant: "destructive" });
+      return;
+    }
+    setIsSendingEmailLink(true);
+    try {
+      await initiateEmailUpdate(auth, emailUpdateData.password, emailUpdateData.new);
+      toast({
+        title: "Verification Sent",
+        description: t('verifyEmailLinkSent')
+      });
+      setEmailUpdateData({ new: '', password: '' });
+    } catch (err: any) {
+      toast({
+        title: "Request Failed",
+        description: err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingEmailLink(false);
     }
   };
 
@@ -732,19 +773,68 @@ function ProfileContent() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-center justify-between space-x-2 rounded-xl bg-secondary/30 p-4 md:col-span-2">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">{t('publicProfile')}</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {t('profilePrivacyDesc')}
+                  
+                  <div className="space-y-4 rounded-xl bg-secondary/30 p-4 border border-dashed">
+                    <Label className="flex items-center gap-2 text-base">
+                      <Mail className="h-4 w-4" />
+                      {t('changeEmail')}
+                    </Label>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Input 
+                        placeholder={t('newEmail')}
+                        value={emailUpdateData.new}
+                        onChange={(e) => setEmailUpdateData({ ...emailUpdateData, new: e.target.value })}
+                        className="rounded-xl border-none bg-background/50"
+                        disabled={isSaving || isSendingEmailLink}
+                      />
+                      <Input 
+                        type="password"
+                        placeholder={t('currentPassword')}
+                        value={emailUpdateData.password}
+                        onChange={(e) => setEmailUpdateData({ ...emailUpdateData, password: e.target.value })}
+                        className="rounded-xl border-none bg-background/50"
+                        disabled={isSaving || isSendingEmailLink}
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full rounded-xl gap-2"
+                      onClick={handleRequestEmailUpdate}
+                      disabled={isSendingEmailLink || isSaving || !emailUpdateData.new || !emailUpdateData.password}
+                    >
+                      {isSendingEmailLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                      {t('sendResetLink')}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Step: Request -> Verify in Inbox -> Save Changes here.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col justify-center space-y-2 rounded-xl bg-secondary/30 p-4 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">{t('publicProfile')}</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {t('profilePrivacyDesc')}
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={editData.isPublic}
+                        onCheckedChange={(val) => setEditData({...editData, isPublic: val})}
+                        disabled={isSaving}
+                      />
+                    </div>
+                  </div>
+
+                  {authUser && authUser.emailVerified && authUser.email !== profile?.email && (
+                    <div className="md:col-span-2 bg-accent/10 border border-accent/20 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+                      <AlertCircle className="h-5 w-5 text-accent shrink-0" />
+                      <p className="text-sm font-medium text-accent">
+                        {t('emailSyncNotice')}
                       </p>
                     </div>
-                    <Switch 
-                      checked={editData.isPublic}
-                      onCheckedChange={(val) => setEditData({...editData, isPublic: val})}
-                      disabled={isSaving}
-                    />
-                  </div>
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="justify-end gap-3">
