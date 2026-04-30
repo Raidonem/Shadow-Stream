@@ -60,7 +60,7 @@ function CommentItem({
   replies, 
   language,
   t,
-  userVote
+  userVotes
 }: { 
   comment: Comment; 
   user: any; 
@@ -71,13 +71,16 @@ function CommentItem({
   replies?: Comment[];
   language: string;
   t: (key: any) => string;
-  userVote?: 'up' | 'down';
+  userVotes?: any[];
 }) {
   const router = useRouter();
   
   const isOwnComment = user && comment.userId === user.uid;
   const currentDisplayName = isOwnComment ? (profile?.displayName || comment.userDisplayName) : (comment.userDisplayName || 'User');
   const currentUserName = isOwnComment ? (profile?.username || comment.userName) : (comment.userName || 'user');
+  
+  // Look up the specific vote for this comment ID
+  const currentVote = userVotes?.find(v => v.commentId === comment.id)?.type;
   
   return (
     <div className="space-y-4" id={`comment-${comment.id}`}>
@@ -127,11 +130,11 @@ function CommentItem({
                   onClick={() => onVote(comment.id, 'up')}
                   className={cn(
                     "hover:text-accent transition-colors p-1",
-                    userVote === 'up' && "text-accent"
+                    currentVote === 'up' && "text-accent"
                   )}
                   disabled={!user}
                 >
-                  <ThumbsUp className={cn("h-4 w-4", userVote === 'up' && "fill-current")} />
+                  <ThumbsUp className={cn("h-4 w-4", currentVote === 'up' && "fill-current")} />
                 </button>
                 <span className="text-xs font-bold min-w-[12px] text-center">
                   {comment.upvotes || 0}
@@ -143,11 +146,11 @@ function CommentItem({
                   onClick={() => onVote(comment.id, 'down')}
                   className={cn(
                     "hover:text-destructive transition-colors p-1",
-                    userVote === 'down' && "text-destructive"
+                    currentVote === 'down' && "text-destructive"
                   )}
                   disabled={!user}
                 >
-                  <ThumbsDown className={cn("h-4 w-4", userVote === 'down' && "fill-current")} />
+                  <ThumbsDown className={cn("h-4 w-4", currentVote === 'down' && "fill-current")} />
                 </button>
                 <span className="text-xs font-bold min-w-[12px] text-center">
                   {comment.downvotes || 0}
@@ -184,7 +187,7 @@ function CommentItem({
               onReply={onReply}
               language={language}
               t={t}
-              userVote={userVote}
+              userVotes={userVotes}
             />
           ))}
         </div>
@@ -207,7 +210,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [activeServer, setActiveServer] = useState<EpisodeServer | null>(null);
   const [isManualServerSelection, setIsManualServerSelection] = useState(false);
-  const [showTagSuggestions, setShowTagSuggestions] = useState<string | null>(null); // 'main' or commentId
+  const [showTagSuggestions, setShowTagSuggestions] = useState<string | null>(null); 
   const loadedEpisodeId = useRef<string | null>(null);
   const incrementedViews = useRef<string | null>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -408,7 +411,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       updatedAt: serverTimestamp()
     });
 
-    // Handle Mentions
     const mentionRegex = /@(\w+)/g;
     const mentions = text.match(mentionRegex);
     if (mentions) {
@@ -430,7 +432,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       });
     }
 
-    // Notification logic for replies
     if (parentId) {
       const parentComment = comments?.find(c => c.id === parentId);
       if (parentComment && parentComment.userId !== user.uid) {
@@ -558,9 +559,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
   const handleReplyInitiation = (parentId: string, targetUserName: string, isReply: boolean) => {
     setActiveReplyId(parentId);
-    // Only pre-fill with a tag if the user is replying to an existing reply (sub-comment)
     setReplyText(isReply ? `@${targetUserName} ` : "");
-    // Use timeout to ensure the textarea is rendered before focusing
     setTimeout(() => {
       replyTextareaRef.current?.focus();
     }, 50);
@@ -679,7 +678,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       replies={getReplies(c.id)}
                       language={language}
                       t={t}
-                      userVote={userVotes?.find(v => v.commentId === c.id)?.type}
+                      userVotes={userVotes}
                     />
                     
                     {activeReplyId === c.id && (
