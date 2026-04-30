@@ -92,7 +92,7 @@ export interface GlobalNotification {
 
 export interface UserNotification {
   id: string;
-  type: 'friend_request' | 'friend_accepted' | 'comment_reply' | 'comment_mention';
+  type: 'friend_request' | 'friend_accepted' | 'comment_reply' | 'comment_mention' | 'comment_like' | 'comment_dislike';
   fromId: string;
   fromName: string;
   messageEn: string;

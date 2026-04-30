@@ -319,7 +319,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["friend_request", "friend_accepted", "comment_reply"] },
+        "type": { "type": "string", "enum": ["friend_request", "friend_accepted", "comment_reply", "comment_mention", "comment_like", "comment_dislike"] },
         "fromId": { "type": "string" },
         "fromName": { "type": "string" },
         "messageEn": { "type": "string" },

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign } from 'lucide-react';
+import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase/index';
 import { collection, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
 import {
@@ -32,10 +32,10 @@ export function NotificationBell() {
     return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(10));
   }, [db]);
 
-  // Personal Notifications (Friend Requests, Replies)
+  // Personal Notifications (Friend Requests, Replies, Likes, Mentions)
   const personalQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(10));
+    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(15));
   }, [db, user]);
 
   const { data: globals, isLoading: isGlobalsLoading } = useCollection<GlobalNotification>(globalQuery);
@@ -58,7 +58,7 @@ export function NotificationBell() {
       const timeA = a.createdAt?.seconds || 0;
       const timeB = b.createdAt?.seconds || 0;
       return timeB - timeA;
-    }).slice(0, 15);
+    }).slice(0, 20);
   }, [globals, personals]);
 
   const unreadCount = useMemo(() => {
@@ -78,6 +78,8 @@ export function NotificationBell() {
       case 'new_episode': return <PlayCircle className="h-4 w-4 text-accent" />;
       case 'comment_reply': return <MessageSquare className="h-4 w-4 text-primary" />;
       case 'comment_mention': return <AtSign className="h-4 w-4 text-yellow-500" />;
+      case 'comment_like': return <ThumbsUp className="h-4 w-4 text-accent" />;
+      case 'comment_dislike': return <ThumbsDown className="h-4 w-4 text-destructive" />;
       case 'friend_request': return <UserPlus className="h-4 w-4 text-green-500" />;
       case 'friend_accepted': return <Users className="h-4 w-4 text-accent" />;
       default: return <Bell className="h-4 w-4" />;

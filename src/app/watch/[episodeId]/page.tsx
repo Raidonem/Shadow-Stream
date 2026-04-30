@@ -35,12 +35,12 @@ import {
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment, deleteDoc, documentId } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, updateDoc, arrayUnion, arrayRemove, where, getDocs, increment, deleteDoc, documentId, limit } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Anime, Comment, UserProfile } from '../../../lib/types';
+import { EpisodeServer, Anime, Comment, UserProfile, UserNotification } from '../../../lib/types';
 import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
@@ -525,24 +525,27 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     toast({ title: parentId ? (language === 'ar' ? 'تم الرد' : 'Reply posted') : t('postComment') });
   };
 
-  const handleVote = (commentId: string, direction: 'up' | 'down') => {
-    if (!user || !db || !animeId || !episodeId) return;
+  const handleVote = async (commentId: string, direction: 'up' | 'down') => {
+    if (!user || !db || !animeId || !episodeId || !profile) return;
     
     const voteId = `${user.uid}_${commentId}`;
     const voteRef = doc(db, 'comment_votes', voteId);
     const existingVote = userVotes?.find(v => v.commentId === commentId);
-    const commentDoc = doc(db, 'anime', animeId, 'episodes', episodeId, 'comments', commentId);
+    const commentDocRef = doc(db, 'anime', animeId, 'episodes', episodeId, 'comments', commentId);
+    const comment = comments?.find(c => c.id === commentId);
+
+    if (!comment) return;
 
     if (existingVote) {
       if (existingVote.type === direction) {
         deleteDocumentNonBlocking(voteRef);
-        updateDocumentNonBlocking(commentDoc, {
+        updateDocumentNonBlocking(commentDocRef, {
           [direction === 'up' ? 'upvotes' : 'downvotes']: increment(-1),
           updatedAt: serverTimestamp()
         });
       } else {
         updateDocumentNonBlocking(voteRef, { type: direction, updatedAt: serverTimestamp() });
-        updateDocumentNonBlocking(commentDoc, {
+        updateDocumentNonBlocking(commentDocRef, {
           [existingVote.type === 'up' ? 'upvotes' : 'downvotes']: increment(-1),
           [direction === 'up' ? 'upvotes' : 'downvotes']: increment(1),
           updatedAt: serverTimestamp()
@@ -556,10 +559,66 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         type: direction,
         createdAt: serverTimestamp()
       }, { merge: true });
-      updateDocumentNonBlocking(commentDoc, {
+      updateDocumentNonBlocking(commentDocRef, {
         [direction === 'up' ? 'upvotes' : 'downvotes']: increment(1),
         updatedAt: serverTimestamp()
       });
+
+      // Aggregated Notification Logic
+      if (comment.userId !== user.uid) {
+        const notifType = direction === 'up' ? 'comment_like' : 'comment_dislike';
+        const link = `/watch/${episodeId}?animeId=${animeId}#comment-${commentId}`;
+        const notificationsRef = collection(db, 'users', comment.userId, 'notifications');
+        
+        const q = query(
+          notificationsRef, 
+          where('type', '==', notifType), 
+          where('link', '==', link),
+          limit(1)
+        );
+        
+        const notifSnapshot = await getDocs(q);
+        const reactorsCount = (direction === 'up' ? comment.upvotes : comment.downvotes) || 0;
+        const totalReactors = reactorsCount + 1;
+        
+        let messageEn = '';
+        let messageAr = '';
+
+        if (totalReactors === 1) {
+          messageEn = `${profile.displayName || profile.username} ${direction === 'up' ? 'liked' : 'disliked'} your comment.`;
+          messageAr = `${direction === 'up' ? 'أعجب' : 'لم يعجب'} ${profile.displayName || profile.username} بتعليقك.`;
+        } else if (totalReactors === 2) {
+          const oldReactorName = notifSnapshot.empty ? 'someone' : notifSnapshot.docs[0].data().fromName;
+          messageEn = `${profile.displayName || profile.username} and ${oldReactorName} ${direction === 'up' ? 'liked' : 'disliked'} your comment.`;
+          messageAr = `${direction === 'up' ? 'أعجب' : 'لم يعجب'} ${profile.displayName || profile.username} و ${oldReactorName} بتعليقك.`;
+        } else {
+          const oldReactorName = notifSnapshot.empty ? 'someone' : notifSnapshot.docs[0].data().fromName;
+          messageEn = `${profile.displayName || profile.username}, ${oldReactorName}, and ${totalReactors - 2} others ${direction === 'up' ? 'liked' : 'disliked'} your comment.`;
+          messageAr = `${direction === 'up' ? 'أعجب' : 'لم يعجب'} ${profile.displayName || profile.username}، ${oldReactorName}، و ${totalReactors - 2} آخرين بتعليقك.`;
+        }
+
+        if (!notifSnapshot.empty) {
+          updateDocumentNonBlocking(notifSnapshot.docs[0].ref, {
+            fromId: user.uid,
+            fromName: profile.displayName || profile.username,
+            messageEn,
+            messageAr,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        } else {
+          addDocumentNonBlocking(notificationsRef, {
+            type: notifType,
+            fromId: user.uid,
+            fromName: profile.displayName || profile.username,
+            messageEn,
+            messageAr,
+            link,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
+      }
     }
   };
 
