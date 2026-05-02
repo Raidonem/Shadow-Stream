@@ -35,17 +35,18 @@ import {
   MoreVertical,
   AlertTriangle,
   Flag,
-  X
+  X,
+  Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, increment, where } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc, writeBatch } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Comment, Report, UserProfile, AvatarItem } from '../../../lib/types';
+import { EpisodeServer, Comment, Report, UserProfile, AvatarItem, Episode, Anime, Rating } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
@@ -66,6 +67,152 @@ import {
 } from "../../../components/ui/dialog";
 
 const COMMENT_LIMIT = 100;
+
+function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: { 
+  animeId: string; 
+  episodeId: string; 
+  currentAvg: number;
+  userRatingDoc: Rating | null;
+}) {
+  const db = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
+  const { language } = useLanguage();
+  const [isRating, setIsRating] = useState(false);
+  const [hoveredValue, setHoveredValue] = useState<number | null>(null);
+
+  const handleRate = async (value: number) => {
+    if (!user || !db) {
+      toast({ title: "Login Required", description: "Sign in to rate episodes." });
+      return;
+    }
+
+    setIsRating(true);
+    const ratingId = `${user.uid}_${episodeId}`;
+    const ratingRef = doc(db, 'ratings', ratingId);
+    const episodeRef = doc(db, 'anime', animeId, 'episodes', episodeId);
+    const animeRef = doc(db, 'anime', animeId);
+
+    try {
+      const oldValue = userRatingDoc?.value || 0;
+      const isUpdate = !!userRatingDoc;
+
+      // 1. Update individual rating
+      setDocumentNonBlocking(ratingRef, {
+        id: ratingId,
+        userId: user.uid,
+        targetId: episodeId,
+        targetType: 'episode',
+        value: value,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      // 2. Update Episode Aggregates
+      const episodeUpdate: any = {
+        ratingCount: increment(isUpdate ? 0 : 1),
+        totalRatingSum: increment(value - oldValue),
+        updatedAt: serverTimestamp()
+      };
+      updateDocumentNonBlocking(episodeRef, episodeUpdate);
+
+      // Wait a tiny bit for the aggregate to be readable locally or just manually calculate for now
+      // In a real app, this would be a cloud function.
+      // Here we will calculate the new average based on all episodes of this anime to update the Anime Doc.
+      const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
+      const episodes = epsSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Episode));
+      
+      let totalSum = 0;
+      let ratedEpsCount = 0;
+
+      episodes.forEach(ep => {
+        let epRating = ep.rating || 0;
+        if (ep.id === episodeId) {
+          const newCount = (ep.ratingCount || 0) + (isUpdate ? 0 : 1);
+          const newSum = (ep.totalRatingSum || 0) + (value - oldValue);
+          epRating = newCount > 0 ? newSum / newCount : 0;
+          
+          // Also update the episode rating field itself for display
+          updateDoc(episodeRef, { rating: epRating });
+        }
+        
+        if (epRating > 0) {
+          totalSum += epRating;
+          ratedEpsCount++;
+        }
+      });
+
+      const newAnimeRating = ratedEpsCount > 0 ? totalSum / ratedEpsCount : 0;
+      updateDocumentNonBlocking(animeRef, {
+        rating: newAnimeRating,
+        updatedAt: serverTimestamp()
+      });
+
+      toast({ 
+        title: language === 'ar' ? 'تم التقييم' : "Rating Saved", 
+        description: (language === 'ar' ? `لقد قيمت الحلقة بـ ${value}/10` : `You rated this episode ${value}/10`) 
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRating(false);
+    }
+  };
+
+  return (
+    <div className="bg-secondary/20 rounded-2xl p-6 border border-accent/10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            <h3 className="font-bold text-lg">{language === 'ar' ? 'قيم هذه الحلقة' : 'Rate this Episode'}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {language === 'ar' ? 'تقييمك يساعد في تحديد الترتيب العام للأنمي.' : 'Your rating helps determine the overall ranking of this anime.'}
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-1">
+            {[...Array(10)].map((_, i) => {
+              const val = i + 1;
+              const isActive = (hoveredValue !== null ? val <= hoveredValue : val <= (userRatingDoc?.value || 0));
+              return (
+                <button
+                  key={val}
+                  onMouseEnter={() => setHoveredValue(val)}
+                  onMouseLeave={() => setHoveredValue(null)}
+                  onClick={() => handleRate(val)}
+                  disabled={isRating}
+                  className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                    isActive ? "bg-yellow-500 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)] scale-110" : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  )}
+                >
+                  <span className="text-xs font-bold">{val}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between w-full px-1 text-[10px] font-bold uppercase text-muted-foreground">
+            <span>{language === 'ar' ? 'سيء' : 'Poor'}</span>
+            <span className="text-accent">
+              {userRatingDoc ? (language === 'ar' ? `تقييمك: ${userRatingDoc.value}` : `Your Score: ${userRatingDoc.value}`) : ''}
+            </span>
+            <span>{language === 'ar' ? 'أسطوري' : 'Masterpiece'}</span>
+          </div>
+        </div>
+
+        <div className="bg-background/40 rounded-xl px-4 py-3 border flex flex-col items-center min-w-[100px]">
+          <span className="text-[10px] font-bold uppercase text-muted-foreground mb-1">{language === 'ar' ? 'متوسط الحلقة' : 'EP Average'}</span>
+          <div className="flex items-center gap-1 text-2xl font-black text-accent">
+            <Star className="h-5 w-5 fill-current" />
+            {currentAvg > 0 ? currentAvg.toFixed(1) : '-.-'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CommentItem({ 
   comment, 
@@ -109,9 +256,6 @@ function CommentItem({
   
   const currentVote = userVotes?.find(v => v.commentId === comment.id)?.type;
 
-  // We need to fetch the profile of the user who made the comment to see their avatarId
-  // but for performance in a real app we might snapshot the avatarId in the comment.
-  // Given the requirement "if it gets deleted, revert to default", we'll fetch the profile.
   const commentUserProfileRef = useMemoFirebase(() => {
     if (!db || !comment.userId) return null;
     return doc(db, 'users', comment.userId);
@@ -392,9 +536,15 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return query(collection(db, 'anime', animeId, 'episodes'), orderBy('episodeNumber', 'asc'));
   }, [db, animeId]);
 
-  const { data: episode, isLoading: isEpLoading } = useDoc(episodeRef);
-  const { data: anime, isLoading: isAnimeLoading } = useDoc(animeRef);
-  const { data: episodes } = useCollection(allEpisodesQuery);
+  const { data: episode, isLoading: isEpLoading } = useDoc<Episode>(episodeRef);
+  const { data: anime, isLoading: isAnimeLoading } = useDoc<Anime>(animeRef);
+  const { data: episodes } = useCollection<Episode>(allEpisodesQuery);
+
+  const userRatingRef = useMemoFirebase(() => {
+    if (!db || !user || !episodeId) return null;
+    return doc(db, 'ratings', `${user.uid}_${episodeId}`);
+  }, [db, user?.uid, episodeId]);
+  const { data: userRatingDoc } = useDoc<Rating>(userRatingRef);
 
   const commentsQuery = useMemoFirebase(() => {
     if (!db || !animeId || !episodeId) return null;
@@ -579,7 +729,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   };
 
   if (isEpLoading || isAnimeLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (!episode || !anime) return <div className="text-center py-20 font-headline text-2xl">Episode not found.</div>;
+  if (!episode || !anime || !animeId) return <div className="text-center py-20 font-headline text-2xl">Episode not found.</div>;
 
   const currentIdx = episodes?.findIndex(e => e.id === episodeId) ?? -1;
   const prevEp = currentIdx > 0 ? episodes?.[currentIdx - 1] : null;
@@ -602,6 +752,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 {nextEp ? <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>{language === 'ar' ? 'التالي' : 'Next'}<ChevronRight className="h-4 w-4 ml-2" /></Link> : <span className="opacity-50 flex items-center">{language === 'ar' ? 'التالي' : 'Next'}<ChevronRight className="h-4 w-4 ml-2" /></span>}
               </Button>
             </div>
+
+            {/* Episode Rating Component */}
+            <EpisodeRatingSystem 
+              animeId={animeId} 
+              episodeId={episodeId} 
+              currentAvg={episode.rating || 0}
+              userRatingDoc={userRatingDoc || null}
+            />
 
             <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -746,6 +904,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
                         <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
+                        <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                          <Star className="h-2 w-2 fill-current" />
+                          {ep.rating ? ep.rating.toFixed(1) : '?.?'}
+                        </div>
                       </div>
                     </Link>
                   ))}

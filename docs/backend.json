@@ -34,6 +34,7 @@
         "bannerImage": { "type": "string" },
         "genres": { "type": "array", "items": { "type": "string" } },
         "rating": { "type": "number" },
+        "ratingCount": { "type": "number" },
         "views": { "type": "number" },
         "releaseYear": { "type": "number" },
         "status": { "type": "string", "enum": ["Airing", "Finished"] },
@@ -52,6 +53,9 @@
         "titleAr": { "type": "string" },
         "thumbnail": { "type": "string" },
         "duration": { "type": "string" },
+        "rating": { "type": "number" },
+        "ratingCount": { "type": "number" },
+        "totalRatingSum": { "type": "number" },
         "servers": { 
           "type": "array", 
           "items": { 
@@ -63,6 +67,18 @@
             }
           } 
         }
+      }
+    },
+    "Rating": {
+      "title": "Rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["anime", "episode"] },
+        "value": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
       }
     },
     "Report": {
@@ -122,6 +138,7 @@
     "/users/{userId}": { "schema": "UserProfile", "description": "User profiles" },
     "/anime/{animeId}": { "schema": "Anime", "description": "Anime catalog" },
     "/anime/{animeId}/episodes/{episodeId}": { "schema": "Episode", "description": "Anime episodes" },
+    "/ratings/{ratingId}": { "schema": "Rating", "description": "User ratings" },
     "/reports/{reportId}": { "schema": "Report", "description": "Issue reports" },
     "/users/{userId}/moderation_logs/{logId}": { "schema": "ModerationLog", "description": "Logs of admin actions" },
     "/avatars/{avatarId}": { "schema": "AvatarItem", "description": "Official avatar options" },

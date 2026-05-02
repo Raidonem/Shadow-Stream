@@ -15,6 +15,7 @@ export interface Anime {
   bannerImage: string;
   genres: GenreKey[];
   rating: number;
+  ratingCount?: number;
   views: number;
   lastEpisodeNumber?: number;
   status: 'Airing' | 'Finished';
@@ -115,8 +116,19 @@ export interface Episode {
   thumbnail: string;
   duration: string;
   rating?: number;
+  ratingCount?: number;
+  totalRatingSum?: number;
   createdAt: any;
   updatedAt: any;
+}
+
+export interface Rating {
+  id: string;
+  userId: string;
+  targetId: string;
+  targetType: 'anime' | 'episode';
+  value: number;
+  createdAt: any;
 }
 
 export interface GlobalNotification {
