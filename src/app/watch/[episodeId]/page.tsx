@@ -114,29 +114,33 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
       };
       updateDocumentNonBlocking(episodeRef, episodeUpdate);
 
-      // Refresh averages
+      // 3. Update averages across the series
       const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
       const episodes = epsSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Episode));
       
-      let totalSum = 0;
+      let totalAnimeSum = 0;
       let ratedEpsCount = 0;
 
       episodes.forEach(ep => {
         let epRating = ep.rating || 0;
+        
+        // Use locally calculated rating for the current episode to avoid snapshot delay
         if (ep.id === episodeId) {
           const newCount = (ep.ratingCount || 0) + (isUpdate ? 0 : 1);
           const newSum = (ep.totalRatingSum || 0) + (value - oldValue);
           epRating = newCount > 0 ? newSum / newCount : 0;
-          updateDoc(episodeRef, { rating: epRating });
+          
+          // Apply individual update
+          updateDocumentNonBlocking(episodeRef, { rating: epRating });
         }
         
         if (epRating > 0) {
-          totalSum += epRating;
+          totalAnimeSum += epRating;
           ratedEpsCount++;
         }
       });
 
-      const newAnimeRating = ratedEpsCount > 0 ? totalSum / ratedEpsCount : 0;
+      const newAnimeRating = ratedEpsCount > 0 ? totalAnimeSum / ratedEpsCount : 0;
       updateDocumentNonBlocking(animeRef, {
         rating: newAnimeRating,
         updatedAt: serverTimestamp()
@@ -152,6 +156,8 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
       setIsRating(false);
     }
   };
+
+  const displayAvg = currentAvg > 0 ? currentAvg.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
 
   return (
     <div className="bg-secondary/20 rounded-2xl p-6 border border-accent/10">
@@ -201,7 +207,7 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
           <span className="text-[10px] font-bold uppercase text-muted-foreground mb-1">{language === 'ar' ? 'متوسط الحلقة' : 'EP Average'}</span>
           <div className="flex items-center gap-1 text-2xl font-black text-accent">
             <Star className="h-5 w-5 fill-current" />
-            {currentAvg > 0 ? currentAvg.toFixed(1) : '-.-'}
+            {displayAvg}
           </div>
         </div>
       </div>
@@ -883,21 +889,24 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               <h3 className="font-headline text-xl font-bold">{t('episodes')}</h3>
               <ScrollArea className="h-[600px] pr-4">
                 <div className="space-y-2">
-                  {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => (
-                    <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}>
-                      <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                        <Image src={(ep.thumbnail || anime.coverImage).trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
-                        <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
-                        <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
-                          <Star className="h-2 w-2 fill-current" />
-                          {ep.rating ? ep.rating.toFixed(1) : '?.?'}
+                  {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
+                    const epAvg = ep.rating > 0 ? ep.rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
+                    return (
+                      <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}>
+                        <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <Image src={(ep.thumbnail || anime.coverImage).trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
+                          <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
+                          <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                            <Star className="h-2 w-2 fill-current" />
+                            {epAvg}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </section>
