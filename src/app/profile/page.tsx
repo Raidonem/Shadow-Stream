@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
@@ -16,66 +16,40 @@ import {
   SelectValue 
 } from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useAuth } from '../../firebase/index';
-import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp, arrayUnion, arrayRemove, orderBy } from 'firebase/firestore';
-import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { doc, collection, query, where, documentId, getDocs, serverTimestamp, arrayUnion, orderBy } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { updateUserPassword } from '../../firebase/non-blocking-login';
 import { 
   User as UserIcon, 
-  Mail, 
   Shield, 
   ShieldCheck, 
   Copy, 
-  CheckCircle2, 
   Edit3, 
   Save, 
-  X,
   Settings2,
-  Globe,
-  Palette,
   Sparkles,
-  Zap,
   Loader2,
-  Lock,
-  Unlock,
   Bookmark,
   Heart,
   Eye,
-  AlertCircle,
-  UserPlus,
-  UserMinus,
-  Users,
   Clock,
-  Check,
-  ShieldAlert,
-  AtSign,
-  Key,
   History,
-  AlertTriangle,
+  Bell,
   Slash,
   Ban,
-  ImageIcon
+  ImageIcon,
+  AtSign
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { useTheme } from '../../components/providers/ThemeContext';
 import { Badge } from '../../components/ui/badge';
-import { usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import { useSearchParams } from 'next/navigation';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../../components/ui/alert-dialog";
 import { differenceInDays } from 'date-fns';
 import { ModerationLog, UserProfile, AvatarItem } from '../../lib/types';
+import { cn } from '../../lib/utils';
 import Image from 'next/image';
 
 function ProfileContent() {
@@ -83,14 +57,12 @@ function ProfileContent() {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { language, setLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   
   const targetUid = searchParams.get('uid') || authUser?.uid;
   const isOwnProfile = !searchParams.get('uid') || searchParams.get('uid') === authUser?.uid;
 
-  const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
@@ -274,8 +246,7 @@ function ProfileContent() {
   const copyUid = () => {
     if (!targetUid) return;
     navigator.clipboard.writeText(targetUid);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Copied to clipboard" });
   };
 
   if (isAuthLoading || isProfileLoading) {

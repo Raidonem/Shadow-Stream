@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Suspense, useMemo, useState } from 'react';
@@ -17,7 +18,7 @@ import {
   Filter, 
   FilterX, 
   User as UserIcon, 
-  Tv 
+  Tv,
 } from 'lucide-react';
 import { normalizeSearchString, cn } from '../../lib/utils';
 import { 
@@ -49,19 +50,16 @@ function SearchResults() {
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
 
-  // Anime Query
   const animeQuery = useMemoFirebase(() => {
     if (!db || searchType !== 'anime') return null;
     return query(collection(db, 'anime'));
   }, [db, searchType]);
 
-  // Users Query
   const usersQuery = useMemoFirebase(() => {
     if (!db || searchType !== 'users') return null;
     return query(collection(db, 'users'), where('isPublic', '==', true), limit(50));
   }, [db, searchType]);
 
-  // Avatars Query for resolution
   const avatarsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
@@ -87,13 +85,12 @@ function SearchResults() {
     if (queryParam) {
       const normalizedQuery = normalizeSearchString(queryParam);
       filtered = filtered.filter(anime => {
-        const normalizedTitleEn = normalizeSearchString(anime.titleEn || '');
-        const normalizedTitleAr = normalizeSearchString(anime.titleAr || '');
-        const altTitles = anime.alternativeTitles || [];
-        const matchesAlternative = altTitles.some(title => 
-          normalizeSearchString(title).includes(normalizedQuery)
+        const titleEn = normalizeSearchString(anime.titleEn || '');
+        const titleAr = normalizeSearchString(anime.titleAr || '');
+        const altTitlesMatch = (anime.alternativeTitles || []).some(t => 
+          normalizeSearchString(t).includes(normalizedQuery)
         );
-        return normalizedTitleEn.includes(normalizedQuery) || normalizedTitleAr.includes(normalizedQuery) || matchesAlternative;
+        return titleEn.includes(normalizedQuery) || titleAr.includes(normalizedQuery) || altTitlesMatch;
       });
     }
 
@@ -111,9 +108,9 @@ function SearchResults() {
 
     return filtered.sort((a, b) => {
       if (sortBy === 'name') {
-        const titleA = (language === 'ar' ? a.titleAr : a.titleEn) || '';
-        const titleB = (language === 'ar' ? b.titleAr : b.titleEn) || '';
-        return titleA.localeCompare(titleB);
+        const nameA = (language === 'ar' ? a.titleAr : a.titleEn) || '';
+        const nameB = (language === 'ar' ? b.titleAr : b.titleEn) || '';
+        return nameA.localeCompare(nameB);
       }
       if (sortBy === 'added_desc') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
       if (sortBy === 'added_asc') return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
@@ -125,17 +122,12 @@ function SearchResults() {
 
   const processedUsers = useMemo(() => {
     if (!usersList || searchType !== 'users') return [];
-    
-    let filtered = [...usersList];
-
-    if (queryParam) {
-      const normalizedQuery = normalizeSearchString(queryParam);
-      filtered = filtered.filter(user => 
-        normalizeSearchString(user.username || '').includes(normalizedQuery)
-      );
-    }
-
-    return filtered;
+    if (!queryParam) return usersList;
+    const normalizedQuery = normalizeSearchString(queryParam);
+    return usersList.filter(user => 
+      normalizeSearchString(user.username || '').includes(normalizedQuery) ||
+      normalizeSearchString(user.displayName || '').includes(normalizedQuery)
+    );
   }, [usersList, queryParam, searchType]);
 
   const toggleGenre = (genre: GenreKey) => {
@@ -151,9 +143,9 @@ function SearchResults() {
     setSelectedYears([]);
   };
 
-  const resolveAvatar = (user: UserProfile) => {
-    if (!user.avatarId || !officialAvatars) return null;
-    return officialAvatars.find(a => a.id === user.avatarId)?.url || null;
+  const resolveAvatar = (u: UserProfile) => {
+    if (!u.avatarId || !officialAvatars) return null;
+    return officialAvatars.find(a => a.id === u.avatarId)?.url || null;
   };
 
   const isLoading = isAnimeLoading || isUsersLoading;
@@ -162,7 +154,7 @@ function SearchResults() {
     <div className="flex flex-col gap-8 lg:flex-row">
       <aside className={cn(
         "w-full shrink-0 transition-all duration-300 lg:w-64",
-        searchType === 'users' && "lg:w-0 lg:opacity-0 lg:pointer-events-none"
+        searchType === 'users' && "lg:w-0 lg:opacity-0 lg:pointer-events-none overflow-hidden"
       )}>
         <div className="sticky top-24 space-y-8 rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
@@ -186,7 +178,10 @@ function SearchResults() {
                   <Badge
                     key={genre}
                     variant={selectedGenres.includes(genre) ? "default" : "secondary"}
-                    className={cn("cursor-pointer px-2 py-0.5 text-[10px] transition-all", selectedGenres.includes(genre) ? "bg-accent text-accent-foreground" : "hover:bg-accent/20")}
+                    className={cn(
+                      "cursor-pointer px-2 py-0.5 text-[10px] transition-all", 
+                      selectedGenres.includes(genre) ? "bg-accent text-accent-foreground" : "hover:bg-accent/20"
+                    )}
                     onClick={() => toggleGenre(genre)}
                   >
                     {translations[language].tags[genre]}
@@ -199,7 +194,16 @@ function SearchResults() {
               <h3 className="text-xs font-bold uppercase text-muted-foreground">{language === 'ar' ? 'سنة الإصدار' : 'Release Year'}</h3>
               <div className="grid grid-cols-2 gap-1.5">
                 {availableYears.map(year => (
-                  <Button key={year} variant={selectedYears.includes(year) ? "default" : "outline"} size="sm" className={cn("h-8 text-xs rounded-lg", selectedYears.includes(year) ? "bg-accent text-accent-foreground border-accent" : "")} onClick={() => toggleYear(year)}>
+                  <Button 
+                    key={year} 
+                    variant={selectedYears.includes(year) ? "default" : "outline"} 
+                    size="sm" 
+                    className={cn(
+                      "h-8 text-xs rounded-lg", 
+                      selectedYears.includes(year) ? "bg-accent text-accent-foreground border-accent" : ""
+                    )} 
+                    onClick={() => toggleYear(year)}
+                  >
                     {year}
                   </Button>
                 ))}
@@ -212,18 +216,16 @@ function SearchResults() {
       <div className="flex-1 space-y-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <h1 className="font-headline text-3xl font-bold">
-                {queryParam ? (
-                  <>
-                    {language === 'ar' ? 'نتائج البحث عن: ' : 'Search results for: '}
-                    <span className="text-accent">"{queryParam}"</span>
-                  </>
-                ) : (
-                  <>{language === 'ar' ? 'استكشاف' : 'Explore'}</>
-                )}
-              </h1>
-            </div>
+            <h1 className="font-headline text-3xl font-bold">
+              {queryParam ? (
+                <>
+                  {language === 'ar' ? 'نتائج البحث عن: ' : 'Search results for: '}
+                  <span className="text-accent">"{queryParam}"</span>
+                </>
+              ) : (
+                <>{language === 'ar' ? 'استكشاف' : 'Explore'}</>
+              )}
+            </h1>
 
             <div className="flex bg-secondary/50 p-1 rounded-xl w-fit">
               <Button 
@@ -317,7 +319,7 @@ function SearchResults() {
               <UserIcon className="h-12 w-12 text-muted-foreground mb-4" />
               <h2 className="text-xl font-bold">{t('noPublicUsers')}</h2>
             </div>
-          )}
+          )
         )}
       </div>
     </div>
