@@ -167,8 +167,8 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
 
   const handleDeleteEpisode = (id: string) => {
     if (!db || !anime.id || !id) return;
-    if (!window.confirm("Are you sure you want to delete this episode?")) return;
     
+    // Use non-blocking delete immediately
     const epRef = doc(db, 'anime', anime.id, 'episodes', id);
     deleteDocumentNonBlocking(epRef);
     toast({ title: "Episode Deleted" });
@@ -267,11 +267,19 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">{ep.servers?.length || 0} Servers • {ep.duration}</p>
                   </div>
-                  <div className="flex gap-1 transition-opacity">
+                  <div className="flex gap-1">
                     <Button size="icon" variant="ghost" className="h-10 w-10 text-accent hover:bg-accent/10" onClick={() => handleEditEpisode(ep)}>
                       <Edit2 className="h-5 w-5" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEpisode(ep.id)}>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-10 w-10 text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteEpisode(ep.id);
+                      }}
+                    >
                       <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
@@ -417,7 +425,6 @@ export default function AdminPage() {
 
   const handleDeleteAnime = (id: string) => {
     if (!db) return;
-    if (!window.confirm("Delete this series and all associated episodes?")) return;
     deleteDocumentNonBlocking(doc(db, 'anime', id));
     toast({ title: "Anime Deleted" });
   };
@@ -438,7 +445,6 @@ export default function AdminPage() {
 
   const handleDeleteAvatar = (id: string) => {
     if (!db) return;
-    if (!window.confirm("Delete this avatar option?")) return;
     deleteDocumentNonBlocking(doc(db, 'avatars', id));
     toast({ title: "Avatar deleted" });
   };
@@ -451,7 +457,6 @@ export default function AdminPage() {
 
   const handleDeleteReport = (reportId: string) => {
     if (!db) return;
-    if (!window.confirm("Delete this report?")) return;
     deleteDocumentNonBlocking(doc(db, 'reports', reportId));
     toast({ title: "Report Deleted" });
   };
