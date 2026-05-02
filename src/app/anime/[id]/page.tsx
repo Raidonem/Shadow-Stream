@@ -286,10 +286,10 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-accent">{language === 'ar' ? 'الحلقة' : 'EPISODE'} {ep.episodeNumber}</span>
-                          {ep.rating && (
-                            <div className="flex items-center gap-1 text-xs text-yellow-500 font-bold">
-                              <Star className="h-3 w-3 fill-current" />
-                              {ep.rating.toFixed(1)}
+                          {ep.rating > 0 && (
+                            <div className="flex items-center bg-secondary/50 px-2 py-0.5 rounded-md text-[10px] font-bold border border-accent/10">
+                              <span className="text-accent">{ep.rating.toFixed(1)}</span>
+                              <span className="text-muted-foreground/50 ml-0.5">/ 10</span>
                             </div>
                           )}
                         </div>
