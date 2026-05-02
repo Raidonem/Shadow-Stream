@@ -18,7 +18,6 @@ import {
 import { 
   Plus, 
   LayoutDashboard, 
-  ShieldAlert,
   Loader2,
   Edit2,
   Trash2,
@@ -64,6 +63,7 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
   const { toast } = useToast();
   const { language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
   const [newEpisode, setNewEpisode] = useState({
     titleEn: '',
     titleAr: '',
@@ -91,6 +91,26 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
     setServers(servers.filter((_, i) => i !== index));
   };
 
+  const resetForm = () => {
+    setNewEpisode({ titleEn: '', titleAr: '', episodeNumber: '', thumbnail: '', duration: '24:00' });
+    setServers([]);
+    setEditingEpisodeId(null);
+    setNewServer({ name: '', url: '', lang: 'en' });
+  };
+
+  const handleEditEpisode = (ep: Episode) => {
+    setEditingEpisodeId(ep.id);
+    setNewEpisode({
+      titleEn: ep.titleEn,
+      titleAr: ep.titleAr,
+      episodeNumber: ep.episodeNumber.toString(),
+      thumbnail: ep.thumbnail || '',
+      duration: ep.duration
+    });
+    setServers(ep.servers || []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleAddEpisode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !anime.id || servers.length === 0) {
@@ -101,40 +121,44 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
 
     const epNum = parseInt(newEpisode.episodeNumber);
     const epColRef = collection(db, 'anime', anime.id, 'episodes');
-    const newEpDoc = doc(epColRef); // Generate ID first
+    const epDocRef = editingEpisodeId ? doc(db, 'anime', anime.id, 'episodes', editingEpisodeId) : doc(epColRef);
     
     const episodeData = {
       ...newEpisode,
-      id: newEpDoc.id,
+      id: epDocRef.id,
       episodeNumber: epNum,
       animeId: anime.id,
       servers,
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
-    setDocumentNonBlocking(newEpDoc, episodeData, { merge: true });
+    if (!editingEpisodeId) {
+      (episodeData as any).createdAt = serverTimestamp();
+    }
+
+    setDocumentNonBlocking(epDocRef, episodeData, { merge: true });
     
     updateDocumentNonBlocking(doc(db, 'anime', anime.id), {
       lastEpisodeNumber: epNum,
       updatedAt: serverTimestamp()
     });
 
-    const notifRef = doc(collection(db, 'global_notifications'));
-    setDocumentNonBlocking(notifRef, {
-      id: notifRef.id,
-      type: 'new_episode',
-      animeId: anime.id,
-      episodeId: newEpDoc.id,
-      animeTitleEn: anime.titleEn,
-      animeTitleAr: anime.titleAr,
-      episodeNumber: epNum,
-      createdAt: serverTimestamp()
-    }, { merge: true });
+    if (!editingEpisodeId) {
+      const notifRef = doc(collection(db, 'global_notifications'));
+      setDocumentNonBlocking(notifRef, {
+        id: notifRef.id,
+        type: 'new_episode',
+        animeId: anime.id,
+        episodeId: epDocRef.id,
+        animeTitleEn: anime.titleEn,
+        animeTitleAr: anime.titleAr,
+        episodeNumber: epNum,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+    }
 
-    toast({ title: "Episode Added Successfully" });
-    setNewEpisode({ titleEn: '', titleAr: '', episodeNumber: '', thumbnail: '', duration: '24:00' });
-    setServers([]);
+    toast({ title: editingEpisodeId ? "Episode Updated" : "Episode Added Successfully" });
+    resetForm();
     setIsSubmitting(false);
   };
 
@@ -147,7 +171,10 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <div className="space-y-6">
-        <h3 className="font-bold flex items-center gap-2 text-lg"><Plus className="h-5 w-5 text-accent" /> Add Episode</h3>
+        <h3 className="font-bold flex items-center gap-2 text-lg">
+          {editingEpisodeId ? <Edit2 className="h-5 w-5 text-accent" /> : <Plus className="h-5 w-5 text-accent" />}
+          {editingEpisodeId ? 'Edit Episode' : 'Add Episode'}
+        </h3>
         <form onSubmit={handleAddEpisode} className="space-y-4 bg-secondary/20 p-6 rounded-2xl border">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -203,9 +230,16 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
             </div>
           </div>
 
-          <Button type="submit" className="w-full rounded-xl h-12 font-bold text-lg" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save Episode"}
-          </Button>
+          <div className="flex gap-2">
+            {editingEpisodeId && (
+              <Button type="button" variant="outline" onClick={resetForm} className="flex-1 rounded-xl h-12 font-bold">
+                Cancel
+              </Button>
+            )}
+            <Button type="submit" className="flex-[2] rounded-xl h-12 font-bold text-lg" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : editingEpisodeId ? "Update Episode" : "Save Episode"}
+            </Button>
+          </div>
         </form>
       </div>
 
@@ -227,9 +261,14 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">{ep.servers.length} Servers • {ep.duration}</p>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteEpisode(ep.id)}>
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-accent hover:bg-accent/10" onClick={() => handleEditEpisode(ep)}>
+                      <Edit2 className="h-5 w-5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEpisode(ep.id)}>
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -400,6 +439,12 @@ export default function AdminPage() {
     if (!db) return;
     updateDocumentNonBlocking(doc(db, 'reports', reportId), { status: 'resolved' });
     toast({ title: "Report Resolved" });
+  };
+
+  const handleDeleteReport = (reportId: string) => {
+    if (!db || !confirm("Delete this report?")) return;
+    deleteDocumentNonBlocking(doc(db, 'reports', reportId));
+    toast({ title: "Report Deleted" });
   };
 
   const handleExecuteAction = async () => {
