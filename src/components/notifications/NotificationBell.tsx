@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
+import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase/index';
-import { collection, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,6 @@ import {
 } from "../ui/dropdown-menu";
 import { Button } from '../ui/button';
 import { useLanguage } from '../providers/LanguageContext';
-import { translations } from '../../lib/i18n';
 import Link from 'next/link';
 import { GlobalNotification, UserNotification } from '../../lib/types';
 import { Badge } from '../ui/badge';
@@ -32,7 +31,7 @@ export function NotificationBell() {
     return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(10));
   }, [db]);
 
-  // Personal Notifications (Friend Requests, Replies, Likes, Mentions, Warnings)
+  // Personal Notifications (Friend Requests, Replies, Likes, Mentions)
   const personalQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(15));
@@ -82,7 +81,6 @@ export function NotificationBell() {
       case 'comment_dislike': return <ThumbsDown className="h-4 w-4 text-destructive" />;
       case 'friend_request': return <UserPlus className="h-4 w-4 text-green-500" />;
       case 'friend_accepted': return <Users className="h-4 w-4 text-accent" />;
-      case 'warning': return <ShieldAlert className="h-4 w-4 text-destructive" />;
       default: return <Bell className="h-4 w-4" />;
     }
   };

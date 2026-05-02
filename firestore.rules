@@ -17,16 +17,6 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    function isSuspended() {
-      let profile = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isSignedIn() && profile.data.suspensionUntil != null && duration.value(request.time - timestamp.value(profile.data.suspensionUntil)) < 0;
-    }
-
-    function isCommentRestricted() {
-      let profile = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isSignedIn() && profile.data.commentRestrictionUntil != null && duration.value(request.time - timestamp.value(profile.data.commentRestrictionUntil)) < 0;
-    }
-
     function isFriend(userId) {
       let friendshipId = request.auth.uid < userId 
         ? request.auth.uid + "_" + userId 
@@ -59,23 +49,15 @@ service cloud.firestore {
       }
     }
 
-    match /reports/{reportId} {
-      // Explicitly define list and get to ensure isAdmin check is robust for queries
-      allow list: if isAdmin();
-      allow get: if isAdmin();
-      allow create: if isSignedIn() && !isSuspended();
-      allow update, delete: if isAdmin();
-    }
-
     match /friendships/{friendshipId} {
       allow read: if isSignedIn() && request.auth.uid in resource.data.userIds;
-      allow create: if isSignedIn() && request.auth.uid in request.resource.data.userIds && !isSuspended();
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.userIds;
       allow delete: if isSignedIn() && request.auth.uid in request.resource.data.userIds;
     }
 
     match /friend_requests/{requestId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && !isSuspended() && !isBlockedBy(request.resource.data.receiverId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && !isBlockedBy(request.resource.data.receiverId);
       allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId);
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
     }
@@ -88,7 +70,7 @@ service cloud.firestore {
     match /anime/{animeId} {
       allow get, list: if true;
       allow create: if isAdmin();
-      allow update: if isAdmin() || (isSignedIn() && !isSuspended());
+      allow update: if isAdmin() || (isSignedIn());
       allow delete: if isAdmin();
 
       match /episodes/{episodeId} {
@@ -98,8 +80,8 @@ service cloud.firestore {
 
         match /comments/{commentId} {
           allow get, list: if true;
-          allow create: if isSignedIn() && !isSuspended() && !isCommentRestricted() && request.resource.data.userId == request.auth.uid;
-          allow update: if (isSignedIn() && !isSuspended() && resource.data.userId == request.auth.uid) || isAdmin();
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+          allow update: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
           allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
         }
       }
@@ -107,15 +89,15 @@ service cloud.firestore {
 
     match /ratings/{ratingId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
     match /comment_votes/{voteId} {
       allow read: if true;
-      allow create: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && !isSuspended() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 

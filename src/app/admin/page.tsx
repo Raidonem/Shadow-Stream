@@ -19,41 +19,25 @@ import {
   Plus, 
   LayoutDashboard, 
   ShieldAlert,
-  Save,
   Loader2,
-  Check,
   Edit2,
   Trash2,
   X,
   Server,
-  Eye,
   Bell,
-  Clapperboard,
-  Flag,
-  AlertTriangle,
-  Ban,
-  MessageSquareWarning,
-  Clock
+  Clapperboard
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, serverTimestamp, query, orderBy, getDoc, where, writeBatch, limit } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy, getDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
-import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report } from '../../lib/types';
+import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime } from '../../lib/types';
 import Image from 'next/image';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -65,14 +49,6 @@ export default function AdminPage() {
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [editingAnimeId, setEditingAnimeId] = useState<string | null>(null);
   const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
-
-  const [modDialogOpen, setModDialogOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [modAction, setModAction] = useState({
-    warningMessage: '',
-    restrictionDuration: '0',
-    suspensionDuration: '0'
-  });
 
   const [animeData, setAnimeData] = useState({
     titleEn: '',
@@ -111,9 +87,6 @@ export default function AdminPage() {
   }, [user?.uid, db]);
 
   const { data: adminDoc, isLoading: isAdminChecking } = useDoc(adminRef);
-
-  // We are confirmed admin only if we finished loading and the doc exists
-  const isConfirmedAdmin = !isAdminChecking && !!adminDoc;
   
   const animeQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -127,18 +100,6 @@ export default function AdminPage() {
   }, [db, episodeData.animeId]);
   const { data: currentEpisodes } = useCollection(episodesQuery);
 
-  const reportsQuery = useMemoFirebase(() => {
-    // CRITICAL: Do not run the query until admin status is absolutely confirmed
-    if (!db || !isConfirmedAdmin) return null;
-    return query(
-      collection(db, 'reports'), 
-      where('status', '==', 'pending'), 
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-  }, [db, isConfirmedAdmin]);
-  const { data: pendingReports } = useCollection<Report>(reportsQuery);
-
   const availableTags = Object.keys(translations.en.tags) as GenreKey[];
 
   useEffect(() => {
@@ -151,70 +112,6 @@ export default function AdminPage() {
       }
     }
   }, [user, isUserLoading, adminDoc, isAdminChecking, router, toast]);
-
-  const handleApplyModAction = async () => {
-    if (!db || !selectedReport || !selectedReport.targetUserId) return;
-    setIsSubmitting(true);
-
-    const userRef = doc(db, 'users', selectedReport.targetUserId);
-    const now = new Date();
-    const updates: any = { updatedAt: serverTimestamp() };
-
-    // 1. Restriction
-    if (modAction.restrictionDuration !== '0') {
-      const duration = parseInt(modAction.restrictionDuration);
-      const until = new Date();
-      until.setDate(now.getDate() + duration);
-      updates.commentRestrictionUntil = until.toISOString();
-    }
-
-    // 2. Suspension
-    if (modAction.suspensionDuration !== '0') {
-      const duration = modAction.suspensionDuration;
-      const until = new Date();
-      if (duration === '365') until.setFullYear(now.getFullYear() + 1);
-      else if (duration === '99999') until.setFullYear(now.getFullYear() + 100);
-      else until.setDate(now.getDate() + parseInt(duration));
-      updates.suspensionUntil = until.toISOString();
-    }
-
-    updateDocumentNonBlocking(userRef, updates);
-
-    // 3. Warning Notification
-    if (modAction.warningMessage.trim()) {
-      const notifRef = collection(db, 'users', selectedReport.targetUserId, 'notifications');
-      const newNotif = await addDocumentNonBlocking(notifRef, {
-        type: 'warning',
-        fromId: user?.uid,
-        fromName: 'ShadowStream Administration',
-        messageEn: 'You have received an official warning from the administration.',
-        messageAr: 'لقد تلقيت تحذيراً رسمياً من الإدارة.',
-        customMessage: modAction.warningMessage.trim(),
-        link: `/warning/`, // Will append ID later
-        read: false,
-        createdAt: serverTimestamp()
-      });
-      // Correct the link with the notification ID
-      if (newNotif) {
-        updateDocumentNonBlocking(doc(db, 'users', selectedReport.targetUserId, 'notifications', newNotif.id), {
-          link: `/warning/${newNotif.id}`
-        });
-      }
-    }
-
-    // 4. Resolve Report
-    updateDocumentNonBlocking(doc(db, 'reports', selectedReport.id), {
-      status: 'resolved',
-      resolvedAt: serverTimestamp(),
-      resolvedBy: user?.uid
-    });
-
-    toast({ title: "Moderation Applied" });
-    setModDialogOpen(false);
-    setSelectedReport(null);
-    setModAction({ warningMessage: '', restrictionDuration: '0', suspensionDuration: '0' });
-    setIsSubmitting(false);
-  };
 
   const toggleGenre = (genre: GenreKey) => {
     setSelectedGenres(prev => prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]);
@@ -389,150 +286,10 @@ export default function AdminPage() {
               </div>
             </div>
             <Tabs defaultValue="anime" className="w-full">
-              <TabsList className="mb-8 grid w-full max-w-2xl grid-cols-3 rounded-xl bg-secondary p-1">
+              <TabsList className="mb-8 grid w-full max-w-md grid-cols-2 rounded-xl bg-secondary p-1">
                 <TabsTrigger value="anime" className="rounded-lg">Anime Catalog</TabsTrigger>
                 <TabsTrigger value="episodes" className="rounded-lg">Episode Manager</TabsTrigger>
-                <TabsTrigger value="mod" className="rounded-lg gap-2">
-                  <ShieldAlert className="h-4 w-4" />
-                  Moderation
-                </TabsTrigger>
               </TabsList>
-
-              {/* MODERATION TAB */}
-              <TabsContent value="mod" className="space-y-8">
-                <div className="grid gap-4">
-                  <h2 className="font-headline text-2xl font-bold flex items-center gap-2">
-                    <Flag className="h-6 w-6 text-destructive" />
-                    Pending Reports ({pendingReports?.length || 0})
-                  </h2>
-                  
-                  {pendingReports?.length === 0 ? (
-                    <Card className="p-12 text-center bg-secondary/10 border-dashed border-2">
-                      <p className="text-muted-foreground italic">No pending reports at this time. Good job!</p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {pendingReports?.map((report) => (
-                        <Card key={report.id} className="overflow-hidden bg-card border-none shadow-sm">
-                          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className={cn(
-                                "flex h-12 w-12 items-center justify-center rounded-xl font-bold text-white",
-                                report.type === 'comment' ? "bg-primary" : "bg-destructive"
-                              )}>
-                                {report.type === 'comment' ? <MessageSquareWarning className="h-6 w-6" /> : <Server className="h-6 w-6" />}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-bold flex items-center gap-2">
-                                  {report.type === 'comment' ? 'Comment Reported' : 'Server Issue'}
-                                  <Badge variant="outline" className="text-[10px] h-4">@{report.reporterId.substring(0, 5)}</Badge>
-                                </p>
-                                <p className="text-sm text-muted-foreground line-clamp-1 italic">"{report.reason}"</p>
-                                {report.context?.text && (
-                                  <p className="text-xs bg-secondary/50 p-1 rounded mt-1 border-l-2 border-primary px-2">
-                                    {report.context.text}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex gap-2 w-full sm:w-auto">
-                              <Button 
-                                variant="outline" 
-                                className="flex-1 sm:flex-none rounded-xl gap-2 hover:bg-green-500/10 hover:text-green-500 border-green-500/20"
-                                onClick={() => {
-                                  updateDocumentNonBlocking(doc(db, 'reports', report.id), { status: 'resolved', resolvedAt: serverTimestamp() });
-                                  toast({ title: "Report marked as resolved" });
-                                }}
-                              >
-                                <Check className="h-4 w-4" /> Resolve
-                              </Button>
-                              <Button 
-                                className="flex-1 sm:flex-none rounded-xl gap-2 bg-destructive text-destructive-foreground"
-                                onClick={() => {
-                                  setSelectedReport(report);
-                                  setModDialogOpen(true);
-                                }}
-                              >
-                                <AlertTriangle className="h-4 w-4" /> Moderate
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <Dialog open={modDialogOpen} onOpenChange={setModDialogOpen}>
-                  <DialogContent className="sm:max-w-md bg-card border-none shadow-2xl">
-                    <DialogHeader>
-                      <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-                        <Ban className="h-6 w-6 text-destructive" />
-                        Take Action
-                      </DialogTitle>
-                      <DialogDescription>
-                        Reviewing report for user: <code className="bg-secondary p-0.5 rounded">{selectedReport?.targetUserId}</code>
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-6 py-4">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Bell className="h-4 w-4 text-accent" /> Custom Warning Message</Label>
-                        <Textarea 
-                          placeholder="Type a message explaining the violation..." 
-                          value={modAction.warningMessage}
-                          onChange={(e) => setModAction({...modAction, warningMessage: e.target.value})}
-                          className="bg-secondary/50 border-none rounded-xl min-h-[100px]"
-                        />
-                      </div>
-                      
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2"><MessageSquareWarning className="h-4 w-4 text-primary" /> Restrict Comments</Label>
-                          <Select value={modAction.restrictionDuration} onValueChange={(val) => setModAction({...modAction, restrictionDuration: val})}>
-                            <SelectTrigger className="bg-secondary/50 border-none rounded-xl">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">None</SelectItem>
-                              <SelectItem value="1">1 Day</SelectItem>
-                              <SelectItem value="3">3 Days</SelectItem>
-                              <SelectItem value="7">7 Days</SelectItem>
-                              <SelectItem value="30">30 Days</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2"><Ban className="h-4 w-4 text-destructive" /> Suspend Account</Label>
-                          <Select value={modAction.suspensionDuration} onValueChange={(val) => setModAction({...modAction, suspensionDuration: val})}>
-                            <SelectTrigger className="bg-secondary/50 border-none rounded-xl">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">None</SelectItem>
-                              <SelectItem value="1">1 Day</SelectItem>
-                              <SelectItem value="3">3 Days</SelectItem>
-                              <SelectItem value="7">7 Days</SelectItem>
-                              <SelectItem value="30">30 Days</SelectItem>
-                              <SelectItem value="365">1 Year</SelectItem>
-                              <SelectItem value="99999">Forever</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="ghost" onClick={() => setModDialogOpen(false)}>Cancel</Button>
-                      <Button 
-                        disabled={isSubmitting} 
-                        className="bg-destructive text-destructive-foreground rounded-xl px-8"
-                        onClick={handleApplyModAction}
-                      >
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply Sanctions"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </TabsContent>
 
               <TabsContent value="anime" className="space-y-8">
                 <Card className="rounded-2xl border-none bg-card shadow-xl">
