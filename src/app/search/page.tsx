@@ -1,7 +1,6 @@
-
 "use client";
 
-import { Suspense, useMemo, useState, useEffect } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
@@ -16,14 +15,11 @@ import {
   Clock, 
   Type, 
   Filter, 
-  X, 
-  ChevronDown, 
-  ChevronUp, 
   FilterX, 
   User as UserIcon, 
   Tv 
 } from 'lucide-react';
-import { normalizeSearchString } from '../../lib/utils';
+import { normalizeSearchString, cn } from '../../lib/utils';
 import { 
   Select, 
   SelectContent, 
@@ -35,7 +31,6 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { translations } from '../../lib/i18n';
 import { Anime, GenreKey, UserProfile, AvatarItem } from '../../lib/types';
-import { cn } from '../../lib/utils';
 import { Card, CardContent } from '../../components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 
@@ -53,7 +48,6 @@ function SearchResults() {
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
-  const [showFilters, setShowFilters] = useState(true);
 
   // Queries
   const animeQuery = useMemoFirebase(() => {
@@ -63,7 +57,6 @@ function SearchResults() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!db || searchType !== 'users') return null;
-    // Only search for public profiles
     return query(collection(db, 'users'), where('isPublic', '==', true), limit(50));
   }, [db, searchType]);
 
@@ -92,9 +85,10 @@ function SearchResults() {
     if (queryParam) {
       const normalizedQuery = normalizeSearchString(queryParam);
       filtered = filtered.filter(anime => {
-        const normalizedTitleEn = normalizeSearchString(anime.titleEn);
-        const normalizedTitleAr = normalizeSearchString(anime.titleAr);
-        const matchesAlternative = (anime.alternativeTitles || []).some(title => 
+        const normalizedTitleEn = normalizeSearchString(anime.titleEn || '');
+        const normalizedTitleAr = normalizeSearchString(anime.titleAr || '');
+        const altTitles = anime.alternativeTitles || [];
+        const matchesAlternative = altTitles.some(title => 
           normalizeSearchString(title).includes(normalizedQuery)
         );
         return normalizedTitleEn.includes(normalizedQuery) || normalizedTitleAr.includes(normalizedQuery) || matchesAlternative;
@@ -102,25 +96,28 @@ function SearchResults() {
     }
 
     if (selectedGenres.length > 0) {
-      filtered = filtered.filter(anime => selectedGenres.every(g => anime.genres?.includes(g)));
+      filtered = filtered.filter(anime => 
+        selectedGenres.every(g => anime.genres?.includes(g))
+      );
     }
 
     if (selectedYears.length > 0) {
-      filtered = filtered.filter(anime => selectedYears.includes(anime.releaseYear));
+      filtered = filtered.filter(anime => 
+        selectedYears.includes(anime.releaseYear)
+      );
     }
 
     return filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          const titleA = (language === 'ar' ? a.titleAr : a.titleEn).toLowerCase();
-          const titleB = (language === 'ar' ? b.titleAr : b.titleEn).toLowerCase();
-          return titleA.localeCompare(titleB);
-        case 'added_desc': return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-        case 'added_asc': return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
-        case 'release_desc': return b.releaseYear - a.releaseYear;
-        case 'release_asc': return a.releaseYear - b.releaseYear;
-        default: return 0;
+      if (sortBy === 'name') {
+        const titleA = (language === 'ar' ? a.titleAr : a.titleEn) || '';
+        const titleB = (language === 'ar' ? b.titleAr : b.titleEn) || '';
+        return titleA.localeCompare(titleB);
       }
+      if (sortBy === 'added_desc') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+      if (sortBy === 'added_asc') return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+      if (sortBy === 'release_desc') return (b.releaseYear || 0) - (a.releaseYear || 0);
+      if (sortBy === 'release_asc') return (a.releaseYear || 0) - (b.releaseYear || 0);
+      return 0;
     });
   }, [animeList, queryParam, sortBy, language, selectedGenres, selectedYears, searchType]);
 
@@ -131,9 +128,8 @@ function SearchResults() {
 
     if (queryParam) {
       const normalizedQuery = normalizeSearchString(queryParam);
-      // SEARCH ONLY BY USERNAME
       filtered = filtered.filter(user => 
-        normalizeSearchString(user.username).includes(normalizedQuery)
+        normalizeSearchString(user.username || '').includes(normalizedQuery)
       );
     }
 
@@ -153,18 +149,18 @@ function SearchResults() {
     setSelectedYears([]);
   };
 
-  const isLoading = isAnimeLoading || isUsersLoading;
-
   const resolveAvatar = (user: UserProfile) => {
     if (!user.avatarId || !officialAvatars) return null;
     return officialAvatars.find(a => a.id === user.avatarId)?.url || null;
   };
 
+  const isLoading = isAnimeLoading || isUsersLoading;
+
   return (
     <div className="flex flex-col gap-8 lg:flex-row">
       <aside className={cn(
         "w-full shrink-0 transition-all duration-300 lg:w-64",
-        (!showFilters || searchType === 'users') && "lg:w-0 lg:opacity-0 lg:pointer-events-none"
+        searchType === 'users' && "lg:w-0 lg:opacity-0 lg:pointer-events-none"
       )}>
         <div className="sticky top-24 space-y-8 rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
