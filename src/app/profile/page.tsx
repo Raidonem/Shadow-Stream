@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
@@ -74,61 +73,7 @@ import {
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
 import { differenceInDays } from 'date-fns';
-import { ModerationLog } from '../../lib/types';
-
-function PayPalButton({ onApprove }: { onApprove: () => void }) {
-  const [{ isResolved }] = usePayPalScriptReducer();
-  const renderedRef = useRef(false);
-
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    if (isResolved && !renderedRef.current) {
-      timeoutId = setTimeout(() => {
-        const paypal = (window as any).paypal;
-        const container = document.getElementById("paypal-container-X3C6F5887MPCG");
-        
-        if (paypal && paypal.HostedButtons && container) {
-          try {
-            container.innerHTML = ''; 
-            
-            renderedRef.current = true;
-            paypal.HostedButtons({
-              hostedButtonId: "X3C6F5887MPCG",
-            }).render("#paypal-container-X3C6F5887MPCG")
-              .catch((err: any) => {
-                console.warn("PayPal render catch:", err);
-                renderedRef.current = false;
-              });
-          } catch (err) {
-            console.error("PayPal button initialization failed:", err);
-            renderedRef.current = false;
-          }
-        }
-      }, 500);
-    }
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      const container = document.getElementById("paypal-container-X3C6F5887MPCG");
-      if (container) container.innerHTML = '';
-    };
-  }, [isResolved]);
-
-  return (
-    <div className="space-y-4">
-      <div id="paypal-container-X3C6F5887MPCG" className="min-h-[150px] w-full" />
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="w-full text-[10px] text-muted-foreground hover:bg-transparent"
-        onClick={onApprove}
-      >
-        Click here if Premium doesn't activate after payment
-      </Button>
-    </div>
-  );
-}
+import { ModerationLog, UserProfile } from '../../lib/types';
 
 function ProfileContent() {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -394,80 +339,6 @@ function ProfileContent() {
     }
   };
 
-  const handleSendRequest = () => {
-    if (!requestRef || !authUser || !targetUid || !db || amIBlocked) return;
-    setDocumentNonBlocking(requestRef, {
-      id: requestId,
-      senderId: authUser.uid,
-      receiverId: targetUid,
-      status: 'pending',
-      createdAt: serverTimestamp()
-    }, { merge: true });
-
-    addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
-      type: 'friend_request',
-      fromId: authUser.uid,
-      fromName: authProfile?.displayName || authProfile?.username,
-      link: `/watchlist?tab=friends`,
-      messageEn: `${authProfile?.displayName || authProfile?.username} sent you a friend request.`,
-      messageAr: `أرسل لك ${authProfile?.displayName || authProfile?.username} طلب صداقة.`,
-      read: false,
-      createdAt: serverTimestamp()
-    });
-
-    toast({ title: "Request Sent" });
-  };
-
-  const handleAcceptRequest = async () => {
-    if (!reverseRequestRef || !friendshipRef || !authUser || !targetUid || !db) return;
-    setDocumentNonBlocking(friendshipRef, { id: friendshipId, userIds: [authUser.uid, targetUid].sort(), createdAt: serverTimestamp() }, { merge: true });
-    deleteDocumentNonBlocking(reverseRequestRef);
-    addDocumentNonBlocking(collection(db, 'users', targetUid, 'notifications'), {
-      type: 'friend_accepted',
-      fromId: authUser.uid,
-      fromName: authProfile?.displayName || authProfile?.username,
-      link: `/profile?uid=${authUser.uid}`,
-      messageEn: `${authProfile?.displayName || authProfile?.username} accepted your friend request.`,
-      messageAr: `قبول ${authProfile?.displayName || authProfile?.username} طلب الصداقة الخاص بك.`,
-      read: false,
-      createdAt: serverTimestamp()
-    });
-    toast({ title: "Friend Added" });
-  };
-
-  const handleDeclineRequest = () => {
-    if (!reverseRequestRef) return;
-    deleteDocumentNonBlocking(reverseRequestRef);
-    toast({ title: "Request Declined" });
-  };
-
-  const handleRemoveFriend = () => {
-    if (!friendshipRef) return;
-    deleteDocumentNonBlocking(friendshipRef);
-    toast({ title: "Removed Friend" });
-  };
-
-  const handleBlock = () => {
-    if (!authProfileRef || !targetUid) return;
-    handleRemoveFriend();
-    deleteDocumentNonBlocking(requestRef);
-    deleteDocumentNonBlocking(reverseRequestRef);
-    updateDocumentNonBlocking(authProfileRef, { blockedUserIds: arrayUnion(targetUid) });
-    toast({ title: "User Blocked" });
-  };
-
-  const handleUnblock = () => {
-    if (!authProfileRef || !targetUid) return;
-    updateDocumentNonBlocking(authProfileRef, { blockedUserIds: arrayRemove(targetUid) });
-    toast({ title: "User Unblocked" });
-  };
-
-  const handleActivatePremium = () => {
-    if (!profileRef) return;
-    updateDocumentNonBlocking(profileRef, { isPremium: true, updatedAt: serverTimestamp() });
-    toast({ title: "Premium Activated!" });
-  };
-
   const copyUid = () => {
     if (!targetUid) return;
     navigator.clipboard.writeText(targetUid);
@@ -496,14 +367,7 @@ function ProfileContent() {
       <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <Lock className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-2xl font-bold">This profile is private.</h1>
-        <div className="flex gap-4">
-          <Button variant="outline" asChild><a href="/">Back to Home</a></Button>
-          {!isOwnProfile && authUser && (
-            incomingRequest ? <Button onClick={handleAcceptRequest}>Accept Request</Button> :
-            outgoingRequest ? <Button disabled>Request Sent</Button> :
-            <Button onClick={handleSendRequest}>Add Friend</Button>
-          )}
-        </div>
+        <Button variant="outline" asChild><a href="/">Back to Home</a></Button>
       </div>
     );
   }
@@ -539,12 +403,93 @@ function ProfileContent() {
 
       <div className="grid gap-8 md:grid-cols-2">
         {isEditing && isOwnProfile ? (
-          <Card className="md:col-span-2">
-            {/* Edit Profile Logic remains unchanged from previous version */}
-            <CardHeader><CardTitle>Settings</CardTitle></CardHeader>
-            <CardContent>Edit form here...</CardContent>
-            <CardFooter className="justify-end"><Button onClick={handleSave}>Save Changes</Button></CardFooter>
-          </Card>
+          <div className="md:col-span-2 space-y-8">
+            <Card className="rounded-2xl border-none bg-card shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings2 className="h-5 w-5 text-accent" />
+                  General Settings
+                </CardTitle>
+                <CardDescription>Update your public identity and preferences.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-displayName">Display Name</Label>
+                    <Input id="edit-displayName" value={editData.displayName} onChange={(e) => setEditData({...editData, displayName: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-username">Username</Label>
+                    <div className="relative">
+                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input id="edit-username" value={editData.username} onChange={(e) => setEditData({...editData, username: e.target.value})} className="rounded-xl border-none bg-secondary/50 pl-10" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 border border-dashed">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-bold">Public Profile</Label>
+                    <p className="text-xs text-muted-foreground">Allow others to see your library and activity.</p>
+                  </div>
+                  <Switch checked={editData.isPublic} onCheckedChange={(val) => setEditData({...editData, isPublic: val})} />
+                </div>
+              </CardContent>
+              <CardFooter className="justify-end border-t pt-6">
+                <Button onClick={handleSave} disabled={isSaving} className="rounded-xl bg-accent gap-2">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save Changes
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card className="rounded-2xl border-none bg-card shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Security & Access
+                </CardTitle>
+                <CardDescription>Manage your authentication details.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Change Password</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Current Password</Label>
+                      <Input type="password" value={passwordData.current} onChange={(e) => setPasswordData({...passwordData, current: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>New Password</Label>
+                      <Input type="password" value={passwordData.new} onChange={(e) => setPasswordData({...passwordData, new: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={handleChangePassword} disabled={isUpdatingPassword} className="w-full md:w-auto rounded-xl">
+                    {isUpdatingPassword && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Update Password
+                  </Button>
+                </div>
+
+                <div className="space-y-4 border-t pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Change Email</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>New Email Address</Label>
+                      <Input type="email" value={emailUpdateData.new} onChange={(e) => setEmailUpdateData({...emailUpdateData, new: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm Password</Label>
+                      <Input type="password" value={emailUpdateData.password} onChange={(e) => setEmailUpdateData({...emailUpdateData, password: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={handleRequestEmailUpdate} disabled={isSendingEmailLink} className="w-full md:w-auto rounded-xl">
+                    {isSendingEmailLink && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Send Verification Link
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <>
             {isAdminSession && moderationLogs && moderationLogs.length > 0 && (
@@ -612,7 +557,65 @@ function ProfileContent() {
                 <Bookmark className="h-6 w-6 text-accent" />
                 {isOwnProfile ? t('watchlist') : t('userLibrary')}
               </h2>
-              {/* Library Tabs Content remains as before */}
+              
+              <Tabs defaultValue="watching" className="w-full">
+                <TabsList className="mb-6 flex w-full max-w-2xl overflow-x-auto rounded-xl bg-secondary p-1">
+                  <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
+                    <Eye className="h-4 w-4" />
+                    {t('currentlyWatching')}
+                  </TabsTrigger>
+                  <TabsTrigger value="watchlist" className="rounded-lg gap-2 flex-1">
+                    <Bookmark className="h-4 w-4" />
+                    {t('watchLater')}
+                  </TabsTrigger>
+                  <TabsTrigger value="favorites" className="rounded-lg gap-2 flex-1">
+                    <Heart className="h-4 w-4" />
+                    {t('myFavorites')}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="watching">
+                  {watchingAnime && watchingAnime.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                      {watchingAnime.map(anime => (
+                        <AnimeCard key={anime.id} anime={anime} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-secondary/20 rounded-2xl border border-dashed">
+                      <p className="text-muted-foreground italic">No currently watching anime found.</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="watchlist">
+                  {watchlistAnime && watchlistAnime.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                      {watchlistAnime.map(anime => (
+                        <AnimeCard key={anime.id} anime={anime} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-secondary/20 rounded-2xl border border-dashed">
+                      <p className="text-muted-foreground italic">No watch later items found.</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="favorites">
+                  {favoritesAnime && favoritesAnime.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                      {favoritesAnime.map(anime => (
+                        <AnimeCard key={anime.id} anime={anime} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-secondary/20 rounded-2xl border border-dashed">
+                      <p className="text-muted-foreground italic">No favorite anime found.</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           </>
         )}

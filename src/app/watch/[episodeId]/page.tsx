@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -569,16 +568,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                             <SelectItem value="Wrong episode">Wrong episode</SelectItem>
                             <SelectItem value="Bad quality">Bad quality</SelectItem>
                             <SelectItem value="Broken link">Broken link</SelectItem>
-                            <SelectItem value="Other">Other (Specify below)</SelectItem>
                           </SelectContent>
                         </Select>
-                        {reportReason === 'Other' && (
-                          <Textarea 
-                            placeholder="Provide more details..." 
-                            className="rounded-xl bg-secondary/50 border-none"
-                            onChange={(e) => setReportReason(`Other: ${e.target.value}`)}
-                          />
-                        )}
                       </div>
                       <DialogFooter>
                         <Button className="rounded-xl gap-2" onClick={handleSendReport} disabled={!reportReason || isReporting}>
