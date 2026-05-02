@@ -42,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { doc, collection, serverTimestamp, query, orderBy, getDoc, limit, addDoc } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
@@ -237,12 +237,11 @@ export default function AdminPage() {
     setIsSubmitting(true);
 
     const targetUid = activeActionReport.type === 'comment' ? activeActionReport.reportedUserId! : activeActionReport.userId;
-    const targetName = activeActionReport.type === 'comment' ? activeActionReport.reportedUserName! : activeActionReport.userName;
     
     try {
       const userRef = doc(db, 'users', targetUid);
       const logRef = collection(db, 'users', targetUid, 'moderation_logs');
-      const notifRef = collection(db, 'users', targetUid, 'notifications');
+      const notifCol = collection(db, 'users', targetUid, 'notifications');
 
       let expiryDate: Date | null = null;
       if (actionType !== 'warning') {
@@ -271,22 +270,24 @@ export default function AdminPage() {
         createdAt: serverTimestamp()
       });
 
-      // 3. Send Notification
+      // 3. Send Notification with a functional link
       const messageEn = actionType === 'warning' 
         ? "You have received an official warning." 
         : `Your account has been ${actionType}ed for ${actionDuration === 'forever' ? 'forever' : actionDuration + ' days'}.`;
 
-      addDocumentNonBlocking(notifRef, {
+      const newNotifDoc = doc(notifCol);
+      setDocumentNonBlocking(newNotifDoc, {
+        id: newNotifDoc.id,
         type: actionType,
         fromId: user.uid,
         fromName: "System Administrator",
         messageEn,
         messageAr: "لقد تلقيت إجراءً إدارياً رسمياً.",
         customMessage: actionReason.trim(),
-        link: `/warning/${targetUid}`, // This will be handled by a generic warning page
+        link: `/warning/${newNotifDoc.id}`,
         read: false,
         createdAt: serverTimestamp()
-      });
+      }, { merge: true });
 
       // 4. Resolve the report
       handleResolveReport(activeActionReport.id);
@@ -354,7 +355,6 @@ export default function AdminPage() {
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleAddAnime} className="space-y-6">
-                      {/* Anime Form Fields - simplified for brevity but fully functional */}
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Title (EN)</Label>
@@ -506,16 +506,13 @@ export default function AdminPage() {
                 )}
               </TabsContent>
 
-              {/* Episode manager remains the same as previously provided */}
               <TabsContent value="episodes" className="space-y-8">
-                {/* ... (Existing Episode Manager Content) */}
               </TabsContent>
             </Tabs>
           </div>
         </div>
       </main>
 
-      {/* Moderation Action Dialog */}
       <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
         <DialogContent className="bg-card border-none max-w-lg">
           <DialogHeader>

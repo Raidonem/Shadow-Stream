@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '../../../components/ui/button';
 import { useFirestore, useDoc, useUser, useMemoFirebase } from '../../../firebase/index';
 import { doc, updateDoc } from 'firebase/firestore';
-import { AlertCircle, ShieldAlert, CheckCircle2, ChevronLeft, MessageSquareWarning } from 'lucide-react';
+import { AlertCircle, ShieldAlert, CheckCircle2, ChevronLeft, MessageSquareWarning, Slash, Ban } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { UserNotification } from '../../../lib/types';
@@ -36,15 +36,35 @@ export default function WarningPage({ params }: { params: Promise<{ id: string }
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  if (!notification || notification.type !== 'warning') {
+  // Allow display for any administrative action notification types
+  const isModerationAction = notification && ['warning', 'restriction', 'suspension'].includes(notification.type);
+
+  if (!notification || !isModerationAction) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-4 text-center">
         <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-bold">Notification Not Found</h1>
+        <h1 className="text-2xl font-bold">Notice Not Found</h1>
+        <p className="text-muted-foreground">The administrative message you are looking for could not be found.</p>
         <Button asChild className="mt-6 rounded-xl"><Link href="/">Back to Home</Link></Button>
       </div>
     );
   }
+
+  const getHeaderIcon = () => {
+    switch (notification.type) {
+      case 'suspension': return <Ban className="h-10 w-10 text-destructive" />;
+      case 'restriction': return <Slash className="h-10 w-10 text-destructive" />;
+      default: return <MessageSquareWarning className="h-10 w-10 text-destructive" />;
+    }
+  };
+
+  const getTitle = () => {
+    switch (notification.type) {
+      case 'suspension': return language === 'ar' ? 'تعليق الحساب' : 'Account Suspension';
+      case 'restriction': return language === 'ar' ? 'تقييد الحساب' : 'Account Restriction';
+      default: return t('officialWarning');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,14 +74,14 @@ export default function WarningPage({ params }: { params: Promise<{ id: string }
           <div className="h-2 bg-destructive" />
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
-              <MessageSquareWarning className="h-10 w-10 text-destructive" />
+              {getHeaderIcon()}
             </div>
             <div className="space-y-1">
               <CardTitle className="font-headline text-3xl font-bold text-destructive">
-                {t('officialWarning')}
+                {getTitle()}
               </CardTitle>
               <CardDescription className="text-lg">
-                Please review this message carefully to maintain your account access.
+                Please review this message carefully to understand the status of your account.
               </CardDescription>
             </div>
           </CardHeader>
@@ -79,11 +99,11 @@ export default function WarningPage({ params }: { params: Promise<{ id: string }
             <div className="space-y-4 text-sm text-muted-foreground bg-accent/5 p-4 rounded-xl">
               <p className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                Continuing to violate community rules will lead to immediate and permanent account suspension.
+                ShadowStream is built on respect and immersion. Help us keep it that way.
               </p>
               <p className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                ShadowStream is built on respect and immersion. Help us keep it that way.
+                Further violations may lead to permanent termination of service.
               </p>
             </div>
           </CardContent>
@@ -92,7 +112,7 @@ export default function WarningPage({ params }: { params: Promise<{ id: string }
               <Link href="/"><ChevronLeft className="mr-2 h-4 w-4" /> {t('home')}</Link>
             </Button>
             <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-              Reference ID: {id}
+              Ref: {id}
             </p>
           </CardFooter>
         </Card>
