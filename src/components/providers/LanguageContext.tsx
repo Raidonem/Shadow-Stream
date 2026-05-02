@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Language, translations } from '../../lib/i18n';
 
 type LanguageContextType = {
@@ -13,7 +13,7 @@ type LanguageContextType = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: React.AbNode }) {
+export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>('en');
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function LanguageProvider({ children }: { children: React.AbNode }) {
   };
 
   const t = (key: keyof typeof translations.en) => {
-    return translations[language][key] || key;
+    return (translations[language] as any)[key] || key;
   };
 
   const dir = language === 'ar' ? 'rtl' : 'ltr';

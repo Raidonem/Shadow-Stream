@@ -49,6 +49,7 @@ function SearchResults() {
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [showFilters, setShowFilters] = useState(true);
 
   const animeQuery = useMemoFirebase(() => {
     if (!db || searchType !== 'anime') return null;
@@ -154,7 +155,7 @@ function SearchResults() {
     <div className="flex flex-col gap-8 lg:flex-row">
       <aside className={cn(
         "w-full shrink-0 transition-all duration-300 lg:w-64",
-        searchType === 'users' && "lg:w-0 lg:opacity-0 lg:pointer-events-none overflow-hidden"
+        (!showFilters || searchType === 'users') && "lg:w-0 lg:opacity-0 lg:pointer-events-none overflow-hidden"
       )}>
         <div className="sticky top-24 space-y-8 rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
@@ -184,7 +185,7 @@ function SearchResults() {
                     )}
                     onClick={() => toggleGenre(genre)}
                   >
-                    {translations[language].tags[genre]}
+                    {(translations[language] as any).tags[genre]}
                   </Badge>
                 ))}
               </div>
@@ -250,21 +251,33 @@ function SearchResults() {
           </div>
 
           {searchType === 'anime' && (
-            <div className="flex flex-col gap-2 min-w-[200px]">
-              <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                <SortAsc className="h-3 w-3" />
-                {language === 'ar' ? 'ترتيب حسب' : 'Sort By'}
-              </label>
-              <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
-                <SelectTrigger className="rounded-xl border-none bg-secondary/50 shadow-none">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name"><div className="flex items-center gap-2"><Type className="h-4 w-4" />{language === 'ar' ? 'الاسم' : 'Name (A-Z)'}</div></SelectItem>
-                  <SelectItem value="added_desc"><div className="flex items-center gap-2"><Clock className="h-4 w-4" />{language === 'ar' ? 'المضاف حديثاً' : 'Newly Added'}</div></SelectItem>
-                  <SelectItem value="release_desc"><div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{language === 'ar' ? 'تاريخ الإصدار (الأحدث)' : 'Release Year'}</div></SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-4">
+               <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-xl lg:hidden"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                {showFilters ? t('cancel') : t('reportReason')}
+              </Button>
+
+              <div className="flex flex-col gap-2 min-w-[200px]">
+                <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <SortAsc className="h-3 w-3" />
+                  {language === 'ar' ? 'ترتيب حسب' : 'Sort By'}
+                </label>
+                <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                  <SelectTrigger className="rounded-xl border-none bg-secondary/50 shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name"><div className="flex items-center gap-2"><Type className="h-4 w-4" />{language === 'ar' ? 'الاسم' : 'Name (A-Z)'}</div></SelectItem>
+                    <SelectItem value="added_desc"><div className="flex items-center gap-2"><Clock className="h-4 w-4" />{language === 'ar' ? 'المضاف حديثاً' : 'Newly Added'}</div></SelectItem>
+                    <SelectItem value="release_desc"><div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{language === 'ar' ? 'تاريخ الإصدار (الأحدث)' : 'Release Year'}</div></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </div>

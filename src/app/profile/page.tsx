@@ -42,7 +42,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
-import { useTheme } from '../../components/providers/ThemeContext';
 import { Badge } from '../../components/ui/badge';
 import { useSearchParams } from 'next/navigation';
 import { AnimeCard } from '../../components/anime/AnimeCard';

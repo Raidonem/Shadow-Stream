@@ -63,10 +63,11 @@ import {
   DialogTrigger
 } from "../../components/ui/dialog";
 import { ScrollArea } from "../../components/ui/scroll-area";
+import { useLanguage } from '../../components/providers/LanguageContext';
 
 function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
   const { toast } = useToast();
-  const { language } = useLanguage ? { language: 'en' } : { language: 'en' }; // Fallback
+  const { language } = useLanguage();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newEpisode, setNewEpisode] = useState({
@@ -104,9 +105,10 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
     }
     setIsSubmitting(true);
 
+    const epNum = parseInt(newEpisode.episodeNumber);
     const episodeData = {
       ...newEpisode,
-      episodeNumber: parseInt(newEpisode.episodeNumber),
+      episodeNumber: epNum,
       animeId: anime.id,
       servers,
       createdAt: serverTimestamp(),
@@ -116,19 +118,17 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
     try {
       await addDocumentNonBlocking(collection(db, 'anime', anime.id, 'episodes'), episodeData);
       
-      // Update anime's last episode and updatedAt
       updateDocumentNonBlocking(doc(db, 'anime', anime.id), {
-        lastEpisodeNumber: parseInt(newEpisode.episodeNumber),
+        lastEpisodeNumber: epNum,
         updatedAt: serverTimestamp()
       });
 
-      // Add to global notifications for trending feed/bell
       addDocumentNonBlocking(collection(db, 'global_notifications'), {
         type: 'new_episode',
         animeId: anime.id,
         animeTitleEn: anime.titleEn,
         animeTitleAr: anime.titleAr,
-        episodeNumber: parseInt(newEpisode.episodeNumber),
+        episodeNumber: epNum,
         createdAt: serverTimestamp()
       });
 
@@ -840,7 +840,6 @@ export default function AdminPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Episode Management Dialog */}
       <Dialog open={!!managingEpisodesAnime} onOpenChange={(open) => !open && setManagingEpisodesAnime(null)}>
         <DialogContent className="max-w-4xl bg-card border-none max-h-[90vh] flex flex-col">
           <DialogHeader>
