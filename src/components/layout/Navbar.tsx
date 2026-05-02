@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -31,11 +31,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
 import { signOut } from 'firebase/auth';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { UserProfile, AvatarItem } from '../../lib/types';
 
 function SearchInput({ t, searchQuery, setSearchQuery, handleSearch }: any) {
   const searchParams = useSearchParams();
@@ -87,9 +88,19 @@ export function Navbar() {
     return doc(db, 'users', user.uid);
   }, [user, db]);
 
-  const { data: userProfile } = useDoc(profileRef);
+  const { data: userProfile } = useDoc<UserProfile>(profileRef);
 
-  // Check for pending friend requests for the badge
+  const avatarsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
+  }, [db]);
+  const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
+
+  const resolvedAvatarUrl = useMemo(() => {
+    if (!userProfile?.avatarId || !officialAvatars) return null;
+    return officialAvatars.find(a => a.id === userProfile.avatarId)?.url || null;
+  }, [userProfile?.avatarId, officialAvatars]);
+
   const requestsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'friend_requests'), where('receiverId', '==', user.uid), where('status', '==', 'pending'));
@@ -173,10 +184,13 @@ export function Navbar() {
             user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full ml-2 p-0">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
-                      {userInitial.toUpperCase()}
-                    </div>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full ml-2 p-0 overflow-hidden">
+                    <Avatar className="h-9 w-9">
+                      {resolvedAvatarUrl && <AvatarImage src={resolvedAvatarUrl} />}
+                      <AvatarFallback className="bg-primary/20 text-xs font-bold text-primary">
+                        {userInitial.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>

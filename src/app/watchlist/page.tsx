@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
+import { UserProfile, AvatarItem } from '../../lib/types';
 
 function WatchlistContent() {
   const { user, isUserLoading } = useUser();
@@ -52,7 +53,7 @@ function WatchlistContent() {
     return doc(db, 'users', user.uid);
   }, [user?.uid, db]);
 
-  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+  const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(profileRef);
 
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
@@ -89,6 +90,11 @@ function WatchlistContent() {
     return query(collection(db, 'friend_requests'), where('receiverId', '==', user.uid), where('status', '==', 'pending'));
   }, [db, user?.uid]);
 
+  const avatarsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
+  }, [db]);
+
   const { data: watchingAnime, isLoading: isWatchingLoading } = useCollection(watchingQuery);
   const { data: watchlistAnime, isLoading: isWatchlistLoading } = useCollection(watchlistQuery);
   const { data: favoritesAnime, isLoading: isFavoritesLoading } = useCollection(favoritesQuery);
@@ -96,6 +102,7 @@ function WatchlistContent() {
   const { data: watchHistory, isLoading: isHistoryLoading } = useCollection(historyQuery);
   const { data: friendships, isLoading: isFriendsLoading } = useCollection(friendshipsQuery);
   const { data: incomingRequests } = useCollection(incomingRequestsQuery);
+  const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
 
   const friendIds = useMemo(() => {
     return friendships?.map(f => f.userIds.find(id => id !== user?.uid)).filter(Boolean) as string[] || [];
@@ -106,7 +113,7 @@ function WatchlistContent() {
     return query(collection(db, 'users'), where(documentId(), 'in', friendIds.slice(0, 10)));
   }, [db, friendIds.join(',')]);
   
-  const { data: friendProfiles } = useCollection(friendsProfilesQuery);
+  const { data: friendProfiles } = useCollection<UserProfile>(friendsProfilesQuery);
 
   const requesterIds = useMemo(() => {
     return incomingRequests?.map(r => r.senderId) || [];
@@ -117,7 +124,7 @@ function WatchlistContent() {
     return query(collection(db, 'users'), where(documentId(), 'in', requesterIds.slice(0, 10)));
   }, [db, requesterIds.join(',')]);
 
-  const { data: requesterProfiles } = useCollection(requesterProfilesQuery);
+  const { data: requesterProfiles } = useCollection<UserProfile>(requesterProfilesQuery);
 
   const handleAccept = (senderId: string) => {
     if (!db || !user) return;
@@ -194,6 +201,11 @@ function WatchlistContent() {
       </div>
     );
   }
+
+  const resolveAvatar = (u: UserProfile) => {
+    if (!u.avatarId || !officialAvatars) return null;
+    return officialAvatars.find(a => a.id === u.avatarId)?.url || null;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -352,31 +364,35 @@ function WatchlistContent() {
                   {language === 'ar' ? 'طلبات الصداقة المعلقة' : 'Pending Invites'}
                 </h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {requesterProfiles.map(requester => (
-                    <Card key={requester.id} className="overflow-hidden bg-accent/5 border border-accent/20">
-                      <CardContent className="p-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0">
-                          <UIAvatar className="h-10 w-10">
-                            <AvatarFallback className="bg-accent/20 text-accent font-bold">
-                              {(requester.displayName || requester.username || 'U')[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </UIAvatar>
-                          <div className="min-w-0">
-                            <h3 className="font-bold truncate text-sm">{requester.displayName || requester.username}</h3>
-                            <p className="text-xs text-muted-foreground">@{requester.username}</p>
+                  {requesterProfiles.map(requester => {
+                    const avatarUrl = resolveAvatar(requester);
+                    return (
+                      <Card key={requester.id} className="overflow-hidden bg-accent/5 border border-accent/20">
+                        <CardContent className="p-4 flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <UIAvatar className="h-10 w-10">
+                              {avatarUrl && <AvatarImage src={avatarUrl} />}
+                              <AvatarFallback className="bg-accent/20 text-accent font-bold">
+                                {(requester.displayName || requester.username || 'U')[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </UIAvatar>
+                            <div className="min-w-0">
+                              <h3 className="font-bold truncate text-sm">{requester.displayName || requester.username}</h3>
+                              <p className="text-xs text-muted-foreground">@{requester.username}</p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                          <Button size="icon" className="h-8 w-8 rounded-full bg-accent hover:bg-accent/90" onClick={() => handleAccept(requester.id)}>
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDecline(requester.id)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          <div className="flex gap-2 shrink-0">
+                            <Button size="icon" className="h-8 w-8 rounded-full bg-accent hover:bg-accent/90" onClick={() => handleAccept(requester.id)}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDecline(requester.id)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -390,81 +406,85 @@ function WatchlistContent() {
                 <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
               ) : friendProfiles && friendProfiles.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {friendProfiles.map(friend => (
-                    <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4 mb-4">
-                          <UIAvatar className="h-12 w-12 ring-2 ring-primary/20 cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
-                            <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                              {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </UIAvatar>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold truncate cursor-pointer hover:text-accent" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
-                              {friend.displayName || friend.username}
-                            </h3>
-                            <p className="text-xs text-accent">@{friend.username}</p>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
-                              <Users className="h-3 w-3" /> Friend
-                              {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                  {friendProfiles.map(friend => {
+                    const avatarUrl = resolveAvatar(friend);
+                    return (
+                      <Card key={friend.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-4 mb-4">
+                            <UIAvatar className="h-12 w-12 ring-2 ring-primary/20 cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
+                              {avatarUrl && <AvatarImage src={avatarUrl} />}
+                              <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                                {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </UIAvatar>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold truncate cursor-pointer hover:text-accent" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
+                                {friend.displayName || friend.username}
+                              </h3>
+                              <p className="text-xs text-accent">@{friend.username}</p>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                                <Users className="h-3 w-3" /> Friend
+                                {friend.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex gap-2 w-full">
-                          <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            className="flex-1 rounded-lg text-xs"
-                            onClick={() => router.push(`/profile?uid=${friend.id}`)}
-                          >
-                            <Eye className="h-3 w-3 mr-1" /> View
-                          </Button>
-                          
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="rounded-lg text-xs text-destructive hover:bg-destructive/10">
-                                <UserMinus className="h-3 w-3 mr-1" /> Remove
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Unfriend User?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to remove {friend.displayName || friend.username} from your friends? They will lose access to your private library.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleUnfriend(friend.id)}>Unfriend</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <div className="flex gap-2 w-full">
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              className="flex-1 rounded-lg text-xs"
+                              onClick={() => router.push(`/profile?uid=${friend.id}`)}
+                            >
+                              <Eye className="h-3 w-3 mr-1" /> View
+                            </Button>
+                            
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="rounded-lg text-xs text-destructive hover:bg-destructive/10">
+                                  <UserMinus className="h-3 w-3 mr-1" /> Remove
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Unfriend User?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to remove {friend.displayName || friend.username} from your friends? They will lose access to your private library.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogAction onClick={() => handleUnfriend(friend.id)}>Unfriend</AlertDialogAction>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" title="Block">
-                                <ShieldAlert className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Block User?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Block {friend.displayName || friend.username}? This will unfriend them and prevent them from sending you future friend requests.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleBlock(friend.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                  Block
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" title="Block">
+                                  <ShieldAlert className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Block User?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Block {friend.displayName || friend.username}? This will unfriend them and prevent them from sending you future friend requests.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogAction onClick={() => handleBlock(friend.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Block
+                                  </AlertDialogAction>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">

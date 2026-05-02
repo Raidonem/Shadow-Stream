@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
@@ -51,7 +52,8 @@ import {
   History,
   AlertTriangle,
   Slash,
-  Ban
+  Ban,
+  ImageIcon
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -73,7 +75,8 @@ import {
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
 import { differenceInDays } from 'date-fns';
-import { ModerationLog, UserProfile } from '../../lib/types';
+import { ModerationLog, UserProfile, AvatarItem } from '../../lib/types';
+import Image from 'next/image';
 
 function ProfileContent() {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -97,7 +100,8 @@ function ProfileContent() {
     displayName: '',
     languagePreference: 'en',
     themePreference: 'dark',
-    isPublic: false
+    isPublic: false,
+    avatarId: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -118,6 +122,12 @@ function ProfileContent() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(profileRef);
   const { data: authProfile } = useDoc<UserProfile>(authProfileRef);
 
+  const avatarsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
+  }, [db]);
+  const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
+
   const isAdminSession = authProfile?.role === 'admin';
 
   const moderationLogsQuery = useMemoFirebase(() => {
@@ -126,47 +136,6 @@ function ProfileContent() {
   }, [db, targetUid, isAdminSession]);
 
   const { data: moderationLogs } = useCollection<ModerationLog>(moderationLogsQuery);
-
-  const isBlocked = authProfile?.blockedUserIds?.includes(targetUid || '');
-  const amIBlocked = profile?.blockedUserIds?.includes(authUser?.uid || '');
-
-  const friendshipId = useMemo(() => {
-    if (!authUser || !targetUid || isOwnProfile) return null;
-    return authUser.uid < targetUid 
-      ? `${authUser.uid}_${targetUid}` 
-      : `${targetUid}_${authUser.uid}`;
-  }, [authUser?.uid, targetUid, isOwnProfile]);
-
-  const friendshipRef = useMemoFirebase(() => {
-    if (!db || !friendshipId) return null;
-    return doc(db, 'friendships', friendshipId);
-  }, [db, friendshipId]);
-
-  const { data: friendshipData } = useDoc(friendshipRef);
-  const isFriend = !!friendshipData;
-
-  const requestId = useMemo(() => {
-    if (!authUser || !targetUid || isOwnProfile) return null;
-    return `${authUser.uid}_${targetUid}`;
-  }, [authUser?.uid, targetUid, isOwnProfile]);
-
-  const reverseRequestId = useMemo(() => {
-    if (!authUser || !targetUid || isOwnProfile) return null;
-    return `${targetUid}_${authUser.uid}`;
-  }, [authUser?.uid, targetUid, isOwnProfile]);
-
-  const requestRef = useMemoFirebase(() => {
-    if (!db || !requestId) return null;
-    return doc(db, 'friend_requests', requestId);
-  }, [db, requestId]);
-
-  const reverseRequestRef = useMemoFirebase(() => {
-    if (!db || !reverseRequestId) return null;
-    return doc(db, 'friend_requests', reverseRequestId);
-  }, [db, reverseRequestId]);
-
-  const { data: outgoingRequest } = useDoc(requestRef);
-  const { data: incomingRequest } = useDoc(reverseRequestRef);
 
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
@@ -197,7 +166,8 @@ function ProfileContent() {
         displayName: profile.displayName || profile.username || '',
         languagePreference: profile.languagePreference || 'en',
         themePreference: profile.themePreference || 'dark',
-        isPublic: profile.isPublic || false
+        isPublic: profile.isPublic || false,
+        avatarId: profile.avatarId || ''
       });
     }
   }, [profile, isOwnProfile]);
@@ -215,11 +185,6 @@ function ProfileContent() {
     setIsSaving(true);
 
     try {
-      if (auth.currentUser) {
-        await auth.currentUser.reload();
-      }
-      const freshAuthUser = auth.currentUser;
-
       const usernameChanged = editData.username.toLowerCase() !== profile?.username?.toLowerCase();
       
       if (usernameChanged) {
@@ -253,12 +218,9 @@ function ProfileContent() {
         languagePreference: editData.languagePreference,
         themePreference: editData.themePreference,
         isPublic: editData.isPublic,
+        avatarId: editData.avatarId,
         updatedAt: serverTimestamp()
       };
-
-      if (freshAuthUser && freshAuthUser.emailVerified && freshAuthUser.email !== profile?.email) {
-        profileUpdate.email = freshAuthUser.email;
-      }
 
       if (usernameChanged) {
         profileUpdate.username = editData.username.toLowerCase();
@@ -320,36 +282,19 @@ function ProfileContent() {
     return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  if (amIBlocked) {
-    return (
-      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
-        <ShieldAlert className="h-12 w-12 text-destructive" />
-        <h1 className="text-2xl font-bold">Access Denied</h1>
-        <Button variant="outline" asChild><a href="/">Back to Home</a></Button>
-      </div>
-    );
-  }
-
-  const canView = isOwnProfile || profile?.isPublic || isFriend || isAdminSession;
-
-  if (!profile || (!canView && !isOwnProfile)) {
-    return (
-      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
-        <Lock className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">This profile is private.</h1>
-        <Button variant="outline" asChild><a href="/">Back to Home</a></Button>
-      </div>
-    );
-  }
-
-  const userInitial = (profile.displayName || profile.username || 'U')[0];
+  const userInitial = (profile?.displayName || profile?.username || 'U')[0];
+  const resolvedAvatar = officialAvatars?.find(a => a.id === profile?.avatarId)?.url;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
         <div className="relative">
-          <div className="flex h-32 w-32 items-center justify-center rounded-full bg-primary/20 text-4xl font-bold text-primary ring-4 ring-background shadow-xl">
-            {userInitial.toUpperCase()}
+          <div className="flex h-32 w-32 items-center justify-center rounded-full bg-primary/20 text-4xl font-bold text-primary ring-4 ring-background shadow-xl overflow-hidden">
+            {resolvedAvatar ? (
+              <Image src={resolvedAvatar} alt={profile?.displayName || ''} fill className="object-cover" />
+            ) : (
+              userInitial.toUpperCase()
+            )}
           </div>
           {isPremium && (
             <div className="absolute -bottom-2 -right-2 rounded-full bg-accent p-2 text-accent-foreground shadow-lg">
@@ -359,10 +304,10 @@ function ProfileContent() {
         </div>
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="font-headline text-4xl font-bold">{profile.displayName || profile.username}</h1>
+            <h1 className="font-headline text-4xl font-bold">{profile?.displayName || profile?.username}</h1>
             {isAdmin && <ShieldCheck className="h-6 w-6 text-accent" />}
           </div>
-          <p className="text-accent font-medium text-lg">@{profile.username}</p>
+          <p className="text-accent font-medium text-lg">@{profile?.username}</p>
         </div>
         {isOwnProfile && (
           <Button variant={isEditing ? "outline" : "default"} onClick={() => setIsEditing(!isEditing)}>
@@ -383,6 +328,36 @@ function ProfileContent() {
                 <CardDescription>Update your public identity and preferences.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Choose Profile Picture
+                  </Label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                    <button 
+                      onClick={() => setEditData({...editData, avatarId: ''})}
+                      className={cn(
+                        "aspect-square rounded-xl bg-secondary flex items-center justify-center border-2 transition-all",
+                        editData.avatarId === '' ? "border-accent ring-2 ring-accent/20" : "border-transparent hover:border-accent/50"
+                      )}
+                    >
+                      <UserIcon className="h-6 w-6 text-muted-foreground" />
+                    </button>
+                    {officialAvatars?.map((avatar) => (
+                      <button 
+                        key={avatar.id}
+                        onClick={() => setEditData({...editData, avatarId: avatar.id})}
+                        className={cn(
+                          "relative aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                          editData.avatarId === avatar.id ? "border-accent ring-2 ring-accent/20 scale-105" : "border-transparent hover:border-accent/50"
+                        )}
+                      >
+                        <Image src={avatar.url} alt="Official Avatar" fill className="object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="edit-displayName">Display Name</Label>
@@ -481,19 +456,19 @@ function ProfileContent() {
                 <div className="space-y-1">
                   <span className="text-xs font-bold uppercase text-muted-foreground">User ID</span>
                   <div className="flex items-center gap-2 bg-secondary/30 p-2 rounded-lg">
-                    <code className="text-xs truncate flex-1">{profile.id}</code>
+                    <code className="text-xs truncate flex-1">{profile?.id}</code>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={copyUid}><Copy className="h-4 w-4" /></Button>
                   </div>
                 </div>
-                {(profile.restrictedUntil || profile.suspendedUntil) && (
+                {(profile?.restrictedUntil || profile?.suspendedUntil) && (
                   <div className="space-y-2 pt-2">
-                    {profile.restrictedUntil && profile.restrictedUntil.toDate() > new Date() && (
+                    {profile?.restrictedUntil && profile.restrictedUntil.toDate() > new Date() && (
                       <Badge variant="outline" className="w-full justify-start py-2 px-3 border-destructive/20 text-destructive gap-2">
                         <Slash className="h-4 w-4" />
                         {t('restrictedUntil').replace('{date}', profile.restrictedUntil.toDate().toLocaleDateString())}
                       </Badge>
                     )}
-                    {profile.suspendedUntil && profile.suspendedUntil.toDate() > new Date() && (
+                    {profile?.suspendedUntil && profile.suspendedUntil.toDate() > new Date() && (
                       <Badge variant="destructive" className="w-full justify-start py-2 px-3 gap-2">
                         <Ban className="h-4 w-4" />
                         {t('suspendedUntil').replace('{date}', profile.suspendedUntil.toDate().toLocaleDateString())}

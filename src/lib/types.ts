@@ -33,6 +33,7 @@ export interface UserProfile {
   role: string;
   isPremium: boolean;
   isPublic: boolean;
+  avatarId?: string;
   languagePreference: string;
   themePreference: string;
   lastUsernameChange?: any;
@@ -46,6 +47,12 @@ export interface UserProfile {
   restrictedUntil?: any;
   createdAt: any;
   updatedAt: any;
+}
+
+export interface AvatarItem {
+  id: string;
+  url: string;
+  createdAt: any;
 }
 
 export interface Report {

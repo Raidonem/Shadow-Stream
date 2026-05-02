@@ -35,7 +35,8 @@ import {
   User as UserIcon,
   Ban,
   Slash,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -46,7 +47,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlo
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
-import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report, UserProfile } from '../../lib/types';
+import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report, UserProfile, AvatarItem } from '../../lib/types';
 import Image from 'next/image';
 import { addDays } from 'date-fns';
 import {
@@ -67,7 +68,6 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [editingAnimeId, setEditingAnimeId] = useState<string | null>(null);
-  const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
 
   const [activeActionReport, setActiveActionReport] = useState<Report | null>(null);
   const [actionType, setActionType] = useState<'warning' | 'restriction' | 'suspension'>('warning');
@@ -90,21 +90,7 @@ export default function AdminPage() {
     views: '0'
   });
 
-  const [episodeData, setEpisodeData] = useState({
-    animeId: '',
-    episodeNumber: '',
-    titleEn: '',
-    titleAr: '',
-    servers: [] as EpisodeServer[],
-    thumbnail: '',
-    duration: '24:00'
-  });
-
-  const [newServer, setNewServer] = useState<EpisodeServer>({
-    lang: 'en',
-    name: '',
-    url: ''
-  });
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   const adminRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -124,6 +110,12 @@ export default function AdminPage() {
     return query(collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(50));
   }, [db, isAdminChecking, !!adminDoc]);
   const { data: reports, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
+
+  const avatarsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
+  }, [db]);
+  const { data: allAvatars } = useCollection<AvatarItem>(avatarsQuery);
 
   const availableTags = Object.keys(translations.en.tags) as GenreKey[];
 
@@ -150,25 +142,6 @@ export default function AdminPage() {
     });
     setSelectedGenres([]);
     setEditingAnimeId(null);
-  };
-
-  const resetEpisodeForm = () => {
-    setEpisodeData({ ...episodeData, episodeNumber: '', titleEn: '', titleAr: '', servers: [], thumbnail: '', duration: '24:00' });
-    setEditingEpisodeId(null);
-    setNewServer({ lang: 'en', name: '', url: '' });
-  };
-
-  const addServer = () => {
-    if (!newServer.name || !newServer.url) {
-      toast({ title: "Error", description: "Server name and URL are required.", variant: "destructive" });
-      return;
-    }
-    setEpisodeData({ ...episodeData, servers: [...episodeData.servers, newServer] });
-    setNewServer({ lang: 'en', name: '', url: '' });
-  };
-
-  const removeServer = (index: number) => {
-    setEpisodeData({ ...episodeData, servers: episodeData.servers.filter((_, i) => i !== index) });
   };
 
   const handleAddAnime = (e: React.FormEvent) => {
@@ -220,6 +193,26 @@ export default function AdminPage() {
     toast({ title: "Anime Deleted" });
   };
 
+  const handleAddAvatar = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !avatarUrl.trim()) return;
+    setIsSubmitting(true);
+    addDocumentNonBlocking(collection(db, 'avatars'), {
+      url: avatarUrl.trim(),
+      createdAt: serverTimestamp()
+    }).then(() => {
+      toast({ title: "Avatar added successfully" });
+      setAvatarUrl('');
+      setIsSubmitting(false);
+    });
+  };
+
+  const handleDeleteAvatar = (id: string) => {
+    if (!db || !confirm("Delete this avatar? Users using this will revert to default.")) return;
+    deleteDocumentNonBlocking(doc(db, 'avatars', id));
+    toast({ title: "Avatar deleted" });
+  };
+
   const handleResolveReport = (reportId: string) => {
     if (!db) return;
     updateDocumentNonBlocking(doc(db, 'reports', reportId), { status: 'resolved' });
@@ -252,14 +245,12 @@ export default function AdminPage() {
         }
       }
 
-      // 1. Update User Profile
       if (actionType === 'restriction') {
         updateDocumentNonBlocking(userRef, { restrictedUntil: expiryDate });
       } else if (actionType === 'suspension') {
         updateDocumentNonBlocking(userRef, { suspendedUntil: expiryDate });
       }
 
-      // 2. Add Moderation Log
       addDocumentNonBlocking(logRef, {
         adminId: user.uid,
         adminName: adminDoc?.username || 'Admin',
@@ -270,7 +261,6 @@ export default function AdminPage() {
         createdAt: serverTimestamp()
       });
 
-      // 3. Send Notification with a functional link
       const messageEn = actionType === 'warning' 
         ? "You have received an official warning." 
         : `Your account has been ${actionType}ed for ${actionDuration === 'forever' ? 'forever' : actionDuration + ' days'}.`;
@@ -289,7 +279,6 @@ export default function AdminPage() {
         createdAt: serverTimestamp()
       }, { merge: true });
 
-      // 4. Resolve the report
       handleResolveReport(activeActionReport.id);
 
       toast({ title: "Action executed successfully" });
@@ -335,10 +324,11 @@ export default function AdminPage() {
               </div>
             </div>
             <Tabs defaultValue="anime" className="w-full">
-              <TabsList className="mb-8 grid w-full max-w-2xl grid-cols-3 rounded-xl bg-secondary p-1">
+              <TabsList className="mb-8 grid w-full max-w-4xl grid-cols-4 rounded-xl bg-secondary p-1">
                 <TabsTrigger value="anime" className="rounded-lg">Anime Catalog</TabsTrigger>
-                <TabsTrigger value="reports" className="rounded-lg">Reports & Moderation</TabsTrigger>
-                <TabsTrigger value="episodes" className="rounded-lg">Episode Manager</TabsTrigger>
+                <TabsTrigger value="reports" className="rounded-lg">Reports</TabsTrigger>
+                <TabsTrigger value="moderation" className="rounded-lg">Moderation</TabsTrigger>
+                <TabsTrigger value="avatars" className="rounded-lg">Avatars</TabsTrigger>
               </TabsList>
 
               <TabsContent value="anime" className="space-y-8">
@@ -474,9 +464,6 @@ export default function AdminPage() {
                             <p className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg border border-dashed">
                               <span className="font-bold mr-2">Reason:</span> {report.reason}
                             </p>
-                            <div className="flex items-center gap-4 text-xs">
-                              <span className="text-accent font-medium">Reported by: @{report.userName}</span>
-                            </div>
                           </div>
 
                           <div className="flex gap-2 shrink-0">
@@ -506,7 +493,55 @@ export default function AdminPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="episodes" className="space-y-8">
+              <TabsContent value="avatars" className="space-y-8">
+                <Card className="rounded-2xl border-none bg-card shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-accent" />
+                      Avatar Management
+                    </CardTitle>
+                    <CardDescription>Add new URLs for users to choose as their profile picture.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddAvatar} className="flex gap-4">
+                      <div className="flex-1 space-y-2">
+                        <Input 
+                          placeholder="https://example.com/avatar.png" 
+                          value={avatarUrl} 
+                          onChange={(e) => setAvatarUrl(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" disabled={isSubmitting || !avatarUrl.trim()}>
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                        Add Avatar
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                  {allAvatars?.map(avatar => (
+                    <Card key={avatar.id} className="group relative aspect-square overflow-hidden bg-secondary border-none">
+                      <Image 
+                        src={avatar.url} 
+                        alt="Avatar Option" 
+                        fill 
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button 
+                          variant="destructive" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-full"
+                          onClick={() => handleDeleteAvatar(avatar.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </TabsContent>
             </Tabs>
           </div>

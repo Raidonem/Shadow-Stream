@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -44,7 +45,7 @@ import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Comment, Report, UserProfile } from '../../../lib/types';
+import { EpisodeServer, Comment, Report, UserProfile, AvatarItem } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
@@ -78,7 +79,8 @@ function CommentItem({
   allComments,
   language,
   t,
-  userVotes
+  userVotes,
+  officialAvatars
 }: { 
   comment: Comment; 
   user: any; 
@@ -92,8 +94,10 @@ function CommentItem({
   language: string;
   t: (key: any) => string;
   userVotes?: any[];
+  officialAvatars?: AvatarItem[];
 }) {
   const router = useRouter();
+  const db = useFirestore();
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null);
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -104,6 +108,20 @@ function CommentItem({
   const currentUserName = isOwnComment ? (profile?.username || comment.userName) : (comment.userName || 'user');
   
   const currentVote = userVotes?.find(v => v.commentId === comment.id)?.type;
+
+  // We need to fetch the profile of the user who made the comment to see their avatarId
+  // but for performance in a real app we might snapshot the avatarId in the comment.
+  // Given the requirement "if it gets deleted, revert to default", we'll fetch the profile.
+  const commentUserProfileRef = useMemoFirebase(() => {
+    if (!db || !comment.userId) return null;
+    return doc(db, 'users', comment.userId);
+  }, [db, comment.userId]);
+  const { data: commentUserProfile } = useDoc<UserProfile>(commentUserProfileRef);
+
+  const resolvedAvatar = useMemo(() => {
+    if (!commentUserProfile?.avatarId || !officialAvatars) return null;
+    return officialAvatars.find(a => a.id === commentUserProfile.avatarId)?.url || null;
+  }, [commentUserProfile?.avatarId, officialAvatars]);
 
   const sortedReplies = useMemo(() => {
     if (!replies) return [];
@@ -167,8 +185,8 @@ function CommentItem({
           className="h-10 w-10 shrink-0 hover:opacity-80 transition-opacity"
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage src={`https://picsum.photos/seed/${comment.userId}/100`} />
-            <AvatarFallback>{currentDisplayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+            {resolvedAvatar && <AvatarImage src={resolvedAvatar} />}
+            <AvatarFallback className="bg-primary/10 text-primary font-bold">{currentDisplayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </button>
         <div className="flex-1 space-y-2">
@@ -318,6 +336,7 @@ function CommentItem({
               userVotes={userVotes}
               replies={allComments?.filter(r => r.parentId === reply.id)}
               allComments={allComments}
+              officialAvatars={officialAvatars}
             />
           ))}
 
@@ -401,6 +420,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   }, [user, db]);
   const { data: adminDoc } = useDoc(adminRef);
   const isAdminUser = !!adminDoc;
+
+  const avatarsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
+  }, [db]);
+  const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
 
   const isRestricted = profile?.restrictedUntil && profile.restrictedUntil.toDate() > new Date();
 
@@ -659,7 +684,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
               {user && !isRestricted ? (
                 <div className="flex gap-4">
-                  <Avatar className="h-10 w-10 shrink-0"><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
+                  <Avatar className="h-10 w-10 shrink-0">
+                    {profile?.avatarId && officialAvatars?.find(a => a.id === profile.avatarId) ? (
+                      <AvatarImage src={officialAvatars.find(a => a.id === profile.avatarId)!.url} />
+                    ) : (
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback>
+                    )}
+                  </Avatar>
                   <div className="flex-1 space-y-2 relative">
                     <Textarea 
                       placeholder={language === 'ar' ? 'انضم إلى المناقشة...' : "Join the discussion..."} 
@@ -694,6 +725,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       userVotes={userVotes}
                       replies={comments?.filter(r => r.parentId === c.id)}
                       allComments={comments || []}
+                      officialAvatars={officialAvatars}
                     />
                   </div>
                 ))}

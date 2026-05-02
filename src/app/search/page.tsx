@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useFirestore, useCollection, useMemoFirebase } from '../../firebase/index';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { 
   Loader2, 
@@ -34,7 +34,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { translations } from '../../lib/i18n';
-import { Anime, GenreKey, UserProfile } from '../../lib/types';
+import { Anime, GenreKey, UserProfile, AvatarItem } from '../../lib/types';
 import { cn } from '../../lib/utils';
 import { Card, CardContent } from '../../components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
@@ -67,8 +67,14 @@ function SearchResults() {
     return query(collection(db, 'users'), where('isPublic', '==', true), limit(50));
   }, [db, searchType]);
 
+  const avatarsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
+  }, [db]);
+
   const { data: animeList, isLoading: isAnimeLoading } = useCollection<Anime>(animeQuery);
   const { data: usersList, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
 
   const availableYears = useMemo(() => {
     if (!animeList) return [];
@@ -148,6 +154,11 @@ function SearchResults() {
   };
 
   const isLoading = isAnimeLoading || isUsersLoading;
+
+  const resolveAvatar = (user: UserProfile) => {
+    if (!user.avatarId || !officialAvatars) return null;
+    return officialAvatars.find(a => a.id === user.avatarId)?.url || null;
+  };
 
   return (
     <div className="flex flex-col gap-8 lg:flex-row">
@@ -279,32 +290,36 @@ function SearchResults() {
         ) : (
           processedUsers.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {processedUsers.map((user) => (
-                <Card key={user.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/profile?uid=${user.id}`)}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                        {(user.displayName || user.username || 'U')[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold truncate">{user.displayName || user.username}</h3>
-                      <p className="text-xs text-accent">@{user.username}</p>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
-                        {user.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
-                        <span>{user.favoriteAnimeIds?.length || 0} Favorites</span>
+              {processedUsers.map((user) => {
+                const avatarUrl = resolveAvatar(user);
+                return (
+                  <Card key={user.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/profile?uid=${user.id}`)}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        {avatarUrl && <AvatarImage src={avatarUrl} />}
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                          {(user.displayName || user.username || 'U')[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold truncate">{user.displayName || user.username}</h3>
+                        <p className="text-xs text-accent">@{user.username}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                          {user.isPremium && <Badge variant="secondary" className="h-4 text-[8px] bg-accent text-accent-foreground px-1">PREMIUM</Badge>}
+                          <span>{user.favoriteAnimeIds?.length || 0} Favorites</span>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl bg-secondary/10">
               <UserIcon className="h-12 w-12 text-muted-foreground mb-4" />
               <h2 className="text-xl font-bold">{t('noPublicUsers')}</h2>
             </div>
-          )
+          )}
         )}
       </div>
     </div>
