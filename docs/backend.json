@@ -89,6 +89,24 @@
         "email",
         "role"
       ]
+    },
+    "Report": {
+      "title": "Report",
+      "type": "object",
+      "description": "Represents a user-submitted issue report.",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["episode_server"] },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "animeId": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "animeTitleEn": { "type": "string" },
+        "episodeNumber": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -99,25 +117,9 @@
       "schema": "UserProfile",
       "description": "Stores user profiles, preferences, and watchlist."
     },
-    "/users/{userId}/history/{historyId}": {
-      "schema": "WatchHistory",
-      "description": "Stores user's watched episodes history."
-    },
-    "/users/{userId}/notifications/{notifId}": {
-      "schema": "UserNotification",
-      "description": "Personal notifications."
-    },
-    "/friendships/{friendshipId}": {
-      "schema": "Friendship",
-      "description": "Stores mutual friendship connections."
-    },
-    "/friend_requests/{requestId}": {
-      "schema": "FriendRequest",
-      "description": "Stores pending friend requests."
-    },
-    "/admins/{adminId}": {
-      "schema": "object",
-      "description": "Dedicated collection for administrative role assignment."
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Stores issue reports for moderation."
     },
     "/anime/{animeId}": {
       "schema": "Anime",

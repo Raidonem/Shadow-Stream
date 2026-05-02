@@ -25,18 +25,21 @@ import {
   X,
   Server,
   Bell,
-  Clapperboard
+  Clapperboard,
+  AlertTriangle,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, serverTimestamp, query, orderBy, getDoc } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy, getDoc, limit } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
-import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime } from '../../lib/types';
+import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report } from '../../lib/types';
 import Image from 'next/image';
 
 export default function AdminPage() {
@@ -99,6 +102,13 @@ export default function AdminPage() {
     return query(collection(db, 'anime', episodeData.animeId, 'episodes'), orderBy('episodeNumber', 'asc'));
   }, [db, episodeData.animeId]);
   const { data: currentEpisodes } = useCollection(episodesQuery);
+
+  // Securely query reports only when admin status is confirmed
+  const reportsQuery = useMemoFirebase(() => {
+    if (!db || isAdminChecking || !adminDoc) return null;
+    return query(collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(50));
+  }, [db, isAdminChecking, !!adminDoc]);
+  const { data: reports, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
 
   const availableTags = Object.keys(translations.en.tags) as GenreKey[];
 
@@ -254,6 +264,18 @@ export default function AdminPage() {
     toast({ title: "Deleted" });
   };
 
+  const handleResolveReport = (reportId: string) => {
+    if (!db) return;
+    updateDocumentNonBlocking(doc(db, 'reports', reportId), { status: 'resolved' });
+    toast({ title: "Report Resolved" });
+  };
+
+  const handleDeleteReport = (reportId: string) => {
+    if (!db || !confirm("Delete report?")) return;
+    deleteDocumentNonBlocking(doc(db, 'reports', reportId));
+    toast({ title: "Report Deleted" });
+  };
+
   if (isUserLoading || isAdminChecking) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -286,9 +308,10 @@ export default function AdminPage() {
               </div>
             </div>
             <Tabs defaultValue="anime" className="w-full">
-              <TabsList className="mb-8 grid w-full max-w-md grid-cols-2 rounded-xl bg-secondary p-1">
+              <TabsList className="mb-8 grid w-full max-w-lg grid-cols-3 rounded-xl bg-secondary p-1">
                 <TabsTrigger value="anime" className="rounded-lg">Anime Catalog</TabsTrigger>
                 <TabsTrigger value="episodes" className="rounded-lg">Episode Manager</TabsTrigger>
+                <TabsTrigger value="reports" className="rounded-lg">Reports</TabsTrigger>
               </TabsList>
 
               <TabsContent value="anime" className="space-y-8">
@@ -411,6 +434,7 @@ export default function AdminPage() {
                   ))}
                 </div>
               </TabsContent>
+
               <TabsContent value="episodes" className="space-y-8">
                 <Card className="rounded-2xl border-none bg-card shadow-xl">
                   <CardHeader>
@@ -527,6 +551,63 @@ export default function AdminPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="reports" className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-headline text-2xl font-bold flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6 text-accent" />
+                    Issue Reports
+                  </h2>
+                </div>
+
+                {isReportsLoading ? (
+                  <div className="flex py-12 justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : reports && reports.length > 0 ? (
+                  <div className="grid gap-4">
+                    {reports.map((report) => (
+                      <Card key={report.id} className="border-none bg-card shadow-md">
+                        <CardContent className="p-4 flex items-center justify-between gap-6">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-3">
+                              <Badge variant={report.status === 'resolved' ? 'secondary' : 'default'} className={cn(report.status === 'pending' && "bg-accent")}>
+                                {report.status === 'resolved' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
+                                {report.status.toUpperCase()}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {report.createdAt?.toDate?.()?.toLocaleString() || 'Recently'}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-lg">
+                              {report.animeTitleEn} - EP {report.episodeNumber}
+                            </h3>
+                            <p className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg border border-dashed">
+                              {report.reason}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs">
+                              <span className="text-accent font-medium">Reported by: @{report.userName}</span>
+                              <span className="text-muted-foreground">Ref: {report.id}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            {report.status === 'pending' && (
+                              <Button variant="outline" size="sm" className="rounded-xl border-accent text-accent" onClick={() => handleResolveReport(report.id)}>
+                                Resolve
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteReport(report.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
+                    <p className="text-muted-foreground italic">No reports found.</p>
                   </div>
                 )}
               </TabsContent>

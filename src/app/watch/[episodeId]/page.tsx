@@ -25,7 +25,8 @@ import {
   Reply as ReplyIcon,
   ChevronDown,
   ChevronUp,
-  MoreVertical
+  MoreVertical,
+  AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -35,7 +36,7 @@ import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Comment } from '../../../lib/types';
+import { EpisodeServer, Comment, Report } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
@@ -45,6 +46,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from "../../../components/ui/dialog";
 
 const COMMENT_LIMIT = 100;
 
@@ -169,7 +179,7 @@ function CommentItem({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-none shadow-xl">
-                  {/* Reporting option removed as requested */}
+                  {/* Reporting option for comments could go here in future */}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -281,6 +291,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const [commentText, setCommentText] = useState('');
   const [activeServer, setActiveServer] = useState<EpisodeServer | null>(null);
   const [isManualServerSelection, setIsManualServerSelection] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   
   const loadedEpisodeId = useRef<string | null>(null);
 
@@ -335,10 +348,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return comments?.filter(c => !c.parentId) || [];
   }, [comments]);
 
-  const getReplies = (parentId: string) => {
-    return comments?.filter(c => c.parentId === parentId) || [];
-  };
-
   useEffect(() => {
     if (episode?.servers?.length && (loadedEpisodeId.current !== episode.id || !isManualServerSelection)) {
       const preferred = episode.servers.find((s: EpisodeServer) => s.lang === language) || episode.servers[0];
@@ -350,7 +359,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const handlePostComment = async (parentId?: string) => {
     if (!user || !animeId || !episodeId || !profile || !db) return;
     
-    // Removed restriction check as part of system removal
     const text = parentId ? '' : commentText;
     if (!text.trim() || text.length > COMMENT_LIMIT) return;
 
@@ -413,6 +421,31 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   };
 
+  const handleSendReport = async () => {
+    if (!user || !db || !animeId || !episodeId || !reportReason.trim()) return;
+    setIsReporting(true);
+
+    try {
+      await addDocumentNonBlocking(collection(db, 'reports'), {
+        type: 'episode_server',
+        userId: user.uid,
+        userName: profile?.username || 'user',
+        animeId,
+        episodeId,
+        animeTitleEn: anime?.titleEn,
+        episodeNumber: episode?.episodeNumber,
+        reason: reportReason.trim(),
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+      toast({ title: t('reportSent') });
+      setReportReason('');
+      setIsReportDialogOpen(false);
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
   if (isEpLoading || isAnimeLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!episode || !anime) return <div className="text-center py-20 font-headline text-2xl">Episode not found.</div>;
 
@@ -444,6 +477,52 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <Server className="h-4 w-4 text-accent" />
                   <h3 className="font-bold text-sm uppercase tracking-wider">{language === 'ar' ? 'اختر السيرفر' : 'Select Server'}</h3>
                 </div>
+
+                {user && (
+                  <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1 text-muted-foreground hover:text-destructive">
+                        <AlertTriangle className="h-3 w-3" />
+                        {t('reportIssue')}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-card border-none">
+                      <DialogHeader>
+                        <DialogTitle>{t('serverIssue')}</DialogTitle>
+                        <DialogDescription>
+                          {language === 'ar' ? 'أخبرنا بمشكلة هذا السيرفر وسنتحقق منها قريباً.' : 'Tell us what is wrong with this server and we will investigate it shortly.'}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <Select value={reportReason} onValueChange={setReportReason}>
+                          <SelectTrigger className="rounded-xl bg-secondary/50 border-none">
+                            <SelectValue placeholder={t('reportReason')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Video not loading">Video not loading</SelectItem>
+                            <SelectItem value="Wrong episode">Wrong episode</SelectItem>
+                            <SelectItem value="Bad quality">Bad quality</SelectItem>
+                            <SelectItem value="Broken link">Broken link</SelectItem>
+                            <SelectItem value="Other">Other (Specify below)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {reportReason === 'Other' && (
+                          <Textarea 
+                            placeholder="Provide more details..." 
+                            className="rounded-xl bg-secondary/50 border-none"
+                            onChange={(e) => setReportReason(`Other: ${e.target.value}`)}
+                          />
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button className="rounded-xl gap-2" onClick={handleSendReport} disabled={!reportReason || isReporting}>
+                          {isReporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          {language === 'ar' ? 'إرسال البلاغ' : 'Send Report'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
               <div className="space-y-4">
                 {Object.entries(episode.servers?.reduce((acc: any, s: any) => { (acc[s.lang] = acc[s.lang] || []).push(s); return acc; }, {}) || {}).map(([lang, servers]: any) => (
