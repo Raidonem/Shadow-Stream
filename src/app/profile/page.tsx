@@ -17,7 +17,7 @@ import {
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useAuth } from '../../firebase/index';
 import { doc, collection, query, where, documentId, collectionGroup, getDocs, writeBatch, serverTimestamp, arrayUnion, arrayRemove, orderBy } from 'firebase/firestore';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../firebase/non-blocking-updates';
-import { updateUserPassword, initiateEmailUpdate } from '../../firebase/non-blocking-login';
+import { updateUserPassword } from '../../firebase/non-blocking-login';
 import { 
   User as UserIcon, 
   Mail, 
@@ -91,7 +91,6 @@ function ProfileContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [isSendingEmailLink, setIsSendingEmailLink] = useState(false);
   
   const [editData, setEditData] = useState({
     username: '',
@@ -104,11 +103,6 @@ function ProfileContent() {
   const [passwordData, setPasswordData] = useState({
     current: '',
     new: ''
-  });
-
-  const [emailUpdateData, setEmailUpdateData] = useState({
-    new: '',
-    password: ''
   });
 
   const profileRef = useMemoFirebase(() => {
@@ -315,30 +309,6 @@ function ProfileContent() {
     }
   };
 
-  const handleRequestEmailUpdate = async () => {
-    if (!emailUpdateData.new || !emailUpdateData.password) {
-      toast({ title: "Error", description: "Email and password are required.", variant: "destructive" });
-      return;
-    }
-    setIsSendingEmailLink(true);
-    try {
-      await initiateEmailUpdate(auth, emailUpdateData.password, emailUpdateData.new);
-      toast({
-        title: "Verification Sent",
-        description: t('verifyEmailLinkSent')
-      });
-      setEmailUpdateData({ new: '', password: '' });
-    } catch (err: any) {
-      toast({
-        title: "Request Failed",
-        description: err.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsSendingEmailLink(false);
-    }
-  };
-
   const copyUid = () => {
     if (!targetUid) return;
     navigator.clipboard.writeText(targetUid);
@@ -467,24 +437,6 @@ function ProfileContent() {
                   <Button variant="outline" onClick={handleChangePassword} disabled={isUpdatingPassword} className="w-full md:w-auto rounded-xl">
                     {isUpdatingPassword && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                     Update Password
-                  </Button>
-                </div>
-
-                <div className="space-y-4 border-t pt-8">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Change Email</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>New Email Address</Label>
-                      <Input type="email" value={emailUpdateData.new} onChange={(e) => setEmailUpdateData({...emailUpdateData, new: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Confirm Password</Label>
-                      <Input type="password" value={emailUpdateData.password} onChange={(e) => setEmailUpdateData({...emailUpdateData, password: e.target.value})} className="rounded-xl border-none bg-secondary/50" />
-                    </div>
-                  </div>
-                  <Button variant="outline" onClick={handleRequestEmailUpdate} disabled={isSendingEmailLink} className="w-full md:w-auto rounded-xl">
-                    {isSendingEmailLink && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    Send Verification Link
                   </Button>
                 </div>
               </CardContent>

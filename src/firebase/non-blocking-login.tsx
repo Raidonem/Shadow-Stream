@@ -11,7 +11,6 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
-  verifyBeforeUpdateEmail,
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in (non-blocking). */
@@ -61,18 +60,4 @@ export async function updateUserPassword(authInstance: Auth, currentPass: string
   const credential = EmailAuthProvider.credential(user.email, currentPass);
   await reauthenticateWithCredential(user, credential);
   await updatePassword(user, newPass);
-}
-
-/** 
- * Re-authenticates the user and initiates an email update.
- * Sends a verification link to the new email. 
- * The email is only changed in Auth after the user clicks the link.
- */
-export async function initiateEmailUpdate(authInstance: Auth, currentPass: string, newEmail: string): Promise<void> {
-  const user = authInstance.currentUser;
-  if (!user || !user.email) throw new Error("Authentication failed: No active session found.");
-  
-  const credential = EmailAuthProvider.credential(user.email, currentPass);
-  await reauthenticateWithCredential(user, credential);
-  await verifyBeforeUpdateEmail(user, newEmail);
 }
