@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -41,12 +40,12 @@ import {
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Comment, Report, UserProfile, AvatarItem, Episode, Anime, Rating } from '../../../lib/types';
+import { EpisodeServer, Comment, UserProfile, AvatarItem, Episode, Anime, Rating } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
@@ -82,7 +81,7 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
   const handleRate = async (value: number) => {
-    if (!user || !db) {
+    if (!user || !db || !animeId) {
       toast({ title: "Login Required", description: "Sign in to rate episodes." });
       return;
     }
@@ -115,9 +114,7 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
       };
       updateDocumentNonBlocking(episodeRef, episodeUpdate);
 
-      // Wait a tiny bit for the aggregate to be readable locally or just manually calculate for now
-      // In a real app, this would be a cloud function.
-      // Here we will calculate the new average based on all episodes of this anime to update the Anime Doc.
+      // Refresh averages
       const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
       const episodes = epsSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Episode));
       
@@ -130,8 +127,6 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
           const newCount = (ep.ratingCount || 0) + (isUpdate ? 0 : 1);
           const newSum = (ep.totalRatingSum || 0) + (value - oldValue);
           epRating = newCount > 0 ? newSum / newCount : 0;
-          
-          // Also update the episode rating field itself for display
           updateDoc(episodeRef, { rating: epRating });
         }
         
@@ -274,17 +269,9 @@ function CommentItem({
 
   useEffect(() => {
     if (!sortedReplies.length) return;
-    const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    const targetId = hash.replace('#comment-', '');
-    const targetIndex = sortedReplies.findIndex(r => r.id === targetId);
-
-    if (targetIndex !== -1 && !visibleRange) {
-      setVisibleRange({ start: targetIndex, end: targetIndex + 1 });
-    } else if (!visibleRange) {
-      const start = Math.max(0, sortedReplies.length - 3);
-      setVisibleRange({ start, end: sortedReplies.length });
-    }
-  }, [sortedReplies, visibleRange]);
+    const start = Math.max(0, sortedReplies.length - 3);
+    setVisibleRange({ start, end: sortedReplies.length });
+  }, [sortedReplies.length]);
 
   const showPrevious = () => {
     if (!visibleRange) return;

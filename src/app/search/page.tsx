@@ -1,7 +1,6 @@
-
 "use client";
 
-import { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
@@ -151,6 +150,14 @@ function SearchResults() {
 
   const isLoading = isAnimeLoading || isUsersLoading;
 
+  if (isLoading) {
+    return (
+      <div className="flex h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8 lg:flex-row">
       <aside className={cn(
@@ -282,11 +289,7 @@ function SearchResults() {
           )}
         </div>
 
-        {isLoading ? (
-          <div className="flex h-[40vh] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : searchType === 'anime' ? (
+        {searchType === 'anime' ? (
           processedAnime.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
               {processedAnime.map((anime) => (

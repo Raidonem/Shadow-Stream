@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -8,13 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "../../components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useAuth } from '../../firebase/index';
 import { doc, collection, query, where, documentId, getDocs, serverTimestamp, arrayUnion, orderBy } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';

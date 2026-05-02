@@ -1,4 +1,3 @@
-
 "use client";
 
 import { LanguageProvider } from './LanguageContext';
@@ -120,7 +119,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isUserLoading || isLoadingProfile) {
+  if (isUserLoading || (user && isLoadingProfile)) {
     return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
