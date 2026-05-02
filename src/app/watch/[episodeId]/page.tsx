@@ -33,7 +33,8 @@ import {
   ChevronUp,
   MoreVertical,
   AlertTriangle,
-  Flag
+  Flag,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -74,6 +75,7 @@ function CommentItem({
   onReply, 
   onReport,
   replies, 
+  allComments,
   language,
   t,
   userVotes
@@ -83,15 +85,19 @@ function CommentItem({
   profile: any; 
   isAdminUser: boolean; 
   onVote: (commentId: string, direction: 'up' | 'down') => void;
-  onReply: (parentId: string, targetUserName: string, isReply: boolean) => void;
+  onReply: (parentId: string, text: string) => Promise<void>;
   onReport: (comment: Comment) => void;
   replies?: Comment[];
+  allComments?: Comment[];
   language: string;
   t: (key: any) => string;
   userVotes?: any[];
 }) {
   const router = useRouter();
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [isSubmittingReply, setIsSubmittingSubmittingReply] = useState(false);
   
   const isOwnComment = user && comment.userId === user.uid;
   const currentDisplayName = isOwnComment ? (profile?.displayName || comment.userDisplayName) : (comment.userDisplayName || 'User');
@@ -132,6 +138,18 @@ function CommentItem({
       start: visibleRange.start,
       end: Math.min(sortedReplies.length, visibleRange.end + 5)
     });
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyText.trim() || isSubmittingReply) return;
+    setIsSubmittingSubmittingReply(true);
+    try {
+      await onReply(comment.id, replyText.trim());
+      setReplyText('');
+      setIsReplying(false);
+    } finally {
+      setIsSubmittingSubmittingReply(false);
+    }
   };
 
   const displayedReplies = visibleRange 
@@ -237,7 +255,7 @@ function CommentItem({
             
             {user && (
               <button 
-                onClick={() => onReply(comment.parentId || comment.id, comment.userName, !!comment.parentId)}
+                onClick={() => setIsReplying(!isReplying)}
                 className="text-xs text-muted-foreground hover:text-accent flex items-center gap-1 font-medium transition-colors"
               >
                 <ReplyIcon className="h-3.5 w-3.5" />
@@ -245,6 +263,28 @@ function CommentItem({
               </button>
             )}
           </div>
+
+          {isReplying && (
+            <div className="pt-2 animate-in fade-in slide-in-from-top-1">
+              <div className="flex gap-2">
+                <Textarea 
+                  placeholder={language === 'ar' ? 'اكتب رداً...' : 'Write a reply...'}
+                  className="min-h-[60px] bg-secondary/30 border-none rounded-xl text-sm"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  maxLength={COMMENT_LIMIT}
+                />
+                <div className="flex flex-col gap-2">
+                  <Button size="icon" className="rounded-xl h-full px-4" onClick={handleSubmitReply} disabled={!replyText.trim() || isSubmittingReply}>
+                    {isSubmittingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setIsReplying(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -276,6 +316,8 @@ function CommentItem({
               language={language}
               t={t}
               userVotes={userVotes}
+              replies={allComments?.filter(r => r.parentId === reply.id)}
+              allComments={allComments}
             />
           ))}
 
@@ -377,7 +419,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [episode, language, isManualServerSelection]);
 
-  const handlePostComment = async (parentId?: string) => {
+  const handlePostComment = async (parentId?: string, text?: string) => {
     if (!user || !animeId || !episodeId || !profile || !db) return;
     
     if (isRestricted) {
@@ -389,8 +431,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       return;
     }
 
-    const text = parentId ? '' : commentText;
-    if (!text.trim() || text.length > COMMENT_LIMIT) return;
+    const finalText = text !== undefined ? text : commentText;
+    if (!finalText.trim() || finalText.length > COMMENT_LIMIT) return;
 
     const commentsRef = collection(db, 'anime', animeId, 'episodes', episodeId, 'comments');
     addDocumentNonBlocking(commentsRef, {
@@ -398,7 +440,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       userName: profile.username,
       userDisplayName: profile.displayName || profile.username,
       episodeId,
-      text: text.trim(),
+      text: finalText.trim(),
       parentId: parentId || null,
       upvotes: 0,
       downvotes: 0,
@@ -645,11 +687,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       profile={profile} 
                       isAdminUser={isAdminUser} 
                       onVote={handleVote}
-                      onReply={(pid, name, isReply) => { /* Reply handling code if needed */ }}
+                      onReply={(pid, text) => handlePostComment(pid, text)}
                       onReport={openReportCommentDialog}
                       language={language}
                       t={t}
                       userVotes={userVotes}
+                      replies={comments?.filter(r => r.parentId === c.id)}
+                      allComments={comments || []}
                     />
                   </div>
                 ))}
