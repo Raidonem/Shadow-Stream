@@ -49,17 +49,19 @@ function SearchResults() {
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
 
-  // Queries
+  // Anime Query
   const animeQuery = useMemoFirebase(() => {
     if (!db || searchType !== 'anime') return null;
     return query(collection(db, 'anime'));
   }, [db, searchType]);
 
+  // Users Query
   const usersQuery = useMemoFirebase(() => {
     if (!db || searchType !== 'users') return null;
     return query(collection(db, 'users'), where('isPublic', '==', true), limit(50));
   }, [db, searchType]);
 
+  // Avatars Query for resolution
   const avatarsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
@@ -72,7 +74,7 @@ function SearchResults() {
   const availableYears = useMemo(() => {
     if (!animeList) return [];
     const years = Array.from(new Set(animeList.map(a => a.releaseYear)));
-    return years.sort((a, b) => b - a);
+    return (years as number[]).sort((a, b) => b - a);
   }, [animeList]);
 
   const allGenres = Object.keys(translations.en.tags) as GenreKey[];
@@ -251,7 +253,7 @@ function SearchResults() {
                 <SortAsc className="h-3 w-3" />
                 {language === 'ar' ? 'ترتيب حسب' : 'Sort By'}
               </label>
-              <Select value={sortBy} onValueChange={(val: SortOption) => setSortBy(val)}>
+              <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
                 <SelectTrigger className="rounded-xl border-none bg-secondary/50 shadow-none">
                   <SelectValue />
                 </SelectTrigger>
