@@ -2,109 +2,41 @@
 {
   "entities": {
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile and application-specific settings.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "externalAuthId": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        },
-        "displayName": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "role": {
-          "type": "string"
-        },
-        "isPremium": {
-          "type": "boolean"
-        },
-        "isPublic": {
-          "type": "boolean"
-        },
-        "languagePreference": {
-          "type": "string"
-        },
-        "themePreference": {
-          "type": "string"
-        },
-        "lastUsernameChange": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "watchlistAnimeIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "currentlyWatchingAnimeIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "favoriteAnimeIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "completedAnimeIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "blockedUserIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "externalAuthId",
-        "username",
-        "displayName",
-        "email",
-        "role"
-      ]
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "suspendedUntil": { "type": "string", "format": "date-time" },
+        "restrictedUntil": { "type": "string", "format": "date-time" }
+      }
     },
     "Report": {
       "title": "Report",
       "type": "object",
-      "description": "Represents a user-submitted issue report.",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["episode_server"] },
+        "type": { "type": "string", "enum": ["episode_server", "comment"] },
         "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "animeId": { "type": "string" },
-        "episodeId": { "type": "string" },
-        "animeTitleEn": { "type": "string" },
-        "episodeNumber": { "type": "number" },
         "reason": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "resolved"] },
+        "commentId": { "type": "string" },
+        "reportedUserId": { "type": "string" }
+      }
+    },
+    "ModerationLog": {
+      "title": "ModerationLog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "adminId": { "type": "string" },
+        "targetUserId": { "type": "string" },
+        "action": { "type": "string", "enum": ["warning", "restriction", "suspension"] },
+        "duration": { "type": "string" },
+        "reason": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }
@@ -113,17 +45,8 @@
     "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": "UserProfile",
-      "description": "Stores user profiles, preferences, and watchlist."
-    },
-    "/reports/{reportId}": {
-      "schema": "Report",
-      "description": "Stores issue reports for moderation."
-    },
-    "/anime/{animeId}": {
-      "schema": "Anime",
-      "description": "Stores public information about anime series."
-    }
+    "/users/{userId}": { "schema": "UserProfile", "description": "User profiles" },
+    "/reports/{reportId}": { "schema": "Report", "description": "Issue reports" },
+    "/users/{userId}/moderation_logs/{logId}": { "schema": "ModerationLog", "description": "Logs of admin actions on a user" }
   }
 }

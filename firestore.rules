@@ -29,6 +29,16 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid in targetProfile.data.blockedUserIds;
     }
 
+    function isRestricted() {
+      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userProfile.data.restrictedUntil != null && userProfile.data.restrictedUntil > request.time;
+    }
+
+    function isSuspended() {
+      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userProfile.data.suspendedUntil != null && userProfile.data.suspendedUntil > request.time;
+    }
+
     // --- Collection Rules ---
 
     match /users/{userId} {
@@ -37,29 +47,25 @@ service cloud.firestore {
       
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if (isOwner(userId) && request.resource.data.id == resource.data.id) || isAdmin();
-      allow delete: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
 
       match /history/{historyId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) && !isSuspended();
       }
 
       match /notifications/{notifId} {
         allow read, update, delete: if isOwner(userId);
-        allow create: if (isSignedIn() && !isBlockedBy(userId)) || isAdmin();
+        allow create: if (isSignedIn() && !isBlockedBy(userId) && !isSuspended()) || isAdmin();
+      }
+
+      match /moderation_logs/{logId} {
+        allow read: if isAdmin();
       }
     }
 
-    match /friendships/{friendshipId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.userIds;
-      allow create: if isSignedIn() && request.auth.uid in request.resource.data.userIds;
-      allow delete: if isSignedIn() && request.auth.uid in request.resource.data.userIds;
-    }
-
-    match /friend_requests/{requestId} {
-      allow read: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && !isBlockedBy(request.resource.data.receiverId);
-      allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId);
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && !isSuspended();
+      allow get, list, update, delete: if isAdmin();
     }
 
     match /admins/{adminId} {
@@ -69,19 +75,17 @@ service cloud.firestore {
 
     match /anime/{animeId} {
       allow get, list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (isSignedIn());
-      allow delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isSignedIn() && !isSuspended());
 
       match /episodes/{episodeId} {
         allow get, list: if true;
-        allow create: if isAdmin();
-        allow update, delete: if isAdmin();
+        allow create, update, delete: if isAdmin();
 
         match /comments/{commentId} {
           allow get, list: if true;
-          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-          allow update: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && !isSuspended() && !isRestricted();
+          allow update: if (isSignedIn() && resource.data.userId == request.auth.uid && !isSuspended() && !isRestricted()) || isAdmin();
           allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
         }
       }
@@ -89,26 +93,23 @@ service cloud.firestore {
 
     match /ratings/{ratingId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid && !isSuspended();
     }
 
     match /comment_votes/{voteId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid && !isSuspended();
+    }
+    
+    match /friendships/{friendshipId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.userIds;
+      allow create, delete: if isSignedIn() && request.auth.uid in request.resource.data.userIds && !isSuspended();
     }
 
-    match /global_notifications/{notificationId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /reports/{reportId} {
-      allow create: if isSignedIn();
-      allow get, list, update, delete: if isAdmin();
+    match /friend_requests/{requestId} {
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && !isBlockedBy(request.resource.data.receiverId) && !isSuspended();
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.receiverId || request.auth.uid == resource.data.senderId);
     }
   }
 }

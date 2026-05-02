@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -32,7 +33,8 @@ import {
   ChevronDown,
   ChevronUp,
   MoreVertical,
-  AlertTriangle
+  AlertTriangle,
+  Flag
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -42,7 +44,7 @@ import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
-import { EpisodeServer, Comment, Report } from '../../../lib/types';
+import { EpisodeServer, Comment, Report, UserProfile } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import Image from 'next/image';
@@ -71,6 +73,7 @@ function CommentItem({
   isAdminUser, 
   onVote, 
   onReply, 
+  onReport,
   replies, 
   language,
   t,
@@ -82,6 +85,7 @@ function CommentItem({
   isAdminUser: boolean; 
   onVote: (commentId: string, direction: 'up' | 'down') => void;
   onReply: (parentId: string, targetUserName: string, isReply: boolean) => void;
+  onReport: (comment: Comment) => void;
   replies?: Comment[];
   language: string;
   t: (key: any) => string;
@@ -185,7 +189,12 @@ function CommentItem({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-none shadow-xl">
-                  {/* Reporting option for comments could go here in future */}
+                  {!isOwnComment && (
+                    <DropdownMenuItem className="text-destructive gap-2 cursor-pointer" onClick={() => onReport(comment)}>
+                      <Flag className="h-4 w-4" />
+                      {t('reportComment')}
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -264,6 +273,7 @@ function CommentItem({
               isAdminUser={isAdminUser} 
               onVote={onVote}
               onReply={onReply}
+              onReport={onReport}
               language={language}
               t={t}
               userVotes={userVotes}
@@ -300,6 +310,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const [reportReason, setReportReason] = useState('');
   const [isReporting, setIsReporting] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  
+  const [reportingComment, setReportingComment] = useState<Comment | null>(null);
+  const [commentReportReason, setCommentReportReason] = useState('');
+  const [isCommentReportDialogOpen, setIsCommentReportDialogOpen] = useState(false);
   
   const loadedEpisodeId = useRef<string | null>(null);
 
@@ -338,7 +352,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
   }, [user, db]);
-  const { data: profile } = useDoc(profileRef);
+  const { data: profile } = useDoc<UserProfile>(profileRef);
 
   const adminRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -346,6 +360,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   }, [user, db]);
   const { data: adminDoc } = useDoc(adminRef);
   const isAdminUser = !!adminDoc;
+
+  const isRestricted = profile?.restrictedUntil && profile.restrictedUntil.toDate() > new Date();
 
   const animeTitle = language === 'ar' ? anime?.titleAr : anime?.titleEn;
   const epTitle = language === 'ar' ? episode?.titleAr : episode?.titleEn;
@@ -365,11 +381,20 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const handlePostComment = async (parentId?: string) => {
     if (!user || !animeId || !episodeId || !profile || !db) return;
     
+    if (isRestricted) {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: t('restrictedUntil').replace('{date}', profile.restrictedUntil.toDate().toLocaleString())
+      });
+      return;
+    }
+
     const text = parentId ? '' : commentText;
     if (!text.trim() || text.length > COMMENT_LIMIT) return;
 
     const commentsRef = collection(db, 'anime', animeId, 'episodes', episodeId, 'comments');
-    await addDocumentNonBlocking(commentsRef, {
+    addDocumentNonBlocking(commentsRef, {
       userId: user.uid,
       userName: profile.username,
       userDisplayName: profile.displayName || profile.username,
@@ -432,7 +457,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     setIsReporting(true);
 
     try {
-      await addDocumentNonBlocking(collection(db, 'reports'), {
+      addDocumentNonBlocking(collection(db, 'reports'), {
         type: 'episode_server',
         userId: user.uid,
         userName: profile?.username || 'user',
@@ -450,6 +475,41 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     } finally {
       setIsReporting(false);
     }
+  };
+
+  const handleReportComment = async () => {
+    if (!user || !db || !animeId || !episodeId || !reportingComment || !commentReportReason.trim()) return;
+    setIsReporting(true);
+
+    try {
+      addDocumentNonBlocking(collection(db, 'reports'), {
+        type: 'comment',
+        userId: user.uid,
+        userName: profile?.username || 'user',
+        animeId,
+        episodeId,
+        animeTitleEn: anime?.titleEn,
+        episodeNumber: episode?.episodeNumber,
+        commentId: reportingComment.id,
+        commentText: reportingComment.text,
+        reportedUserId: reportingComment.userId,
+        reportedUserName: reportingComment.userName,
+        reason: commentReportReason.trim(),
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+      toast({ title: t('reportSent') });
+      setCommentReportReason('');
+      setReportingComment(null);
+      setIsCommentReportDialogOpen(false);
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  const openReportCommentDialog = (comment: Comment) => {
+    setReportingComment(comment);
+    setIsCommentReportDialogOpen(true);
   };
 
   if (isEpLoading || isAnimeLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -554,7 +614,17 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
             <section className="space-y-6 pt-8">
               <div className="flex items-center gap-2"><MessageSquare className="h-6 w-6 text-accent" /><h2 className="font-headline text-2xl font-bold">{t('comments')} ({comments?.length || 0})</h2></div>
-              {user ? (
+              
+              {isRestricted && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                  <p className="text-sm font-medium text-destructive">
+                    {t('restrictedUntil').replace('{date}', profile.restrictedUntil.toDate().toLocaleString())}
+                  </p>
+                </div>
+              )}
+
+              {user && !isRestricted ? (
                 <div className="flex gap-4">
                   <Avatar className="h-10 w-10 shrink-0"><AvatarFallback>{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback></Avatar>
                   <div className="flex-1 space-y-2 relative">
@@ -571,7 +641,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : !user && (
                 <div className="rounded-xl bg-secondary/30 p-8 text-center"><p className="text-muted-foreground mb-4">{language === 'ar' ? 'يجب عليك تسجيل الدخول للتعليق.' : "You must be logged in to comment."}</p><Button asChild variant="outline"><Link href="/login">{t('login')}</Link></Button></div>
               )}
 
@@ -585,6 +655,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       isAdminUser={isAdminUser} 
                       onVote={handleVote}
                       onReply={(pid, name, isReply) => { /* Reply handling code if needed */ }}
+                      onReport={openReportCommentDialog}
                       language={language}
                       t={t}
                       userVotes={userVotes}
@@ -618,6 +689,42 @@ function WatchContent({ episodeId }: { episodeId: string }) {
           </aside>
         </div>
       </main>
+
+      {/* Comment Report Dialog */}
+      <Dialog open={isCommentReportDialogOpen} onOpenChange={setIsCommentReportDialogOpen}>
+        <DialogContent className="bg-card border-none">
+          <DialogHeader>
+            <DialogTitle>{t('reportComment')}</DialogTitle>
+            <DialogDescription>
+              {language === 'ar' ? 'لماذا تبلغ عن هذا التعليق؟' : 'Why are you reporting this comment?'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg bg-secondary/30 p-3 border text-sm italic text-muted-foreground">
+              "{reportingComment?.text}"
+            </div>
+            <Select value={commentReportReason} onValueChange={setCommentReportReason}>
+              <SelectTrigger className="rounded-xl bg-secondary/50 border-none">
+                <SelectValue placeholder={t('reportReason')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Spam">Spam</SelectItem>
+                <SelectItem value="Harassment">Harassment</SelectItem>
+                <SelectItem value="Hate Speech">Hate Speech</SelectItem>
+                <SelectItem value="Spoilers">Spoilers</SelectItem>
+                <SelectItem value="Inappropriate Content">Inappropriate Content</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button className="rounded-xl gap-2" onClick={handleReportComment} disabled={!commentReportReason || isReporting}>
+              {isReporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />}
+              {language === 'ar' ? 'إرسال البلاغ' : 'Send Report'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

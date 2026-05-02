@@ -42,13 +42,15 @@ export interface UserProfile {
   completedAnimeIds: string[];
   favoriteEpisodeIds: string[];
   blockedUserIds: string[];
+  suspendedUntil?: any;
+  restrictedUntil?: any;
   createdAt: any;
   updatedAt: any;
 }
 
 export interface Report {
   id: string;
-  type: 'episode_server';
+  type: 'episode_server' | 'comment';
   userId: string;
   userName: string;
   animeId: string;
@@ -57,6 +59,22 @@ export interface Report {
   episodeNumber?: number;
   reason: string;
   status: 'pending' | 'resolved';
+  createdAt: any;
+  // Specific for comment reports
+  commentId?: string;
+  commentText?: string;
+  reportedUserId?: string;
+  reportedUserName?: string;
+}
+
+export interface ModerationLog {
+  id: string;
+  adminId: string;
+  adminName: string;
+  targetUserId: string;
+  action: 'warning' | 'restriction' | 'suspension';
+  duration?: string;
+  reason: string;
   createdAt: any;
 }
 
@@ -107,11 +125,12 @@ export interface GlobalNotification {
 
 export interface UserNotification {
   id: string;
-  type: 'friend_request' | 'friend_accepted' | 'comment_reply' | 'comment_mention' | 'comment_like' | 'comment_dislike';
+  type: 'friend_request' | 'friend_accepted' | 'comment_reply' | 'comment_mention' | 'comment_like' | 'comment_dislike' | 'warning' | 'restriction' | 'suspension';
   fromId: string;
   fromName: string;
   messageEn: string;
   messageAr: string;
+  customMessage?: string;
   link: string;
   read: boolean;
   createdAt: any;
