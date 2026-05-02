@@ -73,6 +73,16 @@ service cloud.firestore {
       allow list, create, update, delete: if isAdmin();
     }
 
+    match /avatars/{avatarId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /global_notifications/{notifId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     match /anime/{animeId} {
       allow get, list: if true;
       allow create, delete: if isAdmin();
@@ -109,7 +119,7 @@ service cloud.firestore {
     match /friend_requests/{requestId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && !isBlockedBy(request.resource.data.receiverId) && !isSuspended();
-      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.receiverId || request.auth.uid == resource.data.senderId);
+      allow update, delete: if isSignedIn() && (request.auth.uid == receiverId || request.auth.uid == senderId);
     }
   }
 }

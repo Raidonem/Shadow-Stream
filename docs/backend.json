@@ -10,8 +10,59 @@
         "displayName": { "type": "string" },
         "email": { "type": "string" },
         "role": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "avatarId": { "type": "string" },
         "suspendedUntil": { "type": "string", "format": "date-time" },
-        "restrictedUntil": { "type": "string", "format": "date-time" }
+        "restrictedUntil": { "type": "string", "format": "date-time" },
+        "watchlistAnimeIds": { "type": "array", "items": { "type": "string" } },
+        "currentlyWatchingAnimeIds": { "type": "array", "items": { "type": "string" } },
+        "favoriteAnimeIds": { "type": "array", "items": { "type": "string" } },
+        "completedAnimeIds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Anime": {
+      "title": "Anime",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "descriptionEn": { "type": "string" },
+        "descriptionAr": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "bannerImage": { "type": "string" },
+        "genres": { "type": "array", "items": { "type": "string" } },
+        "rating": { "type": "number" },
+        "views": { "type": "number" },
+        "releaseYear": { "type": "number" },
+        "status": { "type": "string", "enum": ["Airing", "Finished"] },
+        "type": { "type": "string" },
+        "season": { "type": "string" }
+      }
+    },
+    "Episode": {
+      "title": "Episode",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "animeId": { "type": "string" },
+        "episodeNumber": { "type": "number" },
+        "titleEn": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "duration": { "type": "string" },
+        "servers": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string" },
+              "lang": { "type": "string" }
+            }
+          } 
+        }
       }
     },
     "Report": {
@@ -39,6 +90,29 @@
         "reason": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "AvatarItem": {
+      "title": "AvatarItem",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GlobalNotification": {
+      "title": "GlobalNotification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "animeId": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "animeTitleEn": { "type": "string" },
+        "animeTitleAr": { "type": "string" },
+        "episodeNumber": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -46,7 +120,11 @@
   },
   "firestore": {
     "/users/{userId}": { "schema": "UserProfile", "description": "User profiles" },
+    "/anime/{animeId}": { "schema": "Anime", "description": "Anime catalog" },
+    "/anime/{animeId}/episodes/{episodeId}": { "schema": "Episode", "description": "Anime episodes" },
     "/reports/{reportId}": { "schema": "Report", "description": "Issue reports" },
-    "/users/{userId}/moderation_logs/{logId}": { "schema": "ModerationLog", "description": "Logs of admin actions on a user" }
+    "/users/{userId}/moderation_logs/{logId}": { "schema": "ModerationLog", "description": "Logs of admin actions" },
+    "/avatars/{avatarId}": { "schema": "AvatarItem", "description": "Official avatar options" },
+    "/global_notifications/{notifId}": { "schema": "GlobalNotification", "description": "System-wide notifications" }
   }
 }
