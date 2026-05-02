@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -9,6 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avat
 import { Textarea } from '../../../components/ui/textarea';
 import { Badge } from '../../../components/ui/badge';
 import { ScrollArea } from '../../../components/ui/scroll-area';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "../../../components/ui/select";
 import { 
   MessageSquare,
   Send,
