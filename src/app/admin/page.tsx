@@ -40,7 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy, limit, Firestore } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
@@ -59,7 +59,7 @@ import {
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { useLanguage } from '../../components/providers/LanguageContext';
 
-function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
+function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
   const { toast } = useToast();
   const { language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,20 +108,23 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
       duration: ep.duration
     });
     setServers(ep.servers || []);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAddEpisode = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !anime.id || servers.length === 0) {
+    if (!db || !anime.id) return;
+    
+    if (servers.length === 0) {
       toast({ title: "Error", description: "Add at least one server.", variant: "destructive" });
       return;
     }
+    
     setIsSubmitting(true);
 
     const epNum = parseInt(newEpisode.episodeNumber);
-    const epColRef = collection(db, 'anime', anime.id, 'episodes');
-    const epDocRef = editingEpisodeId ? doc(db, 'anime', anime.id, 'episodes', editingEpisodeId) : doc(epColRef);
+    const epDocRef = editingEpisodeId 
+      ? doc(db, 'anime', anime.id, 'episodes', editingEpisodeId) 
+      : doc(collection(db, 'anime', anime.id, 'episodes'));
     
     const episodeData = {
       ...newEpisode,
@@ -163,8 +166,11 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
   };
 
   const handleDeleteEpisode = (id: string) => {
-    if (!confirm("Are you sure you want to delete this episode?")) return;
-    deleteDocumentNonBlocking(doc(db, 'anime', anime.id, 'episodes', id));
+    if (!db || !anime.id || !id) return;
+    if (!window.confirm("Are you sure you want to delete this episode?")) return;
+    
+    const epRef = doc(db, 'anime', anime.id, 'episodes', id);
+    deleteDocumentNonBlocking(epRef);
     toast({ title: "Episode Deleted" });
   };
 
@@ -259,9 +265,9 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
                       <span className="text-accent">EP {ep.episodeNumber}</span>
                       <span className="truncate">{ep.titleEn}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{ep.servers.length} Servers • {ep.duration}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{ep.servers?.length || 0} Servers • {ep.duration}</p>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 transition-opacity">
                     <Button size="icon" variant="ghost" className="h-10 w-10 text-accent hover:bg-accent/10" onClick={() => handleEditEpisode(ep)}>
                       <Edit2 className="h-5 w-5" />
                     </Button>
@@ -410,7 +416,8 @@ export default function AdminPage() {
   };
 
   const handleDeleteAnime = (id: string) => {
-    if (!db || !confirm("Delete this series and all associated episodes?")) return;
+    if (!db) return;
+    if (!window.confirm("Delete this series and all associated episodes?")) return;
     deleteDocumentNonBlocking(doc(db, 'anime', id));
     toast({ title: "Anime Deleted" });
   };
@@ -430,7 +437,8 @@ export default function AdminPage() {
   };
 
   const handleDeleteAvatar = (id: string) => {
-    if (!db || !confirm("Delete this avatar option?")) return;
+    if (!db) return;
+    if (!window.confirm("Delete this avatar option?")) return;
     deleteDocumentNonBlocking(doc(db, 'avatars', id));
     toast({ title: "Avatar deleted" });
   };
@@ -442,7 +450,8 @@ export default function AdminPage() {
   };
 
   const handleDeleteReport = (reportId: string) => {
-    if (!db || !confirm("Delete this report?")) return;
+    if (!db) return;
+    if (!window.confirm("Delete this report?")) return;
     deleteDocumentNonBlocking(doc(db, 'reports', reportId));
     toast({ title: "Report Deleted" });
   };
