@@ -36,7 +36,10 @@ import {
   Ban,
   Slash,
   AlertCircle,
-  Image as ImageIcon
+  ImageIcon,
+  PlayCircle,
+  Globe,
+  Settings
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -47,7 +50,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlo
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
 import { cn } from '../../lib/utils';
-import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report, UserProfile, AvatarItem } from '../../lib/types';
+import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report, UserProfile, AvatarItem, Episode } from '../../lib/types';
 import Image from 'next/image';
 import { addDays } from 'date-fns';
 import {
@@ -56,8 +59,181 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogTrigger
 } from "../../components/ui/dialog";
+import { ScrollArea } from "../../components/ui/scroll-area";
+
+function EpisodeManager({ anime, db }: { anime: Anime; db: any }) {
+  const { toast } = useToast();
+  const { language } = useLanguage ? { language: 'en' } : { language: 'en' }; // Fallback
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newEpisode, setNewEpisode] = useState({
+    titleEn: '',
+    titleAr: '',
+    episodeNumber: '',
+    thumbnail: '',
+    duration: '24:00'
+  });
+
+  const [servers, setServers] = useState<EpisodeServer[]>([]);
+  const [newServer, setNewServer] = useState<EpisodeServer>({ name: '', url: '', lang: 'en' });
+
+  const episodesQuery = useMemoFirebase(() => {
+    if (!db || !anime.id) return null;
+    return query(collection(db, 'anime', anime.id, 'episodes'), orderBy('episodeNumber', 'asc'));
+  }, [db, anime.id]);
+  const { data: episodes, isLoading } = useCollection<Episode>(episodesQuery);
+
+  const handleAddServer = () => {
+    if (!newServer.name || !newServer.url) return;
+    setServers([...servers, newServer]);
+    setNewServer({ name: '', url: '', lang: 'en' });
+  };
+
+  const handleRemoveServer = (index: number) => {
+    setServers(servers.filter((_, i) => i !== index));
+  };
+
+  const handleAddEpisode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !anime.id || servers.length === 0) {
+      toast({ title: "Error", description: "Add at least one server.", variant: "destructive" });
+      return;
+    }
+    setIsSubmitting(true);
+
+    const episodeData = {
+      ...newEpisode,
+      episodeNumber: parseInt(newEpisode.episodeNumber),
+      animeId: anime.id,
+      servers,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    try {
+      await addDocumentNonBlocking(collection(db, 'anime', anime.id, 'episodes'), episodeData);
+      
+      // Update anime's last episode and updatedAt
+      updateDocumentNonBlocking(doc(db, 'anime', anime.id), {
+        lastEpisodeNumber: parseInt(newEpisode.episodeNumber),
+        updatedAt: serverTimestamp()
+      });
+
+      // Add to global notifications for trending feed/bell
+      addDocumentNonBlocking(collection(db, 'global_notifications'), {
+        type: 'new_episode',
+        animeId: anime.id,
+        animeTitleEn: anime.titleEn,
+        animeTitleAr: anime.titleAr,
+        episodeNumber: parseInt(newEpisode.episodeNumber),
+        createdAt: serverTimestamp()
+      });
+
+      toast({ title: "Episode Added" });
+      setNewEpisode({ titleEn: '', titleAr: '', episodeNumber: '', thumbnail: '', duration: '24:00' });
+      setServers([]);
+    } catch (err: any) {
+      toast({ title: "Failed to add", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteEpisode = (id: string) => {
+    if (!confirm("Delete this episode?")) return;
+    deleteDocumentNonBlocking(doc(db, 'anime', anime.id, 'episodes', id));
+    toast({ title: "Episode Deleted" });
+  };
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="space-y-6">
+        <h3 className="font-bold flex items-center gap-2"><Plus className="h-4 w-4" /> Add Episode</h3>
+        <form onSubmit={handleAddEpisode} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Number</Label>
+              <Input type="number" value={newEpisode.episodeNumber} onChange={e => setNewEpisode({...newEpisode, episodeNumber: e.target.value})} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <Input value={newEpisode.duration} onChange={e => setNewEpisode({...newEpisode, duration: e.target.value})} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Title (EN)</Label>
+              <Input value={newEpisode.titleEn} onChange={e => setNewEpisode({...newEpisode, titleEn: e.target.value})} required />
+            </div>
+            <div className="space-y-2">
+              <Label>العنوان (AR)</Label>
+              <Input dir="rtl" value={newEpisode.titleAr} onChange={e => setNewEpisode({...newEpisode, titleAr: e.target.value})} required />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Thumbnail URL</Label>
+            <Input value={newEpisode.thumbnail} onChange={e => setNewEpisode({...newEpisode, thumbnail: e.target.value})} placeholder="https://..." />
+          </div>
+
+          <div className="p-4 rounded-xl bg-secondary/50 space-y-4">
+            <Label className="font-bold">Streaming Servers</Label>
+            <div className="flex gap-2">
+              <Input placeholder="Server Name" value={newServer.name} onChange={e => setNewServer({...newServer, name: e.target.value})} />
+              <Select value={newServer.lang} onValueChange={(v: any) => setNewServer({...newServer, lang: v})}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="en">EN</SelectItem><SelectItem value="ar">AR</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Input placeholder="URL" value={newServer.url} onChange={e => setNewServer({...newServer, url: e.target.value})} />
+              <Button type="button" onClick={handleAddServer} size="icon" variant="secondary"><Plus className="h-4 w-4" /></Button>
+            </div>
+            <div className="space-y-1">
+              {servers.map((s, i) => (
+                <div key={i} className="flex items-center justify-between bg-background p-2 rounded-lg border text-xs">
+                  <span>{s.name} ({s.lang.toUpperCase()})</span>
+                  <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleRemoveServer(i)}><Trash2 className="h-3 w-3" /></Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full rounded-xl" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Episode"}
+          </Button>
+        </form>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="font-bold flex items-center gap-2"><PlayCircle className="h-4 w-4" /> Existing Episodes</h3>
+        <ScrollArea className="h-[400px] rounded-xl border p-4 bg-secondary/10">
+          {isLoading ? (
+            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin opacity-20" /></div>
+          ) : episodes?.length === 0 ? (
+            <p className="text-center text-muted-foreground italic p-8">No episodes found.</p>
+          ) : (
+            <div className="space-y-2">
+              {episodes?.map(ep => (
+                <div key={ep.id} className="flex items-center justify-between p-3 rounded-lg bg-card border shadow-sm">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm">EP {ep.episodeNumber}: {ep.titleEn}</p>
+                    <p className="text-[10px] text-muted-foreground">{ep.servers.length} Servers • {ep.duration}</p>
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEpisode(ep.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -74,6 +250,8 @@ export default function AdminPage() {
   const [actionReason, setActionReason] = useState('');
   const [actionDuration, setActionDuration] = useState('1');
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
+
+  const [managingEpisodesAnime, setManagingEpisodesAnime] = useState<Anime | null>(null);
 
   const [animeData, setAnimeData] = useState({
     titleEn: '',
@@ -103,7 +281,7 @@ export default function AdminPage() {
     if (!db) return null;
     return query(collection(db, 'anime'), orderBy('updatedAt', 'desc'));
   }, [db]);
-  const { data: allAnime } = useCollection(animeQuery);
+  const { data: allAnime } = useCollection<Anime>(animeQuery);
 
   const reportsQuery = useMemoFirebase(() => {
     if (!db || isAdminChecking || !adminDoc) return null;
@@ -355,10 +533,23 @@ export default function AdminPage() {
                           <Input dir="rtl" className="text-right" value={animeData.titleAr} onChange={(e) => setAnimeData({...animeData, titleAr: e.target.value})} required />
                         </div>
                       </div>
+                      
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Cover Image URL</Label>
+                          <Input placeholder="https://..." value={animeData.coverImage} onChange={(e) => setAnimeData({...animeData, coverImage: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Banner Image URL</Label>
+                          <Input placeholder="https://..." value={animeData.bannerImage} onChange={(e) => setAnimeData({...animeData, bannerImage: e.target.value})} required />
+                        </div>
+                      </div>
+
                       <div className="grid gap-6 md:grid-cols-2">
                         <Textarea placeholder="Description EN" value={animeData.descriptionEn} onChange={(e) => setAnimeData({...animeData, descriptionEn: e.target.value})} required />
                         <Textarea dir="rtl" className="text-right" placeholder="الوصف بالعربية" value={animeData.descriptionAr} onChange={(e) => setAnimeData({...animeData, descriptionAr: e.target.value})} required />
                       </div>
+                      
                       <div className="space-y-3">
                         <Label>Genres</Label>
                         <div className="flex flex-wrap gap-2">
@@ -369,7 +560,8 @@ export default function AdminPage() {
                           ))}
                         </div>
                       </div>
-                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+
+                      <div className="grid gap-6 grid-cols-2 md:grid-cols-5">
                         <div className="space-y-2">
                           <Label>Year</Label>
                           <Input type="number" value={animeData.releaseYear} onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})} />
@@ -378,38 +570,68 @@ export default function AdminPage() {
                           <Label>Status</Label>
                           <Select value={animeData.status} onValueChange={(val: any) => setAnimeData({...animeData, status: val})}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="Airing">Airing</SelectItem><SelectItem value="Finished">Finished</SelectItem></SelectContent>
+                            <SelectContent>
+                              <SelectItem value="Airing">Airing</SelectItem>
+                              <SelectItem value="Finished">Finished</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
                           <Label>Type</Label>
                           <Select value={animeData.type} onValueChange={(val: any) => setAnimeData({...animeData, type: val})}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>{Object.entries(translations.en.animeTypes).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                            <SelectContent>
+                              {Object.entries(translations.en.animeTypes).map(([k,v]) => (
+                                <SelectItem key={k} value={k}>{v}</SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-2">
+                          <Label>Season</Label>
+                          <Select value={animeData.season} onValueChange={(val: any) => setAnimeData({...animeData, season: val})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(translations.en.animeSeasons).map(([k,v]) => (
+                                <SelectItem key={k} value={k}>{v}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Starting Views</Label>
+                          <Input type="number" value={animeData.views} onChange={(e) => setAnimeData({...animeData, views: e.target.value})} />
+                        </div>
                       </div>
+
                       <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold" disabled={isSubmitting}>
                         {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : editingAnimeId ? 'Update Anime' : 'Publish Anime'}
                       </Button>
                     </form>
                   </CardContent>
                 </Card>
+
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {allAnime?.map(anime => (
                     <Card key={anime.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-all">
                       <div className="relative aspect-video">
                         <Image src={(anime.bannerImage || anime.coverImage || '').trim() || 'https://picsum.photos/seed/placeholder/400/225'} alt={anime.titleEn} fill className="object-cover" />
                       </div>
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="min-w-0">
-                          <span className="font-bold block truncate">{anime.titleEn}</span>
-                          <span className="text-xs text-muted-foreground">{anime.releaseYear} • {translations.en.animeTypes[anime.type]}</span>
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0">
+                            <span className="font-bold block truncate">{anime.titleEn}</span>
+                            <span className="text-xs text-muted-foreground">{anime.releaseYear} • {translations.en.animeTypes[anime.type]}</span>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditAnime(anime)} className="h-8 w-8"><Edit2 className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteAnime(anime.id)}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditAnime(anime)} className="h-8 w-8"><Edit2 className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteAnime(anime.id)}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
+                        <Button variant="outline" className="w-full rounded-xl h-9 text-xs gap-2" onClick={() => setManagingEpisodesAnime(anime)}>
+                          <PlayCircle className="h-4 w-4" />
+                          Manage Episodes
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
@@ -613,6 +835,33 @@ export default function AdminPage() {
             <Button className="rounded-xl bg-accent" disabled={!actionReason.trim() || isSubmitting} onClick={handleExecuteAction}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
               Execute Action
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Episode Management Dialog */}
+      <Dialog open={!!managingEpisodesAnime} onOpenChange={(open) => !open && setManagingEpisodesAnime(null)}>
+        <DialogContent className="max-w-4xl bg-card border-none max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-accent" />
+              Manage Episodes: {managingEpisodesAnime?.titleEn}
+            </DialogTitle>
+            <DialogDescription>
+              Add servers and manage episodes for this series.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden py-4">
+            {managingEpisodesAnime && db && (
+              <EpisodeManager anime={managingEpisodesAnime} db={db} />
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" className="rounded-xl" onClick={() => setManagingEpisodesAnime(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
