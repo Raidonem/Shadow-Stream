@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase/index';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
@@ -24,6 +24,15 @@ export function NotificationBell() {
   const db = useFirestore();
   const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const [lastSeen, setLastSeen] = useState(0);
+
+  // Load last seen notification timestamp from local storage on mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const val = localStorage.getItem('last_notif_seen');
+      if (val) setLastSeen(parseInt(val));
+    }
+  }, []);
 
   // Global Notifications (New Episodes)
   const globalQuery = useMemoFirebase(() => {
@@ -43,13 +52,17 @@ export function NotificationBell() {
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
     return doc(db, 'users', user.uid);
-  }, [user, db]);
+  }, [user?.uid, db]);
 
-  const { data: profile } = useDoc<UserProfile>(profileRef);
+  const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(profileRef);
 
   // Merge and sort notifications
   const allNotifications = useMemo(() => {
-    if (!profile) return (personals || []).map(n => ({ ...n, category: 'personal' as const }));
+    // If profile is still loading, we don't know what they follow.
+    // Return only personals (which are private) to be safe and avoid showing irrelevant globals.
+    if (!profile) {
+      return (personals || []).map(n => ({ ...n, category: 'personal' as const }));
+    }
 
     // Create a set of all anime IDs the user is following/tracking
     const followedAnimeIds = new Set([
@@ -59,9 +72,9 @@ export function NotificationBell() {
       ...(profile.completedAnimeIds || [])
     ]);
 
-    // Only include global notifications for anime in the user's library
+    // STRICTOR FILTERING: Only include global notifications for anime actually in the user's library
     const filteredGlobals = (globals || []).filter(n => 
-      n.type === 'new_episode' && followedAnimeIds.has(n.animeId)
+      n.type === 'new_episode' && n.animeId && followedAnimeIds.has(n.animeId)
     );
 
     const merged = [
@@ -77,14 +90,15 @@ export function NotificationBell() {
   }, [globals, personals, profile]);
 
   const unreadCount = useMemo(() => {
-    const lastSeen = parseInt(localStorage.getItem('last_notif_seen') || '0');
     return allNotifications.filter(n => (n.createdAt?.seconds || 0) > lastSeen).length;
-  }, [allNotifications]);
+  }, [allNotifications, lastSeen]);
 
-  const handleOpen = () => {
-    setIsOpen(!isOpen);
-    if (allNotifications.length > 0) {
-      localStorage.setItem('last_notif_seen', allNotifications[0].createdAt?.seconds.toString() || '0');
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && allNotifications.length > 0) {
+      const latestTime = allNotifications[0].createdAt?.seconds || 0;
+      setLastSeen(latestTime);
+      localStorage.setItem('last_notif_seen', latestTime.toString());
     }
   };
 
@@ -104,10 +118,10 @@ export function NotificationBell() {
     }
   };
 
-  const isLoading = isGlobalsLoading || isPersonalsLoading;
+  const isLoading = isGlobalsLoading || isPersonalsLoading || isProfileLoading;
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={handleOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
           <Bell className="h-5 w-5" />
@@ -123,16 +137,16 @@ export function NotificationBell() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {isLoading ? (
-          <div className="flex p-4 justify-center"><Loader2 className="h-4 w-4 animate-spin" /></div>
+        {isLoading && allNotifications.length === 0 ? (
+          <div className="flex p-8 justify-center"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
         ) : allNotifications.length > 0 ? (
           <div className="max-h-96 overflow-y-auto">
             {allNotifications.map((n: any) => {
               if (n.category === 'global') {
                 const title = language === 'ar' ? n.animeTitleAr : n.animeTitleEn;
                 return (
-                  <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0">
-                    <Link href={`/watch/${n.episodeId}?animeId=${n.animeId}`} className="flex flex-col gap-1 p-3 hover:bg-secondary/50">
+                  <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0 focus:bg-secondary/50">
+                    <Link href={`/watch/${n.episodeId}?animeId=${n.animeId}`} className="flex flex-col gap-1 p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {getIcon(n.type)}
@@ -155,8 +169,8 @@ export function NotificationBell() {
                 );
               } else {
                 return (
-                  <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0">
-                    <Link href={n.link} className="flex flex-col gap-1 p-3 hover:bg-secondary/50">
+                  <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0 focus:bg-secondary/50">
+                    <Link href={n.link} className="flex flex-col gap-1 p-3">
                       <div className="flex items-start gap-2">
                         {getIcon(n.type)}
                         <div className="flex-1">
