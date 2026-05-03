@@ -67,10 +67,10 @@ import {
 
 const COMMENT_LIMIT = 100;
 
-function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: { 
+function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: { 
   animeId: string; 
   episodeId: string; 
-  currentAvg: number;
+  episodeDoc: Episode | null;
   userRatingDoc: Rating | null;
 }) {
   const db = useFirestore();
@@ -80,8 +80,18 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
   const [isRating, setIsRating] = useState(false);
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
+  // Calculate average from current snapshot to ensure immediate UI feedback
+  const currentAvg = useMemo(() => {
+    if (!episodeDoc) return 0;
+    if (episodeDoc.ratingCount && episodeDoc.ratingCount > 0) {
+      const avg = (episodeDoc.totalRatingSum || 0) / episodeDoc.ratingCount;
+      return Math.min(10, Math.max(0, avg));
+    }
+    return episodeDoc.rating || 0;
+  }, [episodeDoc]);
+
   const handleRate = async (value: number) => {
-    if (!user || !db || !animeId) {
+    if (!user || !db || !animeId || !episodeDoc) {
       toast({ title: "Login Required", description: "Sign in to rate episodes." });
       return;
     }
@@ -107,35 +117,33 @@ function EpisodeRatingSystem({ animeId, episodeId, currentAvg, userRatingDoc }: 
       }, { merge: true });
 
       // 2. Update Episode Aggregates
-      const episodeUpdate: any = {
-        ratingCount: increment(isUpdate ? 0 : 1),
-        totalRatingSum: increment(value - oldValue),
+      const deltaSum = value - oldValue;
+      const deltaCount = isUpdate ? 0 : 1;
+
+      const newCount = (episodeDoc.ratingCount || 0) + deltaCount;
+      const newSum = (episodeDoc.totalRatingSum || 0) + deltaSum;
+      const newEpAvg = newCount > 0 ? newSum / newCount : 0;
+
+      updateDocumentNonBlocking(episodeRef, {
+        ratingCount: increment(deltaCount),
+        totalRatingSum: increment(deltaSum),
+        rating: newEpAvg,
         updatedAt: serverTimestamp()
-      };
-      updateDocumentNonBlocking(episodeRef, episodeUpdate);
+      });
 
       // 3. Update averages across the series
+      // We fetch all episodes to get a comprehensive show average
       const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
-      const episodes = epsSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Episode));
+      const otherEpisodes = epsSnapshot.docs
+        .map(d => ({ ...d.data(), id: d.id } as Episode))
+        .filter(ep => ep.id !== episodeId);
       
-      let totalAnimeSum = 0;
-      let ratedEpsCount = 0;
+      let totalAnimeSum = newEpAvg;
+      let ratedEpsCount = newEpAvg > 0 ? 1 : 0;
 
-      episodes.forEach(ep => {
-        let epRating = ep.rating || 0;
-        
-        // Use locally calculated rating for the current episode to avoid snapshot delay
-        if (ep.id === episodeId) {
-          const newCount = (ep.ratingCount || 0) + (isUpdate ? 0 : 1);
-          const newSum = (ep.totalRatingSum || 0) + (value - oldValue);
-          epRating = newCount > 0 ? newSum / newCount : 0;
-          
-          // Apply individual update
-          updateDocumentNonBlocking(episodeRef, { rating: epRating });
-        }
-        
-        if (epRating > 0) {
-          totalAnimeSum += epRating;
+      otherEpisodes.forEach(ep => {
+        if (ep.rating && ep.rating > 0) {
+          totalAnimeSum += ep.rating;
           ratedEpsCount++;
         }
       });
@@ -750,7 +758,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             <EpisodeRatingSystem 
               animeId={animeId} 
               episodeId={episodeId} 
-              currentAvg={episode.rating || 0}
+              episodeDoc={episode}
               userRatingDoc={userRatingDoc || null}
             />
 
