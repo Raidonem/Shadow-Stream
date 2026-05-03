@@ -16,7 +16,7 @@ import {
 import { Button } from '../ui/button';
 import { useLanguage } from '../providers/LanguageContext';
 import Link from 'next/link';
-import { GlobalNotification, UserNotification } from '../../lib/types';
+import { GlobalNotification, UserNotification, UserProfile } from '../../lib/types';
 import { Badge } from '../ui/badge';
 
 export function NotificationBell() {
@@ -28,7 +28,7 @@ export function NotificationBell() {
   // Global Notifications (New Episodes)
   const globalQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(10));
+    return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(15));
   }, [db]);
 
   // Personal Notifications (Friend Requests, Replies, Likes, Mentions)
@@ -45,20 +45,36 @@ export function NotificationBell() {
     return doc(db, 'users', user.uid);
   }, [user, db]);
 
-  const { data: profile } = useDoc(profileRef);
+  const { data: profile } = useDoc<UserProfile>(profileRef);
 
   // Merge and sort notifications
   const allNotifications = useMemo(() => {
+    if (!profile) return (personals || []).map(n => ({ ...n, category: 'personal' as const }));
+
+    // Create a set of all anime IDs the user is following/tracking
+    const followedAnimeIds = new Set([
+      ...(profile.watchlistAnimeIds || []),
+      ...(profile.currentlyWatchingAnimeIds || []),
+      ...(profile.favoriteAnimeIds || []),
+      ...(profile.completedAnimeIds || [])
+    ]);
+
+    // Only include global notifications for anime in the user's library
+    const filteredGlobals = (globals || []).filter(n => 
+      n.type === 'new_episode' && followedAnimeIds.has(n.animeId)
+    );
+
     const merged = [
-      ...(globals || []).map(n => ({ ...n, category: 'global' as const })),
+      ...filteredGlobals.map(n => ({ ...n, category: 'global' as const })),
       ...(personals || []).map(n => ({ ...n, category: 'personal' as const }))
     ];
+
     return merged.sort((a, b) => {
       const timeA = a.createdAt?.seconds || 0;
       const timeB = b.createdAt?.seconds || 0;
       return timeB - timeA;
     }).slice(0, 20);
-  }, [globals, personals]);
+  }, [globals, personals, profile]);
 
   const unreadCount = useMemo(() => {
     const lastSeen = parseInt(localStorage.getItem('last_notif_seen') || '0');
@@ -81,6 +97,9 @@ export function NotificationBell() {
       case 'comment_dislike': return <ThumbsDown className="h-4 w-4 text-destructive" />;
       case 'friend_request': return <UserPlus className="h-4 w-4 text-green-500" />;
       case 'friend_accepted': return <Users className="h-4 w-4 text-accent" />;
+      case 'warning':
+      case 'restriction':
+      case 'suspension': return <Bell className="h-4 w-4 text-destructive" />;
       default: return <Bell className="h-4 w-4" />;
     }
   };
@@ -110,7 +129,6 @@ export function NotificationBell() {
           <div className="max-h-96 overflow-y-auto">
             {allNotifications.map((n: any) => {
               if (n.category === 'global') {
-                const isWatching = profile?.currentlyWatchingAnimeIds?.includes(n.animeId);
                 const title = language === 'ar' ? n.animeTitleAr : n.animeTitleEn;
                 return (
                   <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0">
@@ -125,11 +143,9 @@ export function NotificationBell() {
                             </p>
                           </div>
                         </div>
-                        {isWatching && (
-                          <Badge variant="outline" className="text-[9px] border-accent text-accent uppercase px-1 py-0 h-4">
-                            {t('watching')}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-[9px] border-accent text-accent uppercase px-1 py-0 h-4">
+                          {profile?.currentlyWatchingAnimeIds?.includes(n.animeId) ? t('watching') : 'Followed'}
+                        </Badge>
                       </div>
                       <span className="text-[10px] text-muted-foreground ml-6">
                         {n.createdAt?.toDate?.()?.toLocaleString() || 'Recently'}
