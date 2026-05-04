@@ -19,6 +19,8 @@ import Link from 'next/link';
 import { GlobalNotification, UserNotification, UserProfile } from '../../lib/types';
 import { Badge } from '../ui/badge';
 
+const RECENT_THRESHOLD_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
 export function NotificationBell() {
   const { user } = useUser();
   const db = useFirestore();
@@ -37,13 +39,13 @@ export function NotificationBell() {
   // Global Notifications (New Episodes)
   const globalQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(15));
+    return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(50));
   }, [db]);
 
   // Personal Notifications (Friend Requests, Replies, Likes, Mentions)
   const personalQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(15));
+    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(20));
   }, [db, user]);
 
   const { data: globals, isLoading: isGlobalsLoading } = useCollection<GlobalNotification>(globalQuery);
@@ -59,12 +61,10 @@ export function NotificationBell() {
   // Merge and sort notifications
   const allNotifications = useMemo(() => {
     // If profile is still loading, we don't know what they follow.
-    // Return only personals (which are private) to be safe and avoid showing irrelevant globals.
     if (!profile) {
       return (personals || []).map(n => ({ ...n, category: 'personal' as const }));
     }
 
-    // Create a set of all anime IDs the user is following/tracking
     const followedAnimeIds = new Set([
       ...(profile.watchlistAnimeIds || []),
       ...(profile.currentlyWatchingAnimeIds || []),
@@ -72,10 +72,32 @@ export function NotificationBell() {
       ...(profile.completedAnimeIds || [])
     ]);
 
-    // STRICTOR FILTERING: Only include global notifications for anime actually in the user's library
-    const filteredGlobals = (globals || []).filter(n => 
-      n.type === 'new_episode' && n.animeId && followedAnimeIds.has(n.animeId)
-    );
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const userJoinTime = profile.createdAt?.seconds || 0;
+
+    // 1. FILTER: Only global notifications for anime in user's library,
+    // created after the user joined, and within a recent window (7 days).
+    let filteredGlobals = (globals || []).filter(n => {
+      const createdAt = n.createdAt?.seconds || 0;
+      const isFollowed = n.type === 'new_episode' && n.animeId && followedAnimeIds.has(n.animeId);
+      const isAfterJoin = createdAt >= userJoinTime;
+      const isRecent = createdAt >= (nowSeconds - RECENT_THRESHOLD_SECONDS);
+      
+      return isFollowed && isAfterJoin && isRecent;
+    });
+
+    // 2. DEDUPLICATE: Only show the LATEST episode notification per anime.
+    // This prevents "Notification Spam" when a user follows a show with many recent updates.
+    const latestPerAnime = new Map<string, GlobalNotification>();
+    filteredGlobals.forEach(n => {
+      if (!n.animeId) return;
+      const existing = latestPerAnime.get(n.animeId);
+      if (!existing || (n.createdAt?.seconds || 0) > (existing.createdAt?.seconds || 0)) {
+        latestPerAnime.set(n.animeId, n);
+      }
+    });
+
+    filteredGlobals = Array.from(latestPerAnime.values());
 
     const merged = [
       ...filteredGlobals.map(n => ({ ...n, category: 'global' as const })),
