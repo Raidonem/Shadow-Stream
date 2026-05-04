@@ -132,7 +132,6 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
       });
 
       // 3. Update averages across the series
-      // We fetch all episodes to get a comprehensive show average
       const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
       const otherEpisodes = epsSnapshot.docs
         .map(d => ({ ...d.data(), id: d.id } as Episode))
@@ -595,6 +594,32 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [episode, language, isManualServerSelection]);
 
+  const getEpisodeThumbnail = (targetEp: Episode) => {
+    const banner = (anime?.bannerImage || '').trim();
+    const cover = (anime?.coverImage || '').trim();
+    const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
+
+    if (!targetEp) return fallback;
+    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
+    
+    if (!episodes || episodes.length === 0) return fallback;
+
+    const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
+    
+    const prev = sorted
+      .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
+      .reverse()[0];
+    
+    if (prev) return prev.thumbnail;
+
+    const next = sorted
+      .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
+    
+    if (next) return next.thumbnail;
+
+    return fallback;
+  };
+
   const handlePostComment = async (parentId?: string, text?: string) => {
     if (!user || !animeId || !episodeId || !profile || !db) return;
     
@@ -754,7 +779,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </Button>
             </div>
 
-            {/* Episode Rating Component */}
             <EpisodeRatingSystem 
               animeId={animeId} 
               episodeId={episodeId} 
@@ -899,10 +923,11 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 <div className="space-y-2">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const epAvg = ep.rating > 0 ? ep.rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
+                    const thumbnail = getEpisodeThumbnail(ep);
                     return (
                       <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}>
                         <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image src={(ep.thumbnail || anime.coverImage).trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
+                          <Image src={thumbnail.trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
@@ -923,7 +948,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         </div>
       </main>
 
-      {/* Comment Report Dialog */}
       <Dialog open={isCommentReportDialogOpen} onOpenChange={setIsCommentReportDialogOpen}>
         <DialogContent className="bg-card border-none">
           <DialogHeader>
