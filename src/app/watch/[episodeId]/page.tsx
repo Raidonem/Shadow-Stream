@@ -662,9 +662,16 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       const timer = setTimeout(() => {
         const element = document.getElementById(`ep-item-${episodeId}`);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Use scrollTo on the viewport specifically to avoid scrolling the whole page
+          const viewport = element.closest('[data-radix-scroll-area-viewport]');
+          if (viewport) {
+            viewport.scrollTo({
+              top: element.offsetTop - 12, // Small padding for top alignment
+              behavior: 'smooth'
+            });
+          }
         }
-      }, 200);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [episodeId, !!episodes]);
