@@ -30,7 +30,10 @@ import {
   Slash,
   Ban,
   ImageIcon,
-  AtSign
+  AtSign,
+  Flag,
+  ListFilter,
+  ChevronDown
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -39,9 +42,177 @@ import { useSearchParams } from 'next/navigation';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { differenceInDays } from 'date-fns';
-import { ModerationLog, UserProfile, AvatarItem } from '../../lib/types';
+import { ModerationLog, UserProfile, AvatarItem, Report } from '../../lib/types';
 import { cn } from '../../lib/utils';
 import Image from 'next/image';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../../components/ui/tooltip";
+import { ScrollArea } from '../../components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+
+function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports }: { 
+  targetUid: string; 
+  isAdminSession: boolean; 
+  moderationLogs: ModerationLog[] | null;
+  reports: Report[] | null;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'reported' | 'warning' | 'restriction' | 'suspension'>('all');
+  const { language, t } = useLanguage();
+
+  if (!isAdminSession) return null;
+
+  const warningCount = moderationLogs?.filter(l => l.action === 'warning').length || 0;
+  const restrictionCount = moderationLogs?.filter(l => l.action === 'restriction').length || 0;
+  const suspensionCount = moderationLogs?.filter(l => l.action === 'suspension').length || 0;
+  const reportCount = reports?.length || 0;
+
+  const combinedHistory = [
+    ...(moderationLogs || []).map(l => ({ ...l, entryType: 'log' as const })),
+    ...(reports || []).map(r => ({ 
+      id: r.id, 
+      action: 'reported' as const, 
+      reason: r.reason, 
+      createdAt: r.createdAt, 
+      entryType: 'report' as const,
+      adminName: r.resolvedBy || 'System',
+      details: r.commentText || `Issue: ${r.type}`
+    }))
+  ].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+  const filteredHistory = filter === 'all' 
+    ? combinedHistory 
+    : combinedHistory.filter(h => h.action === filter);
+
+  return (
+    <>
+      <TooltipProvider>
+        <button 
+          onClick={() => setIsOpen(true)}
+          className="flex items-center gap-1 hover:bg-accent/10 p-1 rounded-full transition-colors ml-2"
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+            </TooltipTrigger>
+            <TooltipContent>Reports: {reportCount}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+            </TooltipTrigger>
+            <TooltipContent>Warnings: {warningCount}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+            </TooltipTrigger>
+            <TooltipContent>Restrictions: {restrictionCount}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+            </TooltipTrigger>
+            <TooltipContent>Suspensions: {suspensionCount}</TooltipContent>
+          </Tooltip>
+        </button>
+      </TooltipProvider>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-2xl bg-card border-none rounded-3xl shadow-2xl overflow-hidden p-0">
+          <div className="h-1.5 bg-accent w-full" />
+          <DialogHeader className="p-6 pb-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="flex items-center gap-2 text-2xl font-headline">
+                  <Shield className="h-6 w-6 text-accent" />
+                  Moderation History
+                </DialogTitle>
+                <DialogDescription>Chronological log of reports and actions taken.</DialogDescription>
+              </div>
+              <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
+                <SelectTrigger className="w-40 rounded-xl bg-secondary border-none">
+                  <ListFilter className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  <SelectItem value="reported">Reports</SelectItem>
+                  <SelectItem value="warning">Warnings</SelectItem>
+                  <SelectItem value="restriction">Restrictions</SelectItem>
+                  <SelectItem value="suspension">Suspensions</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </DialogHeader>
+
+          <ScrollArea className="h-[60vh] p-6 pt-4">
+            <div className="space-y-4">
+              {filteredHistory.length > 0 ? filteredHistory.map((item, idx) => (
+                <div key={item.id} className="flex gap-4 items-start p-4 rounded-2xl bg-secondary/20 border group hover:border-accent/30 transition-colors">
+                  <div className={cn(
+                    "mt-1 p-2 rounded-full",
+                    item.action === 'reported' ? "bg-blue-500/10 text-blue-500" :
+                    item.action === 'warning' ? "bg-yellow-500/10 text-yellow-500" :
+                    item.action === 'restriction' ? "bg-orange-500/10 text-orange-500" :
+                    "bg-red-500/10 text-red-500"
+                  )}>
+                    {item.action === 'reported' ? <Flag className="h-4 w-4" /> :
+                     item.action === 'warning' ? <Bell className="h-4 w-4" /> :
+                     item.action === 'restriction' ? <Slash className="h-4 w-4" /> :
+                     <Ban className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider">
+                        {item.action}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-bold">
+                        {item.createdAt?.toDate?.()?.toLocaleString() || 'Recent'}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed">{item.reason}</p>
+                    {(item as any).details && (
+                      <p className="text-xs italic text-muted-foreground bg-background/40 p-2 rounded-lg border mt-1">
+                        "{(item as any).details}"
+                      </p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground pt-1 flex items-center gap-1">
+                      <UserIcon className="h-2.5 w-2.5" />
+                      Executed by: <span className="font-bold text-accent">@{item.adminName}</span>
+                      {item.duration && <span className="ml-auto">Duration: {item.duration}</span>}
+                    </p>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-12 text-muted-foreground italic bg-secondary/10 rounded-2xl border border-dashed">
+                  No history items found for this filter.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 function ProfileContent() {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -98,7 +269,13 @@ function ProfileContent() {
     return query(collection(db, 'users', targetUid, 'moderation_logs'), orderBy('createdAt', 'desc'));
   }, [db, targetUid, isAdminSession]);
 
+  const reportsQuery = useMemoFirebase(() => {
+    if (!db || !targetUid || !isAdminSession) return null;
+    return query(collection(db, 'reports'), where('reportedUserId', '==', targetUid));
+  }, [db, targetUid, isAdminSession]);
+
   const { data: moderationLogs } = useCollection<ModerationLog>(moderationLogsQuery);
+  const { data: userReports } = useCollection<Report>(reportsQuery);
 
   const watchingQuery = useMemoFirebase(() => {
     if (!db || !profile?.currentlyWatchingAnimeIds?.length) return null;
@@ -265,9 +442,17 @@ function ProfileContent() {
           )}
         </div>
         <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-center md:justify-start">
             <h1 className="font-headline text-4xl font-bold">{profile?.displayName || profile?.username}</h1>
             {isAdmin && <ShieldCheck className="h-6 w-6 text-accent" />}
+            {isAdminSession && targetUid && (
+              <AdminHistoryButton 
+                targetUid={targetUid} 
+                isAdminSession={isAdminSession} 
+                moderationLogs={moderationLogs || null}
+                reports={userReports || null}
+              />
+            )}
           </div>
           <p className="text-accent font-medium text-lg">@{profile?.username}</p>
         </div>
