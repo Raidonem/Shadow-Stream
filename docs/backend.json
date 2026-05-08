@@ -50,6 +50,7 @@
         "status": { "type": "string", "enum": ["Airing", "Finished"] },
         "type": { "type": "string", "enum": ["tv", "movie", "ova", "ona", "special"] },
         "season": { "type": "string", "enum": ["spring", "summer", "fall", "winter"] },
+        "isPinned": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }

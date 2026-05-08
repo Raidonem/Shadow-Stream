@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from "../../components/layout/Navbar";
 import { Button } from '../../components/ui/button';
@@ -36,7 +36,8 @@ import {
   PlayCircle,
   Settings,
   ShieldCheck,
-  History
+  History,
+  Pin
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -356,6 +357,17 @@ export default function AdminPage() {
 
   const availableTags = Object.keys(translations.en.tags) as GenreKey[];
 
+  const sortedAnime = useMemo(() => {
+    if (!allAnime) return [];
+    return [...allAnime].sort((a, b) => {
+      // Pinned items first
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      // Then by updatedAt
+      return (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0);
+    });
+  }, [allAnime]);
+
   useEffect(() => {
     if (!isUserLoading && !isAdminChecking) {
       if (!user) {
@@ -369,6 +381,15 @@ export default function AdminPage() {
 
   const toggleGenre = (genre: GenreKey) => {
     setSelectedGenres(prev => prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]);
+  };
+
+  const handleTogglePin = (id: string, currentPinned: boolean) => {
+    if (!db) return;
+    updateDocumentNonBlocking(doc(db, 'anime', id), {
+      isPinned: !currentPinned,
+      updatedAt: serverTimestamp()
+    });
+    toast({ title: !currentPinned ? "Series Pinned to Top" : "Series Unpinned" });
   };
 
   const resetAnimeForm = () => {
@@ -404,7 +425,12 @@ export default function AdminPage() {
       resetAnimeForm();
       setIsSubmitting(false);
     } else {
-      addDocumentNonBlocking(collection(db, 'anime'), { ...data, rating: 0, createdAt: serverTimestamp() }).then(() => {
+      addDocumentNonBlocking(collection(db, 'anime'), { 
+        ...data, 
+        rating: 0, 
+        isPinned: false,
+        createdAt: serverTimestamp() 
+      }).then(() => {
         toast({ title: "Anime Published Successfully" });
         resetAnimeForm();
         setIsSubmitting(false);
@@ -705,11 +731,25 @@ export default function AdminPage() {
                 </Card>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {allAnime?.map(anime => (
+                  {sortedAnime?.map(anime => (
                     <Card key={anime.id} className="overflow-hidden bg-card border-none shadow-md hover:shadow-xl transition-all group">
                       <div className="relative aspect-video">
                         <Image src={(anime.bannerImage || anime.coverImage || '').trim() || 'https://picsum.photos/seed/placeholder/400/225'} alt={anime.titleEn} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { e.preventDefault(); handleTogglePin(anime.id, !!anime.isPinned); }}
+                          className={cn(
+                            "absolute top-2 right-2 z-10 h-8 w-8 rounded-full backdrop-blur-md transition-all",
+                            anime.isPinned ? "bg-accent text-accent-foreground" : "bg-black/40 text-white hover:bg-black/60"
+                          )}
+                          title={anime.isPinned ? "Unpin from top" : "Pin to top"}
+                        >
+                          <Pin className={cn("h-4 w-4", anime.isPinned && "fill-current")} />
+                        </Button>
+
                         <div className="absolute bottom-3 left-3 flex gap-2">
                           <Badge className="bg-accent text-accent-foreground uppercase text-[10px] font-bold">{anime.type}</Badge>
                           <Badge variant="secondary" className="bg-black/40 text-white backdrop-blur-sm text-[10px] uppercase font-bold">{anime.season} {anime.releaseYear}</Badge>

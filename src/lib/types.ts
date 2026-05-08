@@ -21,6 +21,7 @@ export interface Anime {
   status: 'Airing' | 'Finished';
   type: AnimeType;
   season: AnimeSeason;
+  isPinned?: boolean;
   createdAt: any;
   updatedAt: any;
 }
