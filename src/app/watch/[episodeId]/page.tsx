@@ -80,7 +80,6 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
   const [isRating, setIsRating] = useState(false);
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
-  // Calculate average from current snapshot to ensure immediate UI feedback
   const currentAvg = useMemo(() => {
     if (!episodeDoc) return 0;
     if (episodeDoc.ratingCount && episodeDoc.ratingCount > 0) {
@@ -106,7 +105,6 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
       const oldValue = userRatingDoc?.value || 0;
       const isUpdate = !!userRatingDoc;
 
-      // 1. Update individual rating
       setDocumentNonBlocking(ratingRef, {
         id: ratingId,
         userId: user.uid,
@@ -116,7 +114,6 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
         createdAt: serverTimestamp()
       }, { merge: true });
 
-      // 2. Update Episode Aggregates
       const deltaSum = value - oldValue;
       const deltaCount = isUpdate ? 0 : 1;
 
@@ -131,7 +128,6 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
         updatedAt: serverTimestamp()
       });
 
-      // 3. Update averages across the series
       const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
       const otherEpisodes = epsSnapshot.docs
         .map(d => ({ ...d.data(), id: d.id } as Episode))
@@ -369,7 +365,16 @@ function CommentItem({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-none shadow-xl">
                   {!isOwnComment && (
-                    <DropdownMenuItem className="text-destructive gap-2 cursor-pointer" onClick={() => onReport(comment)}>
+                    <DropdownMenuItem 
+                      className="text-destructive gap-2 cursor-pointer" 
+                      onSelect={(e) => {
+                        // Crucial fix: Prevent dropdown from interfering with the incoming Dialog lifecycle
+                        // Using onSelect instead of onClick and decoupling the trigger allows Radix to correctly
+                        // restore the page focus/pointer-events after the dialog closes.
+                        e.preventDefault();
+                        onReport(comment);
+                      }}
+                    >
                       <Flag className="h-4 w-4" />
                       {t('reportComment')}
                     </DropdownMenuItem>
