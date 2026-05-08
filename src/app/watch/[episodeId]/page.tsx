@@ -118,33 +118,28 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
       const deltaSum = value - oldValue;
       const deltaCount = isUpdate ? 0 : 1;
 
-      const newCount = (episodeDoc.ratingCount || 0) + deltaCount;
-      const newSum = (episodeDoc.totalRatingSum || 0) + deltaSum;
-      const newEpAvg = newCount > 0 ? newSum / newCount : 0;
-
       updateDocumentNonBlocking(episodeRef, {
         ratingCount: increment(deltaCount),
         totalRatingSum: increment(deltaSum),
-        rating: newEpAvg,
         updatedAt: serverTimestamp()
       });
 
       const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
-      const otherEpisodes = epsSnapshot.docs
-        .map(d => ({ ...d.data(), id: d.id } as Episode))
-        .filter(ep => ep.id !== episodeId);
+      const allEps = epsSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Episode));
       
-      let totalAnimeSum = newEpAvg;
-      let ratedEpsCount = newEpAvg > 0 ? 1 : 0;
-
-      otherEpisodes.forEach(ep => {
-        if (ep.rating && ep.rating > 0) {
-          totalAnimeSum += ep.rating;
-          ratedEpsCount++;
+      let totalSum = 0;
+      let count = 0;
+      allEps.forEach(ep => {
+        const epSum = ep.id === episodeId ? (episodeDoc.totalRatingSum || 0) + deltaSum : (ep.totalRatingSum || 0);
+        const epCount = ep.id === episodeId ? (episodeDoc.ratingCount || 0) + deltaCount : (ep.ratingCount || 0);
+        
+        if (epCount > 0) {
+          totalSum += (epSum / epCount);
+          count++;
         }
       });
 
-      const newAnimeRating = ratedEpsCount > 0 ? totalAnimeSum / ratedEpsCount : 0;
+      const newAnimeRating = count > 0 ? totalSum / count : 0;
       updateDocumentNonBlocking(animeRef, {
         rating: newAnimeRating,
         updatedAt: serverTimestamp()
@@ -368,11 +363,7 @@ function CommentItem({
                   {!isOwnComment && (
                     <DropdownMenuItem 
                       className="text-destructive gap-2 cursor-pointer" 
-                      onSelect={() => {
-                        // Crucial fix: Let the dropdown close naturally by NOT calling e.preventDefault()
-                        // This allows focus to return to the document before the dialog locks pointer events.
-                        onReport(comment);
-                      }}
+                      onSelect={() => onReport(comment)}
                     >
                       <Flag className="h-4 w-4" />
                       {t('reportComment')}
@@ -754,8 +745,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   };
 
   const openReportCommentDialog = (comment: Comment) => {
-    setReportingComment(comment);
-    setIsCommentReportDialogOpen(true);
+    // Short delay to ensure DropdownMenu unmounts properly before Dialog mounts.
+    // This fixes the pointer-events lockup issue.
+    setTimeout(() => {
+      setReportingComment(comment);
+      setIsCommentReportDialogOpen(true);
+    }, 50);
   };
 
   if (isEpLoading || isAnimeLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
