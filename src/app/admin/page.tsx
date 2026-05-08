@@ -168,7 +168,6 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
   const handleDeleteEpisode = (id: string) => {
     if (!db || !anime.id || !id) return;
     
-    // Use non-blocking delete immediately
     const epRef = doc(db, 'anime', anime.id, 'episodes', id);
     deleteDocumentNonBlocking(epRef);
     toast({ title: "Episode Deleted" });
@@ -563,10 +562,9 @@ export default function AdminPage() {
 
           <div className="flex-1 space-y-8">
             <Tabs defaultValue="anime" className="w-full">
-              <TabsList className="mb-8 grid w-full max-w-2xl grid-cols-4 rounded-xl bg-secondary p-1 h-12">
+              <TabsList className="mb-8 grid w-full max-w-2xl grid-cols-3 rounded-xl bg-secondary p-1 h-12">
                 <TabsTrigger value="anime" className="rounded-lg font-bold">Catalog</TabsTrigger>
                 <TabsTrigger value="reports" className="rounded-lg font-bold">Reports</TabsTrigger>
-                <TabsTrigger value="moderation" className="rounded-lg font-bold">Rules</TabsTrigger>
                 <TabsTrigger value="avatars" className="rounded-lg font-bold">Assets</TabsTrigger>
               </TabsList>
 
