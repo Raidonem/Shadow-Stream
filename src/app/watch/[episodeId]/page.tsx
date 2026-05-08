@@ -593,6 +593,54 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return comments?.filter(c => !c.parentId) || [];
   }, [comments]);
 
+  const getEpisodeThumbnail = (targetEp: Episode) => {
+    const banner = (anime?.bannerImage || '').trim();
+    const cover = (anime?.coverImage || '').trim();
+    const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
+
+    if (!targetEp) return fallback;
+    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
+    
+    if (!episodes || episodes.length === 0) return fallback;
+
+    const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
+    
+    const prev = sorted
+      .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
+      .reverse()[0];
+    
+    if (prev) return prev.thumbnail;
+
+    const next = sorted
+      .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
+    
+    if (next) return next.thumbnail;
+
+    return fallback;
+  };
+
+  // Save to history when watching an episode
+  useEffect(() => {
+    if (user && db && anime && episode && animeId) {
+      const historyRef = doc(db, 'users', user.uid, 'history', animeId);
+      const thumbnail = getEpisodeThumbnail(episode);
+      
+      setDocumentNonBlocking(historyRef, {
+        id: animeId,
+        userId: user.uid,
+        animeId: animeId,
+        episodeId: episode.id,
+        animeTitleEn: anime.titleEn,
+        animeTitleAr: anime.titleAr,
+        episodeTitleEn: episode.titleEn,
+        episodeTitleAr: episode.titleAr,
+        episodeNumber: episode.episodeNumber,
+        thumbnail: thumbnail,
+        watchedAt: serverTimestamp()
+      }, { merge: true });
+    }
+  }, [user?.uid, db, anime?.id, episode?.id, animeId]);
+
   useEffect(() => {
     if (episode?.servers?.length && (loadedEpisodeId.current !== episode.id || !isManualServerSelection)) {
       const preferred = episode.servers.find((s: EpisodeServer) => s.lang === language) || episode.servers[0];
@@ -620,32 +668,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       return () => clearTimeout(timer);
     }
   }, [episodeId, !!episodes]);
-
-  const getEpisodeThumbnail = (targetEp: Episode) => {
-    const banner = (anime?.bannerImage || '').trim();
-    const cover = (anime?.coverImage || '').trim();
-    const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
-
-    if (!targetEp) return fallback;
-    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
-    
-    if (!episodes || episodes.length === 0) return fallback;
-
-    const sorted = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
-    
-    const prev = sorted
-      .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
-      .reverse()[0];
-    
-    if (prev) return prev.thumbnail;
-
-    const next = sorted
-      .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
-    
-    if (next) return next.thumbnail;
-
-    return fallback;
-  };
 
   const suggestions = useMemo(() => {
     if (!allAnime || !anime) return [];

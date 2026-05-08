@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, query, where, documentId, orderBy, serverTimestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, collection, query, where, documentId, orderBy, serverTimestamp, arrayUnion, arrayRemove, limit } from 'firebase/firestore';
 import { deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { Loader2, Bookmark, Heart, History, PlayCircle, CheckCircle2, Eye, Users, UserPlus, UserMinus, Check, X, Clock, ShieldAlert } from 'lucide-react';
@@ -77,7 +77,7 @@ function WatchlistContent() {
 
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'users', user.uid, 'history'), orderBy('watchedAt', 'desc'));
+    return query(collection(db, 'users', user.uid, 'history'), orderBy('watchedAt', 'desc'), limit(50));
   }, [db, user?.uid]);
 
   const friendshipsQuery = useMemoFirebase(() => {
