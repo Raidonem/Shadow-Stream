@@ -596,6 +596,16 @@ export default function AdminPage() {
                           <Input dir="rtl" className="text-right rounded-xl h-11" value={animeData.titleAr} onChange={(e) => setAnimeData({...animeData, titleAr: e.target.value})} required />
                         </div>
                       </div>
+
+                      <div className="space-y-2">
+                        <Label>Alternative Titles (Comma separated)</Label>
+                        <Input 
+                          placeholder="Attack on Titan Season 1, AOT..." 
+                          value={animeData.alternativeTitles} 
+                          onChange={(e) => setAnimeData({...animeData, alternativeTitles: e.target.value})} 
+                          className="rounded-xl h-11" 
+                        />
+                      </div>
                       
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
