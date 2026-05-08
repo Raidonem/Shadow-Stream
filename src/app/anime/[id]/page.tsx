@@ -269,35 +269,40 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                 </TabsList>
                 
                 <TabsContent value="episodes" className="mt-8 space-y-4">
-                  {episodes?.sort((a, b) => a.episodeNumber - b.episodeNumber).map((ep) => (
-                    <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
-                      <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
-                        <Image
-                          src={getEpisodeThumbnail(ep).trim()}
-                          alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
-                          fill
-                          className="object-cover"
-                          data-ai-hint="anime episode"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/40">
-                          <Play className="h-8 w-8 text-white fill-current" />
+                  {episodes?.sort((a, b) => a.episodeNumber - b.episodeNumber).map((ep) => {
+                    const rating = (ep.ratingCount && ep.ratingCount > 0) 
+                      ? (ep.totalRatingSum || 0) / ep.ratingCount 
+                      : (ep.rating || 0);
+                    return (
+                      <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
+                        <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <Image
+                            src={getEpisodeThumbnail(ep).trim()}
+                            alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
+                            fill
+                            className="object-cover"
+                            data-ai-hint="anime episode"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/40">
+                            <Play className="h-8 w-8 text-white fill-current" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-accent">{language === 'ar' ? 'الحلقة' : 'EPISODE'} {ep.episodeNumber}</span>
-                          {ep.rating > 0 && (
-                            <div className="flex items-center bg-secondary/50 px-2 py-0.5 rounded-md text-[10px] font-bold border border-accent/10">
-                              <span className="text-accent">{ep.rating.toFixed(1)}</span>
-                              <span className="text-muted-foreground/50 ml-0.5">/ 10</span>
-                            </div>
-                          )}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-accent">{language === 'ar' ? 'الحلقة' : 'EPISODE'} {ep.episodeNumber}</span>
+                            {rating > 0 && (
+                              <div className="flex items-center bg-secondary/50 px-2 py-0.5 rounded-md text-[10px] font-bold border border-accent/10">
+                                <span className="text-accent">{rating.toFixed(1)}</span>
+                                <span className="text-muted-foreground/50 ml-0.5">/ 10</span>
+                              </div>
+                            )}
+                          </div>
+                          <h3 className="font-bold">{language === 'ar' ? ep.titleAr : ep.titleEn}</h3>
+                          <p className="text-xs text-muted-foreground">{ep.duration}</p>
                         </div>
-                        <h3 className="font-bold">{language === 'ar' ? ep.titleAr : ep.titleEn}</h3>
-                        <p className="text-xs text-muted-foreground">{ep.duration}</p>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    );
+                  })}
                   {!isEpisodesLoading && (!episodes || episodes.length === 0) && (
                     <div className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
                       {language === 'ar' ? 'حلقات جديدة قادمة قريباً!' : 'New episodes coming soon!'}

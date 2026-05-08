@@ -118,9 +118,15 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
       const deltaSum = value - oldValue;
       const deltaCount = isUpdate ? 0 : 1;
 
+      // Calculate new episode rating average to save to the document
+      const newEpSum = (episodeDoc.totalRatingSum || 0) + deltaSum;
+      const newEpCount = (episodeDoc.ratingCount || 0) + deltaCount;
+      const newEpRating = newEpCount > 0 ? newEpSum / newEpCount : 0;
+
       updateDocumentNonBlocking(episodeRef, {
         ratingCount: increment(deltaCount),
         totalRatingSum: increment(deltaSum),
+        rating: newEpRating,
         updatedAt: serverTimestamp()
       });
 
@@ -928,7 +934,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               <ScrollArea className="h-[600px] pr-4">
                 <div className="space-y-2">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
-                    const epAvg = ep.rating > 0 ? ep.rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
+                    const rating = (ep.ratingCount && ep.ratingCount > 0) 
+                      ? (ep.totalRatingSum || 0) / ep.ratingCount 
+                      : (ep.rating || 0);
+                    const epAvg = rating > 0 ? rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
                     const thumbnail = getEpisodeThumbnail(ep);
                     return (
                       <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}>
