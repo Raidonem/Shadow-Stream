@@ -142,29 +142,37 @@ function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports
       <TooltipProvider>
         <button 
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-1 hover:bg-accent/10 p-1 rounded-full transition-colors ml-2"
+          className="flex items-center gap-1.5 hover:bg-accent/10 p-1 rounded-full transition-colors ml-2"
         >
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+              <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm">
+                {reportCount}
+              </div>
             </TooltipTrigger>
             <TooltipContent>Reports: {reportCount}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-black shadow-sm">
+                {warningCount}
+              </div>
             </TooltipTrigger>
             <TooltipContent>Warnings: {warningCount}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+              <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm">
+                {restrictionCount}
+              </div>
             </TooltipTrigger>
             <TooltipContent>Restrictions: {restrictionCount}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm">
+                {suspensionCount}
+              </div>
             </TooltipTrigger>
             <TooltipContent>Suspensions: {suspensionCount}</TooltipContent>
           </Tooltip>
