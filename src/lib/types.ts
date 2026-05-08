@@ -73,6 +73,10 @@ export interface Report {
   commentText?: string;
   reportedUserId?: string;
   reportedUserName?: string;
+  // Admin resolution
+  adminMessage?: string;
+  resolvedAt?: any;
+  resolvedBy?: string;
 }
 
 export interface ModerationLog {

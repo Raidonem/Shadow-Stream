@@ -6,6 +6,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "externalAuthId": { "type": "string" },
         "username": { "type": "string" },
         "displayName": { "type": "string" },
         "email": { "type": "string" },
@@ -13,12 +14,19 @@
         "isPremium": { "type": "boolean" },
         "isPublic": { "type": "boolean" },
         "avatarId": { "type": "string" },
-        "suspendedUntil": { "type": "string", "format": "date-time" },
-        "restrictedUntil": { "type": "string", "format": "date-time" },
+        "languagePreference": { "type": "string" },
+        "themePreference": { "type": "string" },
+        "lastUsernameChange": { "type": "string", "format": "date-time" },
         "watchlistAnimeIds": { "type": "array", "items": { "type": "string" } },
         "currentlyWatchingAnimeIds": { "type": "array", "items": { "type": "string" } },
         "favoriteAnimeIds": { "type": "array", "items": { "type": "string" } },
-        "completedAnimeIds": { "type": "array", "items": { "type": "string" } }
+        "completedAnimeIds": { "type": "array", "items": { "type": "string" } },
+        "favoriteEpisodeIds": { "type": "array", "items": { "type": "string" } },
+        "blockedUserIds": { "type": "array", "items": { "type": "string" } },
+        "suspendedUntil": { "type": "string", "format": "date-time" },
+        "restrictedUntil": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
     "Anime": {
@@ -28,6 +36,7 @@
         "id": { "type": "string" },
         "titleEn": { "type": "string" },
         "titleAr": { "type": "string" },
+        "alternativeTitles": { "type": "array", "items": { "type": "string" } },
         "descriptionEn": { "type": "string" },
         "descriptionAr": { "type": "string" },
         "coverImage": { "type": "string" },
@@ -36,10 +45,13 @@
         "rating": { "type": "number" },
         "ratingCount": { "type": "number" },
         "views": { "type": "number" },
+        "lastEpisodeNumber": { "type": "number" },
         "releaseYear": { "type": "number" },
         "status": { "type": "string", "enum": ["Airing", "Finished"] },
-        "type": { "type": "string" },
-        "season": { "type": "string" }
+        "type": { "type": "string", "enum": ["tv", "movie", "ova", "ona", "special"] },
+        "season": { "type": "string", "enum": ["spring", "summer", "fall", "winter"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
     "Episode": {
@@ -66,7 +78,9 @@
               "lang": { "type": "string" }
             }
           } 
-        }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
     "Rating": {
@@ -88,10 +102,21 @@
         "id": { "type": "string" },
         "type": { "type": "string", "enum": ["episode_server", "comment"] },
         "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "animeId": { "type": "string" },
+        "episodeId": { "type": "string" },
+        "animeTitleEn": { "type": "string" },
+        "episodeNumber": { "type": "number" },
         "reason": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "resolved"] },
         "commentId": { "type": "string" },
-        "reportedUserId": { "type": "string" }
+        "commentText": { "type": "string" },
+        "reportedUserId": { "type": "string" },
+        "reportedUserName": { "type": "string" },
+        "adminMessage": { "type": "string" },
+        "resolvedAt": { "type": "string", "format": "date-time" },
+        "resolvedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       }
     },
     "ModerationLog": {
@@ -100,6 +125,7 @@
       "properties": {
         "id": { "type": "string" },
         "adminId": { "type": "string" },
+        "adminName": { "type": "string" },
         "targetUserId": { "type": "string" },
         "action": { "type": "string", "enum": ["warning", "restriction", "suspension"] },
         "duration": { "type": "string" },

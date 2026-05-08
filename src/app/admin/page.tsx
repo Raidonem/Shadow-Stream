@@ -34,13 +34,15 @@ import {
   AlertTriangle,
   ImageIcon,
   PlayCircle,
-  Settings
+  Settings,
+  ShieldCheck,
+  History
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { useToast } from '../../hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../firebase/index';
-import { doc, collection, serverTimestamp, query, orderBy, limit, Firestore } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy, limit, Firestore, updateDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
@@ -448,9 +450,15 @@ export default function AdminPage() {
     toast({ title: "Avatar deleted" });
   };
 
-  const handleResolveReport = (reportId: string) => {
+  const handleResolveReport = (reportId: string, adminMessage?: string) => {
     if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'reports', reportId), { status: 'resolved' });
+    const updateData: any = { status: 'resolved' };
+    if (adminMessage) {
+      updateData.adminMessage = adminMessage;
+      updateData.resolvedAt = serverTimestamp();
+      updateData.resolvedBy = adminDoc?.username || 'Admin';
+    }
+    updateDocumentNonBlocking(doc(db, 'reports', reportId), updateData);
     toast({ title: "Report Resolved" });
   };
 
@@ -514,7 +522,7 @@ export default function AdminPage() {
         createdAt: serverTimestamp()
       }, { merge: true });
 
-      handleResolveReport(activeActionReport.id);
+      handleResolveReport(activeActionReport.id, actionReason.trim());
 
       toast({ title: "Moderation action executed" });
       setIsActionDialogOpen(false);
@@ -779,6 +787,17 @@ export default function AdminPage() {
                                 <span className="font-bold text-foreground">Reason:</span> {report.reason}
                               </p>
                             </div>
+
+                            {report.status === 'resolved' && report.adminMessage && (
+                              <div className="flex items-start gap-2 bg-accent/5 p-4 rounded-xl border border-accent/20">
+                                <ShieldCheck className="h-4 w-4 text-accent mt-0.5" />
+                                <div className="space-y-1">
+                                  <p className="text-xs font-bold text-accent uppercase">Admin Resolution</p>
+                                  <p className="text-sm text-muted-foreground italic">"{report.adminMessage}"</p>
+                                  <p className="text-[10px] text-muted-foreground">— {report.resolvedBy} • {report.resolvedAt?.toDate?.()?.toLocaleString() || 'Recently'}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex gap-2 shrink-0">
