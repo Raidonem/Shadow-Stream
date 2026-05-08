@@ -47,7 +47,7 @@ import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocki
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
 import { EpisodeServer, Comment, UserProfile, AvatarItem, Episode, Anime, Rating } from '../../../lib/types';
-import { cn } from '../../../lib/utils';
+import { cn, normalizeSearchString } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import { AnimeCard } from '../../../components/anime/AnimeCard';
 import Image from 'next/image';
@@ -537,15 +537,15 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return query(collection(db, 'anime', animeId, 'episodes'), orderBy('episodeNumber', 'asc'));
   }, [db, animeId]);
 
-  const recommendedQuery = useMemoFirebase(() => {
-    if (!db || !animeId) return null;
-    return query(collection(db, 'anime'), limit(7));
-  }, [db, animeId]);
+  const allAnimeQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'anime'), limit(100));
+  }, [db]);
 
   const { data: episode, isLoading: isEpLoading } = useDoc<Episode>(episodeRef);
   const { data: anime, isLoading: isAnimeLoading } = useDoc<Anime>(animeRef);
   const { data: episodes } = useCollection<Episode>(allEpisodesQuery);
-  const { data: recommendedAnime } = useCollection<Anime>(recommendedQuery);
+  const { data: allAnime } = useCollection<Anime>(allAnimeQuery);
 
   const userRatingRef = useMemoFirebase(() => {
     if (!db || !user || !episodeId) return null;
@@ -632,6 +632,36 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
     return fallback;
   };
+
+  const suggestions = useMemo(() => {
+    if (!allAnime || !anime) return [];
+    
+    const currentName = (anime.titleEn + ' ' + anime.titleAr).toLowerCase();
+    const currentNameWords = currentName.split(/\W+/).filter(w => w.length > 2);
+    const currentGenres = new Set(anime.genres || []);
+
+    return allAnime
+      .filter(a => a.id !== animeId)
+      .map(a => {
+        const targetName = (a.titleEn + ' ' + a.titleAr).toLowerCase();
+        const targetNameWords = targetName.split(/\W+/).filter(w => w.length > 2);
+        
+        let nameMatches = 0;
+        targetNameWords.forEach(w => {
+          if (currentNameWords.includes(w)) nameMatches++;
+        });
+
+        const genreMatches = (a.genres || []).filter(g => currentGenres.has(g)).length;
+
+        // Weight name matches heavily to prioritize name similarity
+        const score = (nameMatches * 100) + genreMatches;
+        
+        return { anime: a, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(item => item.anime);
+  }, [allAnime, anime, animeId]);
 
   const handlePostComment = async (parentId?: string, text?: string) => {
     if (!user || !animeId || !episodeId || !profile || !db) return;
@@ -775,8 +805,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const currentIdx = episodes?.findIndex(e => e.id === episodeId) ?? -1;
   const prevEp = currentIdx > 0 ? episodes?.[currentIdx - 1] : null;
   const nextEp = episodes && currentIdx < episodes.length - 1 ? episodes[currentIdx + 1] : null;
-
-  const suggestions = recommendedAnime?.filter(a => a.id !== animeId).slice(0, 6) || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -939,7 +967,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <Sparkles className="h-6 w-6 text-accent" />
                   <h2 className="font-headline text-2xl font-bold">{t('recommended')}</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                   {suggestions.map((anime) => (
                     <AnimeCard key={anime.id} anime={anime} />
                   ))}
