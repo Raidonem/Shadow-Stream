@@ -614,7 +614,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       const timer = setTimeout(() => {
         const element = document.getElementById(`ep-item-${episodeId}`);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 200);
       return () => clearTimeout(timer);
