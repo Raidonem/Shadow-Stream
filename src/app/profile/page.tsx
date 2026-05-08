@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -33,7 +34,9 @@ import {
   AtSign,
   Flag,
   ListFilter,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -75,7 +78,13 @@ function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'reported' | 'warning' | 'restriction' | 'suspension'>('all');
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const { language, t } = useLanguage();
+
+  // Reset drill-down when filter changes
+  useEffect(() => {
+    setSelectedGroupId(null);
+  }, [filter]);
 
   if (!isAdminSession) return null;
 
@@ -83,6 +92,31 @@ function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports
   const restrictionCount = moderationLogs?.filter(l => l.action === 'restriction').length || 0;
   const suspensionCount = moderationLogs?.filter(l => l.action === 'suspension').length || 0;
   const reportCount = reports?.length || 0;
+
+  const groupedReports = useMemo(() => {
+    if (!reports) return [];
+    const groups: Record<string, { id: string; type: string; title: string; subtitle?: string; count: number; items: Report[] }> = {};
+    
+    reports.forEach(r => {
+      const isComment = r.type === 'comment';
+      const key = isComment ? `comment_${r.commentId}` : `server_${r.episodeId}`;
+      
+      if (!groups[key]) {
+        groups[key] = { 
+          id: key, 
+          type: r.type, 
+          title: isComment ? r.commentText || 'Original comment text unavailable' : `${r.animeTitleEn} - EP ${r.episodeNumber}`,
+          subtitle: isComment ? `@${r.reportedUserName || 'user'}` : 'Server/Video Issue',
+          count: 0, 
+          items: [] 
+        };
+      }
+      groups[key].count++;
+      groups[key].items.push(r);
+    });
+    
+    return Object.values(groups).sort((a, b) => b.count - a.count);
+  }, [reports]);
 
   const combinedHistory = [
     ...(moderationLogs || []).map(l => ({ ...l, entryType: 'log' as const })),
@@ -100,6 +134,8 @@ function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports
   const filteredHistory = filter === 'all' 
     ? combinedHistory 
     : combinedHistory.filter(h => h.action === filter);
+
+  const selectedGroup = selectedGroupId ? groupedReports.find(g => g.id === selectedGroupId) : null;
 
   return (
     <>
@@ -165,46 +201,115 @@ function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports
 
           <ScrollArea className="h-[60vh] p-6 pt-4">
             <div className="space-y-4">
-              {filteredHistory.length > 0 ? filteredHistory.map((item, idx) => (
-                <div key={item.id} className="flex gap-4 items-start p-4 rounded-2xl bg-secondary/20 border group hover:border-accent/30 transition-colors">
-                  <div className={cn(
-                    "mt-1 p-2 rounded-full",
-                    item.action === 'reported' ? "bg-blue-500/10 text-blue-500" :
-                    item.action === 'warning' ? "bg-yellow-500/10 text-yellow-500" :
-                    item.action === 'restriction' ? "bg-orange-500/10 text-orange-500" :
-                    "bg-red-500/10 text-red-500"
-                  )}>
-                    {item.action === 'reported' ? <Flag className="h-4 w-4" /> :
-                     item.action === 'warning' ? <Bell className="h-4 w-4" /> :
-                     item.action === 'restriction' ? <Slash className="h-4 w-4" /> :
-                     <Ban className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black uppercase tracking-wider">
-                        {item.action}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-bold">
-                        {item.createdAt?.toDate?.()?.toLocaleString() || 'Recent'}
-                      </span>
+              {filter === 'reported' ? (
+                <>
+                  {!selectedGroupId ? (
+                    // Grouped List
+                    groupedReports.length > 0 ? groupedReports.map(group => (
+                      <div 
+                        key={group.id} 
+                        onClick={() => setSelectedGroupId(group.id)}
+                        className="flex items-center justify-between p-4 rounded-2xl bg-secondary/20 border hover:border-accent cursor-pointer transition-all group"
+                      >
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest px-2">{group.type}</Badge>
+                            <span className="text-xs text-muted-foreground font-bold">{group.subtitle}</span>
+                          </div>
+                          <p className="text-sm font-medium truncate italic text-muted-foreground">"{group.title}"</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge className="bg-accent text-accent-foreground font-black px-3 h-7 rounded-lg">{group.count}</Badge>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="text-center py-12 text-muted-foreground italic bg-secondary/10 rounded-2xl border border-dashed">
+                        No active reports found for this user.
+                      </div>
+                    )
+                  ) : (
+                    // Drill-down Detail
+                    <div className="space-y-4">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedGroupId(null)} className="rounded-xl h-9 hover:bg-accent/10 px-2 -ml-2">
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Back to Summary
+                      </Button>
+                      
+                      <div className="p-4 rounded-2xl bg-accent/5 border border-accent/20 mb-6">
+                        <p className="text-[10px] font-black uppercase text-accent mb-2 tracking-widest">Reported Content</p>
+                        <p className="text-sm font-bold leading-relaxed italic text-foreground/90">
+                          "{selectedGroup?.title}"
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-2 font-bold">{selectedGroup?.count} Total Submissions</p>
+                      </div>
+
+                      {selectedGroup?.items.map(item => (
+                        <div key={item.id} className="flex gap-4 items-start p-4 rounded-2xl bg-secondary/10 border hover:border-accent/30 transition-colors">
+                           <div className="mt-1 p-2 rounded-full bg-blue-500/10 text-blue-500">
+                              <Flag className="h-4 w-4" />
+                           </div>
+                           <div className="flex-1 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-blue-500">Individual Submission</span>
+                                <span className="text-[10px] text-muted-foreground font-bold">
+                                  {item.createdAt?.toDate?.()?.toLocaleString() || 'Recent'}
+                                </span>
+                              </div>
+                              <p className="text-sm font-medium leading-relaxed">{item.reason}</p>
+                              <p className="text-[10px] text-muted-foreground pt-1 flex items-center gap-1">
+                                <UserIcon className="h-2.5 w-2.5" />
+                                Submitted by: <span className="font-bold text-accent">@{item.userName}</span>
+                              </p>
+                           </div>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-sm font-medium leading-relaxed">{item.reason}</p>
-                    {(item as any).details && (
-                      <p className="text-xs italic text-muted-foreground bg-background/40 p-2 rounded-lg border mt-1">
-                        "{(item as any).details}"
+                  )}
+                </>
+              ) : (
+                // Original list view for Logs or All Items
+                filteredHistory.length > 0 ? filteredHistory.map((item, idx) => (
+                  <div key={item.id} className="flex gap-4 items-start p-4 rounded-2xl bg-secondary/20 border group hover:border-accent/30 transition-colors">
+                    <div className={cn(
+                      "mt-1 p-2 rounded-full",
+                      item.action === 'reported' ? "bg-blue-500/10 text-blue-500" :
+                      item.action === 'warning' ? "bg-yellow-500/10 text-yellow-500" :
+                      item.action === 'restriction' ? "bg-orange-500/10 text-orange-500" :
+                      "bg-red-500/10 text-red-500"
+                    )}>
+                      {item.action === 'reported' ? <Flag className="h-4 w-4" /> :
+                       item.action === 'warning' ? <Bell className="h-4 w-4" /> :
+                       item.action === 'restriction' ? <Slash className="h-4 w-4" /> :
+                       <Ban className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {item.action}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-bold">
+                          {item.createdAt?.toDate?.()?.toLocaleString() || 'Recent'}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium leading-relaxed">{item.reason}</p>
+                      {(item as any).details && (
+                        <p className="text-xs italic text-muted-foreground bg-background/40 p-2 rounded-lg border mt-1">
+                          "{(item as any).details}"
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground pt-1 flex items-center gap-1">
+                        <UserIcon className="h-2.5 w-2.5" />
+                        Executed by: <span className="font-bold text-accent">@{item.adminName}</span>
+                        {item.duration && <span className="ml-auto">Duration: {item.duration}</span>}
                       </p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground pt-1 flex items-center gap-1">
-                      <UserIcon className="h-2.5 w-2.5" />
-                      Executed by: <span className="font-bold text-accent">@{item.adminName}</span>
-                      {item.duration && <span className="ml-auto">Duration: {item.duration}</span>}
-                    </p>
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <div className="text-center py-12 text-muted-foreground italic bg-secondary/10 rounded-2xl border border-dashed">
-                  No history items found for this filter.
-                </div>
+                )) : (
+                  <div className="text-center py-12 text-muted-foreground italic bg-secondary/10 rounded-2xl border border-dashed">
+                    No history items found for this filter.
+                  </div>
+                )
               )}
             </div>
           </ScrollArea>
@@ -256,7 +361,7 @@ function ProfileContent() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(profileRef);
   const { data: authProfile } = useDoc<UserProfile>(authProfileRef);
 
-  // Robust admin status verification for the viewer (checks admins collection)
+  // Viewer is an admin if they exist in the official admins collection
   const viewerAdminRef = useMemoFirebase(() => {
     if (!authUser || !db) return null;
     return doc(db, 'admins', authUser.uid);
@@ -269,7 +374,6 @@ function ProfileContent() {
   }, [db]);
   const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
 
-  // Viewer is an admin if they have the role OR exist in the admins collection
   const isAdminSession = !!viewerAdminDoc || authProfile?.role === 'admin';
 
   const moderationLogsQuery = useMemoFirebase(() => {
