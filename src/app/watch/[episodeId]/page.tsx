@@ -41,7 +41,7 @@ import {
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc, limit } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
@@ -49,6 +49,7 @@ import { translations } from '../../../lib/i18n';
 import { EpisodeServer, Comment, UserProfile, AvatarItem, Episode, Anime, Rating } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
+import { AnimeCard } from '../../../components/anime/AnimeCard';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -118,7 +119,6 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
       const deltaSum = value - oldValue;
       const deltaCount = isUpdate ? 0 : 1;
 
-      // Calculate new episode rating average to save to the document
       const newEpSum = (episodeDoc.totalRatingSum || 0) + deltaSum;
       const newEpCount = (episodeDoc.ratingCount || 0) + deltaCount;
       const newEpRating = newEpCount > 0 ? newEpSum / newEpCount : 0;
@@ -537,9 +537,15 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     return query(collection(db, 'anime', animeId, 'episodes'), orderBy('episodeNumber', 'asc'));
   }, [db, animeId]);
 
+  const recommendedQuery = useMemoFirebase(() => {
+    if (!db || !animeId) return null;
+    return query(collection(db, 'anime'), limit(7));
+  }, [db, animeId]);
+
   const { data: episode, isLoading: isEpLoading } = useDoc<Episode>(episodeRef);
   const { data: anime, isLoading: isAnimeLoading } = useDoc<Anime>(animeRef);
   const { data: episodes } = useCollection<Episode>(allEpisodesQuery);
+  const { data: recommendedAnime } = useCollection<Anime>(recommendedQuery);
 
   const userRatingRef = useMemoFirebase(() => {
     if (!db || !user || !episodeId) return null;
@@ -595,7 +601,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [episode, language, isManualServerSelection]);
 
-  // Safety check: ensure pointer-events are restored to the body if stuck
   useEffect(() => {
     if (!isReportDialogOpen && !isCommentReportDialogOpen) {
       document.body.style.pointerEvents = 'auto';
@@ -758,8 +763,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   };
 
   const openReportCommentDialog = (comment: Comment) => {
-    // Short delay to ensure DropdownMenu unmounts properly before Dialog mounts.
-    // This fixes the pointer-events lockup issue.
     setTimeout(() => {
       setReportingComment(comment);
       setIsCommentReportDialogOpen(true);
@@ -772,6 +775,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const currentIdx = episodes?.findIndex(e => e.id === episodeId) ?? -1;
   const prevEp = currentIdx > 0 ? episodes?.[currentIdx - 1] : null;
   const nextEp = episodes && currentIdx < episodes.length - 1 ? episodes[currentIdx + 1] : null;
+
+  const suggestions = recommendedAnime?.filter(a => a.id !== animeId).slice(0, 6) || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -821,7 +826,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        <Select value={reportReason} onValueChange={setReportReason}>
+                        <Select value={reportReason} onValueChange={reportReason => setReportReason(reportReason)}>
                           <SelectTrigger className="rounded-xl bg-secondary/50 border-none">
                             <SelectValue placeholder={t('reportReason')} />
                           </SelectTrigger>
@@ -926,6 +931,21 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 ))}
               </div>
             </section>
+
+            {/* Suggestions Section */}
+            {suggestions.length > 0 && (
+              <section className="space-y-6 pt-12 border-t mt-12">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-6 w-6 text-accent" />
+                  <h2 className="font-headline text-2xl font-bold">{t('recommended')}</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {suggestions.map((anime) => (
+                    <AnimeCard key={anime.id} anime={anime} />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           <aside className="space-y-8">
@@ -963,7 +983,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         </div>
       </main>
 
-      <Dialog open={isCommentReportDialogOpen} onOpenChange={setIsCommentReportDialogOpen}>
+      <Dialog open={isCommentReportDialogOpen} onOpenChange={isCommentReportDialogOpen => setIsCommentReportDialogOpen(isCommentReportDialogOpen)}>
         <DialogContent className="bg-card border-none">
           <DialogHeader>
             <DialogTitle>{t('reportComment')}</DialogTitle>
@@ -975,7 +995,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             <div className="rounded-lg bg-secondary/30 p-3 border text-sm italic text-muted-foreground">
               "{reportingComment?.text}"
             </div>
-            <Select value={commentReportReason} onValueChange={setCommentReportReason}>
+            <Select value={commentReportReason} onValueChange={commentReportReason => setCommentReportReason(commentReportReason)}>
               <SelectTrigger className="rounded-xl bg-secondary/50 border-none">
                 <SelectValue placeholder={t('reportReason')} />
               </SelectTrigger>
