@@ -256,13 +256,21 @@ function ProfileContent() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(profileRef);
   const { data: authProfile } = useDoc<UserProfile>(authProfileRef);
 
+  // Robust admin status verification for the viewer (checks admins collection)
+  const viewerAdminRef = useMemoFirebase(() => {
+    if (!authUser || !db) return null;
+    return doc(db, 'admins', authUser.uid);
+  }, [authUser?.uid, db]);
+  const { data: viewerAdminDoc } = useDoc(viewerAdminRef);
+
   const avatarsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'avatars'), orderBy('createdAt', 'desc'));
   }, [db]);
   const { data: officialAvatars } = useCollection<AvatarItem>(avatarsQuery);
 
-  const isAdminSession = authProfile?.role === 'admin';
+  // Viewer is an admin if they have the role OR exist in the admins collection
+  const isAdminSession = !!viewerAdminDoc || authProfile?.role === 'admin';
 
   const moderationLogsQuery = useMemoFirebase(() => {
     if (!db || !targetUid || !isAdminSession) return null;
