@@ -37,7 +37,8 @@ import {
   Settings,
   ShieldCheck,
   History,
-  Pin
+  Pin,
+  Search
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -47,7 +48,7 @@ import { doc, collection, serverTimestamp, query, orderBy, limit, Firestore, upd
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
-import { cn } from '../../lib/utils';
+import { cn, normalizeSearchString } from '../../lib/utils';
 import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report, AvatarItem, Episode } from '../../lib/types';
 import Image from 'next/image';
 import { addDays } from 'date-fns';
@@ -304,6 +305,7 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<GenreKey[]>([]);
   const [editingAnimeId, setEditingAnimeId] = useState<string | null>(null);
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
 
   const [activeActionReport, setActiveActionReport] = useState<Report | null>(null);
   const [actionType, setActionType] = useState<'warning' | 'restriction' | 'suspension'>('warning');
@@ -367,6 +369,16 @@ export default function AdminPage() {
       return (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0);
     });
   }, [allAnime]);
+
+  const filteredAnime = useMemo(() => {
+    if (!catalogSearchQuery.trim()) return sortedAnime;
+    const q = catalogSearchQuery.toLowerCase().trim();
+    return sortedAnime.filter(anime => 
+      anime.titleEn.toLowerCase().includes(q) || 
+      anime.titleAr.toLowerCase().includes(q) ||
+      (anime.alternativeTitles || []).some(t => t.toLowerCase().includes(q))
+    );
+  }, [sortedAnime, catalogSearchQuery]);
 
   useEffect(() => {
     if (!isUserLoading && !isAdminChecking) {
@@ -730,8 +742,21 @@ export default function AdminPage() {
                   </CardContent>
                 </Card>
 
+                <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between mt-8 mb-6">
+                  <h2 className="font-headline text-2xl font-bold">Library Catalog</h2>
+                  <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Find a series..." 
+                      value={catalogSearchQuery}
+                      onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                      className="pl-10 rounded-xl bg-card"
+                    />
+                  </div>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {sortedAnime?.map(anime => (
+                  {filteredAnime?.map(anime => (
                     <Card key={anime.id} className="overflow-hidden bg-card border-none shadow-md hover:shadow-xl transition-all group">
                       <div className="relative aspect-video">
                         <Image src={(anime.bannerImage || anime.coverImage || '').trim() || 'https://picsum.photos/seed/placeholder/400/225'} alt={anime.titleEn} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -773,6 +798,12 @@ export default function AdminPage() {
                       </CardContent>
                     </Card>
                   ))}
+                  {filteredAnime?.length === 0 && (
+                    <div className="col-span-full py-20 text-center bg-secondary/10 rounded-3xl border border-dashed">
+                      <Search className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No matches found for "{catalogSearchQuery}"</p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
