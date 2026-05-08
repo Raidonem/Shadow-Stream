@@ -589,6 +589,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [episode, language, isManualServerSelection]);
 
+  // Safety check: ensure pointer-events are restored to the body if stuck
+  useEffect(() => {
+    if (!isReportDialogOpen && !isCommentReportDialogOpen) {
+      document.body.style.pointerEvents = 'auto';
+    }
+  }, [isReportDialogOpen, isCommentReportDialogOpen]);
+
   const getEpisodeThumbnail = (targetEp: Episode) => {
     const banner = (anime?.bannerImage || '').trim();
     const cover = (anime?.coverImage || '').trim();
@@ -750,7 +757,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     setTimeout(() => {
       setReportingComment(comment);
       setIsCommentReportDialogOpen(true);
-    }, 50);
+    }, 100);
   };
 
   if (isEpLoading || isAnimeLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
