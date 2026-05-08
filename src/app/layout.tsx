@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Providers } from '../components/providers/Providers';
-import { ADSENSE_PUBLISHER_ID } from '../components/ads/AdBanner';
+import { ADSENSE_PUBLISHER_ID } from '../lib/constants';
 import Script from 'next/script';
 
 export const metadata: Metadata = {

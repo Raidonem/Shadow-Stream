@@ -5,8 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../firebase/index';
 import { doc } from 'firebase/firestore';
-
-export const ADSENSE_PUBLISHER_ID = "ca-pub-9229134067523856";
+import { ADSENSE_PUBLISHER_ID } from '../../lib/constants';
 
 interface AdBannerProps {
   dataAdSlot: string;

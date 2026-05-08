@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -367,11 +368,9 @@ function CommentItem({
                   {!isOwnComment && (
                     <DropdownMenuItem 
                       className="text-destructive gap-2 cursor-pointer" 
-                      onSelect={(e) => {
-                        // Crucial fix: Prevent dropdown from interfering with the incoming Dialog lifecycle
-                        // Using onSelect instead of onClick and decoupling the trigger allows Radix to correctly
-                        // restore the page focus/pointer-events after the dialog closes.
-                        e.preventDefault();
+                      onSelect={() => {
+                        // Crucial fix: Let the dropdown close naturally by NOT calling e.preventDefault()
+                        // This allows focus to return to the document before the dialog locks pointer events.
                         onReport(comment);
                       }}
                     >
