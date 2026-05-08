@@ -607,6 +607,20 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [isReportDialogOpen, isCommentReportDialogOpen]);
 
+  // Auto-scroll the episode list to the current episode when it changes
+  useEffect(() => {
+    if (episodeId && episodes?.length) {
+      // Use a small timeout to ensure the DOM has settled after navigation
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`ep-item-${episodeId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [episodeId, !!episodes]);
+
   const getEpisodeThumbnail = (targetEp: Episode) => {
     const banner = (anime?.bannerImage || '').trim();
     const cover = (anime?.coverImage || '').trim();
@@ -988,7 +1002,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const epAvg = rating > 0 ? rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
                     const thumbnail = getEpisodeThumbnail(ep);
                     return (
-                      <Link key={ep.id} href={`/watch/${ep.id}?animeId=${animeId}`} className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}>
+                      <Link 
+                        key={ep.id} 
+                        id={`ep-item-${ep.id}`}
+                        href={`/watch/${ep.id}?animeId=${animeId}`} 
+                        className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
+                      >
                         <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                           <Image src={thumbnail.trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
