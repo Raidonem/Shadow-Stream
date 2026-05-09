@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -22,6 +21,7 @@
         "favoriteAnimeIds": { "type": "array", "items": { "type": "string" } },
         "completedAnimeIds": { "type": "array", "items": { "type": "string" } },
         "favoriteEpisodeIds": { "type": "array", "items": { "type": "string" } },
+        "watchedEpisodeIds": { "type": "array", "items": { "type": "string" } },
         "blockedUserIds": { "type": "array", "items": { "type": "string" } },
         "suspendedUntil": { "type": "string", "format": "date-time" },
         "restrictedUntil": { "type": "string", "format": "date-time" },

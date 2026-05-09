@@ -44,6 +44,7 @@ export interface UserProfile {
   favoriteAnimeIds: string[];
   completedAnimeIds: string[];
   favoriteEpisodeIds: string[];
+  watchedEpisodeIds?: string[];
   blockedUserIds: string[];
   suspendedUntil?: any;
   restrictedUntil?: any;

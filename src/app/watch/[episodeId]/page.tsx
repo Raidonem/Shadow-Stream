@@ -36,12 +36,13 @@ import {
   AlertTriangle,
   Flag,
   X,
-  Trophy
+  Trophy,
+  Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc, limit } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, increment, where, getDocs, updateDoc, limit, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useLanguage } from '../../../components/providers/LanguageContext';
@@ -641,6 +642,15 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }
   }, [user?.uid, db, anime?.id, episode?.id, animeId]);
 
+  // Automatic watch tracking (independent system)
+  useEffect(() => {
+    if (user && db && episodeId && profileRef && profile && !profile.watchedEpisodeIds?.includes(episodeId)) {
+      updateDocumentNonBlocking(profileRef, {
+        watchedEpisodeIds: arrayUnion(episodeId)
+      });
+    }
+  }, [user?.uid, db, episodeId, !!profile, !!profileRef]);
+
   useEffect(() => {
     if (episode?.servers?.length && (loadedEpisodeId.current !== episode.id || !isManualServerSelection)) {
       const preferred = episode.servers.find((s: EpisodeServer) => s.lang === language) || episode.servers[0];
@@ -842,6 +852,17 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     }, 100);
   };
 
+  const handleToggleWatched = (e: React.MouseEvent, epId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || !profileRef || !profile) return;
+
+    const isWatched = profile.watchedEpisodeIds?.includes(epId);
+    updateDocumentNonBlocking(profileRef, {
+      watchedEpisodeIds: isWatched ? arrayRemove(epId) : arrayUnion(epId)
+    });
+  };
+
   if (isEpLoading || isAnimeLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!episode || !anime || !animeId) return <div className="text-center py-20 font-headline text-2xl">Episode not found.</div>;
 
@@ -1030,6 +1051,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       : (ep.rating || 0);
                     const epAvg = rating > 0 ? rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
                     const thumbnail = getEpisodeThumbnail(ep);
+                    const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
+
                     return (
                       <Link 
                         key={ep.id} 
@@ -1041,7 +1064,20 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <Image src={thumbnail.trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-accent uppercase">EP {ep.episodeNumber}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
+                            {user && (
+                              <button
+                                onClick={(e) => handleToggleWatched(e, ep.id)}
+                                className={cn(
+                                  "transition-all",
+                                  isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/40 hover:text-muted-foreground"
+                                )}
+                              >
+                                <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                              </button>
+                            )}
+                          </div>
                           <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
                           <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
                             <Star className="h-2 w-2 fill-current" />
