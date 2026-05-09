@@ -19,3 +19,20 @@ export function normalizeSearchString(str: string): string {
     .replace(/\s+/g, '')
     .trim();
 }
+
+/**
+ * Ensures a URL is absolute by prepending 'https:' to protocol-relative URLs (//).
+ * Also handles invalid or empty inputs gracefully.
+ */
+export function ensureAbsoluteUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
+  // Basic validation to ensure it's at least potentially a URL
+  if (trimmed.length > 0 && !trimmed.startsWith('http') && !trimmed.startsWith('/') && !trimmed.startsWith('data:')) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+}

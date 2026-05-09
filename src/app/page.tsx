@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -19,7 +18,7 @@ import {
   CarouselItem,
 } from "../components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
-import { cn } from "../lib/utils";
+import { cn, ensureAbsoluteUrl } from "../lib/utils";
 
 export default function Home() {
   const db = useFirestore();
@@ -75,7 +74,7 @@ export default function Home() {
                 // Ensure heroImage is never an empty string or invalid URL
                 const banner = (anime.bannerImage || '').trim();
                 const cover = (anime.coverImage || '').trim();
-                const heroImage = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/1200/800');
+                const heroImage = ensureAbsoluteUrl(banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/1200/800'));
                 
                 return (
                   <CarouselItem key={anime.id} className="relative h-[80vh] w-full">
@@ -185,7 +184,7 @@ export default function Home() {
               {latestUpdates?.slice(0, 4).map((anime) => {
                 const banner = (anime.bannerImage || '').trim();
                 const cover = (anime.coverImage || '').trim();
-                const subImage = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/sub/600/400');
+                const subImage = ensureAbsoluteUrl(banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/sub/600/400'));
                 
                 return (
                   <Link key={anime.id} href={`/anime/${anime.id}`} className="relative aspect-video overflow-hidden rounded-xl group">

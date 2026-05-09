@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -30,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "../../components/ui/alert-dialog";
 import { UserProfile, AvatarItem } from '../../lib/types';
+import { ensureAbsoluteUrl } from '../../lib/utils';
 
 function WatchlistContent() {
   const { user, isUserLoading } = useUser();
@@ -320,7 +320,7 @@ function WatchlistContent() {
             ) : watchHistory && watchHistory.length > 0 ? (
               <div className="grid gap-4">
                 {watchHistory.map(entry => {
-                  const thumbnail = (entry.thumbnail || '').trim() !== '' ? entry.thumbnail : 'https://picsum.photos/seed/placeholder/320/180';
+                  const thumbnail = ensureAbsoluteUrl((entry.thumbnail || '').trim() !== '' ? entry.thumbnail : 'https://picsum.photos/seed/placeholder/320/180');
                   return (
                     <Link key={entry.id} href={`/watch/${entry.episodeId}?animeId=${entry.animeId}`}>
                       <Card className="overflow-hidden border-none bg-secondary/30 transition-colors hover:bg-secondary/50">
@@ -371,7 +371,7 @@ function WatchlistContent() {
                         <CardContent className="p-4 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4 min-w-0">
                             <UIAvatar className="h-10 w-10">
-                              {avatarUrl && <AvatarImage src={avatarUrl} />}
+                              {avatarUrl && <AvatarImage src={ensureAbsoluteUrl(avatarUrl)} />}
                               <AvatarFallback className="bg-accent/20 text-accent font-bold">
                                 {(requester.displayName || requester.username || 'U')[0]?.toUpperCase()}
                               </AvatarFallback>
@@ -413,7 +413,7 @@ function WatchlistContent() {
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4 mb-4">
                             <UIAvatar className="h-12 w-12 ring-2 ring-primary/20 cursor-pointer" onClick={() => router.push(`/profile?uid=${friend.id}`)}>
-                              {avatarUrl && <AvatarImage src={avatarUrl} />}
+                              {avatarUrl && <AvatarImage src={ensureAbsoluteUrl(avatarUrl)} />}
                               <AvatarFallback className="bg-primary/20 text-primary font-bold">
                                 {(friend.displayName || friend.username || 'U')[0]?.toUpperCase()}
                               </AvatarFallback>

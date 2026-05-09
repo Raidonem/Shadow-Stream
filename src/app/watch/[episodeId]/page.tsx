@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -48,7 +47,7 @@ import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocki
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
 import { EpisodeServer, Comment, UserProfile, AvatarItem, Episode, Anime, Rating } from '../../../lib/types';
-import { cn, normalizeSearchString } from '../../../lib/utils';
+import { cn, normalizeSearchString, ensureAbsoluteUrl } from '../../../lib/utils';
 import { AdBanner } from '../../../components/ads/AdBanner';
 import { AnimeCard } from '../../../components/anime/AnimeCard';
 import Image from 'next/image';
@@ -328,7 +327,7 @@ function CommentItem({
           className="h-10 w-10 shrink-0 hover:opacity-80 transition-opacity"
         >
           <Avatar className="h-10 w-10">
-            {resolvedAvatar && <AvatarImage src={resolvedAvatar} />}
+            {resolvedAvatar && <AvatarImage src={ensureAbsoluteUrl(resolvedAvatar)} />}
             <AvatarFallback className="bg-primary/10 text-primary font-bold">{currentDisplayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </button>
@@ -595,12 +594,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   }, [comments]);
 
   const getEpisodeThumbnail = (targetEp: Episode) => {
-    const banner = (anime?.bannerImage || '').trim();
-    const cover = (anime?.coverImage || '').trim();
+    const banner = ensureAbsoluteUrl((anime?.bannerImage || '').trim());
+    const cover = ensureAbsoluteUrl((anime?.coverImage || '').trim());
     const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
 
     if (!targetEp) return fallback;
-    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
+    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return ensureAbsoluteUrl(targetEp.thumbnail);
     
     if (!episodes || episodes.length === 0) return fallback;
 
@@ -610,12 +609,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
       .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
       .reverse()[0];
     
-    if (prev) return prev.thumbnail;
+    if (prev) return ensureAbsoluteUrl(prev.thumbnail);
 
     const next = sorted
       .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
     
-    if (next) return next.thumbnail;
+    if (next) return ensureAbsoluteUrl(next.thumbnail);
 
     return fallback;
   };
@@ -978,7 +977,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 <div className="flex gap-4">
                   <Avatar className="h-10 w-10 shrink-0">
                     {profile?.avatarId && officialAvatars?.find(a => a.id === profile.avatarId) ? (
-                      <AvatarImage src={officialAvatars.find(a => a.id === profile.avatarId)!.url} />
+                      <AvatarImage src={ensureAbsoluteUrl(officialAvatars.find(a => a.id === profile.avatarId)!.url)} />
                     ) : (
                       <AvatarFallback className="bg-primary/10 text-primary font-bold">{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback>
                     )}
@@ -1061,7 +1060,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
                       >
                         <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image src={thumbnail.trim()} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
+                          <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">

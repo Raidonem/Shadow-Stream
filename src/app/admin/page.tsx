@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -48,7 +47,7 @@ import { doc, collection, serverTimestamp, query, orderBy, limit, Firestore, upd
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { translations } from '../../lib/i18n';
 import { Badge } from '../../components/ui/badge';
-import { cn, normalizeSearchString } from '../../lib/utils';
+import { cn, normalizeSearchString, ensureAbsoluteUrl } from '../../lib/utils';
 import { GenreKey, EpisodeServer, AnimeType, AnimeSeason, Anime, Report, AvatarItem, Episode } from '../../lib/types';
 import Image from 'next/image';
 import { addDays } from 'date-fns';
@@ -188,7 +187,7 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Episode Number</Label>
-              <Input type="number" value={newEpisode.episodeNumber} onChange={e => setNewEpisode({...newEpisode, episodeNumber: e.target.value})} required className="rounded-xl" />
+              <input type="number" value={newEpisode.episodeNumber} onChange={e => setNewEpisode({...newEpisode, episodeNumber: e.target.value})} required className="rounded-xl h-10 w-full px-3 border bg-background" />
             </div>
             <div className="space-y-2">
               <Label>Duration (MM:SS)</Label>
@@ -695,7 +694,7 @@ export default function AdminPage() {
                       <div className="grid gap-6 grid-cols-2 md:grid-cols-5 bg-secondary/20 p-6 rounded-2xl border">
                         <div className="space-y-2">
                           <Label>Release Year</Label>
-                          <Input type="number" value={animeData.releaseYear} onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})} className="rounded-xl" />
+                          <input type="number" value={animeData.releaseYear} onChange={(e) => setAnimeData({...animeData, releaseYear: e.target.value})} className="rounded-xl h-10 w-full px-3 border bg-background" />
                         </div>
                         <div className="space-y-2">
                           <Label>Air Status</Label>
@@ -731,7 +730,7 @@ export default function AdminPage() {
                         </div>
                         <div className="space-y-2">
                           <Label>Initial Views</Label>
-                          <Input type="number" value={animeData.views} onChange={(e) => setAnimeData({...animeData, views: e.target.value})} className="rounded-xl" />
+                          <input type="number" value={animeData.views} onChange={(e) => setAnimeData({...animeData, views: e.target.value})} className="rounded-xl h-10 w-full px-3 border bg-background" />
                         </div>
                       </div>
 
@@ -759,7 +758,7 @@ export default function AdminPage() {
                   {filteredAnime?.map(anime => (
                     <Card key={anime.id} className="overflow-hidden bg-card border-none shadow-md hover:shadow-xl transition-all group">
                       <div className="relative aspect-video">
-                        <Image src={(anime.bannerImage || anime.coverImage || '').trim() || 'https://picsum.photos/seed/placeholder/400/225'} alt={anime.titleEn} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <Image src={ensureAbsoluteUrl((anime.bannerImage || anime.coverImage || '').trim() || 'https://picsum.photos/seed/placeholder/400/225')} alt={anime.titleEn} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                         
                         <Button 
@@ -932,7 +931,7 @@ export default function AdminPage() {
                   {allAvatars?.map(avatar => (
                     <Card key={avatar.id} className="group relative aspect-square overflow-hidden bg-secondary border-none shadow-md hover:ring-2 ring-accent transition-all">
                       <Image 
-                        src={avatar.url} 
+                        src={ensureAbsoluteUrl(avatar.url)} 
                         alt="Avatar Option" 
                         fill 
                         className="object-cover transition-transform group-hover:scale-110"

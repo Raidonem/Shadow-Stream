@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useMemo } from 'react';
@@ -14,6 +13,7 @@ import { doc, collection, arrayUnion, arrayRemove, updateDoc } from 'firebase/fi
 import { useToast } from "../../../hooks/use-toast";
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
+import { ensureAbsoluteUrl } from '../../../lib/utils';
 
 export default function AnimeDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -53,12 +53,12 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
   const tSeasons = translations[language].animeSeasons;
 
   const getEpisodeThumbnail = (targetEp: any) => {
-    const banner = (anime?.bannerImage || '').trim();
-    const cover = (anime?.coverImage || '').trim();
+    const banner = ensureAbsoluteUrl((anime?.bannerImage || '').trim());
+    const cover = ensureAbsoluteUrl((anime?.coverImage || '').trim());
     const fallback = banner !== '' ? banner : (cover !== '' ? cover : 'https://picsum.photos/seed/placeholder/400/600');
 
     if (!targetEp) return fallback;
-    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return targetEp.thumbnail;
+    if (targetEp.thumbnail && targetEp.thumbnail.trim() !== '') return ensureAbsoluteUrl(targetEp.thumbnail);
     
     if (!episodes || episodes.length === 0) return fallback;
 
@@ -68,12 +68,12 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       .filter(e => e.episodeNumber < targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '')
       .reverse()[0];
     
-    if (prev) return prev.thumbnail;
+    if (prev) return ensureAbsoluteUrl(prev.thumbnail);
 
     const next = sorted
       .find(e => e.episodeNumber > targetEp.episodeNumber && e.thumbnail && e.thumbnail.trim() !== '');
     
-    if (next) return next.thumbnail;
+    if (next) return ensureAbsoluteUrl(next.thumbnail);
 
     return fallback;
   };
@@ -132,8 +132,8 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
 
   if (!anime) return <div className="text-center py-20">Anime not found.</div>;
 
-  const bannerUrl = (anime.bannerImage || '').trim() !== '' ? anime.bannerImage : ((anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/1200/600');
-  const coverUrl = (anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600';
+  const bannerUrl = ensureAbsoluteUrl((anime.bannerImage || '').trim() !== '' ? anime.bannerImage : ((anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/1200/600'));
+  const coverUrl = ensureAbsoluteUrl((anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600');
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,7 +141,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
       
       <div className="relative h-[60vh] w-full">
         <Image
-          src={bannerUrl.trim()}
+          src={bannerUrl}
           alt={title || 'Anime Banner'}
           fill
           className="object-cover opacity-60"
@@ -154,7 +154,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
           <div className="flex flex-col gap-8 md:flex-row w-full">
             <div className="relative hidden aspect-[2/3] w-64 shrink-0 overflow-hidden rounded-2xl shadow-2xl md:block">
               <Image
-                src={coverUrl.trim()}
+                src={coverUrl}
                 alt={title || 'Anime Cover'}
                 fill
                 className="object-cover"
@@ -277,7 +277,7 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
                       <Link key={ep.id} href={`/watch/${ep.id}?animeId=${id}`} className="group flex items-center gap-4 rounded-xl border bg-card p-3 transition-colors hover:border-accent hover:bg-accent/5">
                         <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
                           <Image
-                            src={getEpisodeThumbnail(ep).trim()}
+                            src={getEpisodeThumbnail(ep)}
                             alt={(language === 'ar' ? ep.titleAr : ep.titleEn) || 'Episode Thumbnail'}
                             fill
                             className="object-cover"

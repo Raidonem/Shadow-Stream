@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -9,6 +8,7 @@ import { Star, PlayCircle } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import { translations } from '../../lib/i18n';
+import { ensureAbsoluteUrl } from '../../lib/utils';
 
 interface AnimeCardProps {
   anime: Anime;
@@ -18,7 +18,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
   const { language } = useLanguage();
   const title = (language === 'ar' ? anime.titleAr : anime.titleEn) || 'Anime Cover';
   const tTags = translations[language].tags;
-  const imageSrc = (anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600';
+  const imageSrc = ensureAbsoluteUrl((anime.coverImage || '').trim() !== '' ? anime.coverImage : 'https://picsum.photos/seed/placeholder/400/600');
 
   return (
     <Link href={`/anime/${anime.id}`} className="group relative block w-full overflow-hidden rounded-xl bg-card anime-card-hover">
