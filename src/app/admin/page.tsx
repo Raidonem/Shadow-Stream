@@ -261,28 +261,28 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
           ) : (
             <div className="space-y-3">
               {episodes?.map(ep => (
-                <div key={ep.id} className="flex items-center justify-between p-4 rounded-xl bg-card border shadow-sm group gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-accent shrink-0 font-bold text-sm">EP {ep.episodeNumber}</span>
-                      <span className="truncate font-bold text-base flex-1">{ep.titleEn}</span>
+                <div key={ep.id} className="grid grid-cols-[1fr_auto] items-center p-4 rounded-xl bg-card border shadow-sm group gap-4 overflow-hidden">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-accent shrink-0 font-bold text-xs">EP {ep.episodeNumber}</span>
+                      <span className="truncate font-bold text-sm block">{ep.titleEn}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">{ep.servers?.length || 0} Servers • {ep.duration}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 truncate">{ep.servers?.length || 0} Servers • {ep.duration}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <Button size="icon" variant="ghost" className="h-10 w-10 text-accent hover:bg-accent/10" onClick={() => handleEditEpisode(ep)}>
-                      <Edit2 className="h-5 w-5" />
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-accent hover:bg-accent/10" onClick={() => handleEditEpisode(ep)}>
+                      <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button 
                       size="icon" 
                       variant="ghost" 
-                      className="h-10 w-10 text-destructive hover:bg-destructive/10"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
                       onClick={(e) => {
                         e.preventDefault();
                         handleDeleteEpisode(ep.id);
                       }}
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
