@@ -144,8 +144,16 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
 
     setDocumentNonBlocking(epDocRef, episodeData, { merge: true });
     
+    // Calculate what the last episode number should be (the maximum)
+    let nextLastEp = epNum;
+    if (episodes) {
+      const otherEps = episodes.filter(e => e.id !== editingEpisodeId);
+      const maxOther = otherEps.length > 0 ? Math.max(...otherEps.map(e => e.episodeNumber)) : 0;
+      nextLastEp = Math.max(maxOther, epNum);
+    }
+
     updateDocumentNonBlocking(doc(db, 'anime', anime.id), {
-      lastEpisodeNumber: epNum,
+      lastEpisodeNumber: nextLastEp,
       updatedAt: serverTimestamp()
     });
 
@@ -169,10 +177,20 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
   };
 
   const handleDeleteEpisode = (id: string) => {
-    if (!db || !anime.id || !id) return;
+    if (!db || !anime.id || !id || !episodes) return;
     
     const epRef = doc(db, 'anime', anime.id, 'episodes', id);
     deleteDocumentNonBlocking(epRef);
+
+    // Recalculate last episode number from remaining episodes
+    const remaining = episodes.filter(e => e.id !== id);
+    const nextLastEp = remaining.length > 0 ? Math.max(...remaining.map(e => e.episodeNumber)) : 0;
+    
+    updateDocumentNonBlocking(doc(db, 'anime', anime.id), {
+      lastEpisodeNumber: nextLastEp,
+      updatedAt: serverTimestamp()
+    });
+
     toast({ title: "Episode Deleted" });
   };
 
