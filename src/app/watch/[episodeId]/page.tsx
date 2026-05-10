@@ -177,8 +177,8 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col items-center gap-2 max-w-full">
+          <div className="flex flex-wrap justify-center items-center gap-1.5 md:gap-1">
             {[...Array(10)].map((_, i) => {
               const val = i + 1;
               const isActive = (hoveredValue !== null ? val <= hoveredValue : val <= (userRatingDoc?.value || 0));
@@ -190,7 +190,7 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
                   onClick={() => handleRate(val)}
                   disabled={isRating}
                   className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                    "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
                     isActive ? "bg-yellow-500 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)] scale-110" : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                   )}
                 >
@@ -199,7 +199,7 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
               );
             })}
           </div>
-          <div className="flex items-center justify-between w-full px-1 text-[10px] font-bold uppercase text-muted-foreground">
+          <div className="flex items-center justify-between w-full max-w-[280px] sm:max-w-none px-1 text-[10px] font-bold uppercase text-muted-foreground">
             <span>{language === 'ar' ? 'سيء' : 'Poor'}</span>
             <span className="text-accent">
               {userRatingDoc ? (language === 'ar' ? `تقييمك: ${userRatingDoc.value}` : `Your Score: ${userRatingDoc.value}`) : ''}
