@@ -1051,6 +1051,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const epAvg = rating > 0 ? rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
                     const thumbnail = getEpisodeThumbnail(ep);
                     const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
+                    
+                    const title = language === 'ar' ? ep.titleAr : ep.titleEn;
+                    const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
                       <Link 
@@ -1080,9 +1083,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <div className="overflow-hidden whitespace-nowrap">
                             <h4 className={cn(
                               "text-sm font-bold inline-block",
-                              language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide"
+                              isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
                             )}>
-                              {language === 'ar' ? ep.titleAr : ep.titleEn}
+                              {title}
                             </h4>
                           </div>
                           <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
