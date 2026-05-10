@@ -668,15 +668,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   // Auto-scroll the episode list to the current episode when it changes
   useEffect(() => {
     if (episodeId && episodes?.length) {
-      // Use a small timeout to ensure the DOM has settled after navigation
       const timer = setTimeout(() => {
         const element = document.getElementById(`ep-item-${episodeId}`);
         if (element) {
-          // Use scrollTo on the viewport specifically to avoid scrolling the whole page
           const viewport = element.closest('[data-radix-scroll-area-viewport]');
           if (viewport) {
             viewport.scrollTo({
-              top: element.offsetTop - 12, // Small padding for top alignment
+              top: element.offsetTop - 12,
               behavior: 'smooth'
             });
           }
@@ -705,8 +703,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
         });
 
         const genreMatches = (a.genres || []).filter(g => currentGenres.has(g)).length;
-
-        // Weight name matches heavily to prioritize name similarity
         const score = (nameMatches * 100) + genreMatches;
         
         return { anime: a, score };
@@ -871,17 +867,17 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const nextEp = episodes && currentIdx < episodes.length - 1 ? episodes[currentIdx + 1] : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
-      <main className="container mx-auto px-4 py-8 md:px-8">
+      <main className="container mx-auto px-4 py-8 md:px-8 max-w-full overflow-hidden">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="space-y-6 min-w-0 w-full max-w-full">
+          <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
             <div className="w-full max-w-full">
               <StreamPlayer url={activeServer?.url || ""} title={`${animeTitle} - ${language === 'ar' ? 'الحلقة' : 'Episode'} ${episode.episodeNumber}`} />
             </div>
             
-            <div className="flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full">
-              <Button asChild variant="secondary" disabled={!prevEp} className="rounded-xl flex-1 max-w-[140px] sm:max-w-none">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full overflow-hidden px-1">
+              <Button asChild variant="secondary" disabled={!prevEp} className="rounded-xl flex-1 max-w-[140px] px-2 sm:px-4">
                 {prevEp ? (
                   <Link href={`/watch/${prevEp.id}?animeId=${animeId}`}>
                     <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" />
@@ -896,10 +892,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   </span>
                 )}
               </Button>
-              <div className="text-xs sm:text-sm font-bold bg-secondary/50 px-2 sm:px-4 py-2 rounded-xl whitespace-nowrap">
+              <div className="text-[10px] sm:text-sm font-bold bg-secondary/50 px-2 sm:px-4 py-2 rounded-xl whitespace-nowrap shrink-0">
                 {language === 'ar' ? 'الحلقة' : 'Episode'} {episode.episodeNumber}
               </div>
-              <Button asChild variant="secondary" disabled={!nextEp} className="rounded-xl flex-1 max-w-[140px] sm:max-w-none">
+              <Button asChild variant="secondary" disabled={!nextEp} className="rounded-xl flex-1 max-w-[140px] px-2 sm:px-4">
                 {nextEp ? (
                   <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>
                     <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
@@ -916,14 +912,16 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </Button>
             </div>
 
-            <EpisodeRatingSystem 
-              animeId={animeId} 
-              episodeId={episodeId} 
-              episodeDoc={episode}
-              userRatingDoc={userRatingDoc || null}
-            />
+            <div className="w-full max-w-full overflow-hidden">
+              <EpisodeRatingSystem 
+                animeId={animeId} 
+                episodeId={episodeId} 
+                episodeDoc={episode}
+                userRatingDoc={userRatingDoc || null}
+              />
+            </div>
 
-            <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border overflow-hidden w-full max-w-full">
+            <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border w-full max-w-full overflow-hidden">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   <Server className="h-4 w-4 text-accent" />
@@ -968,7 +966,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   </Dialog>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-4 overflow-hidden">
                 {Object.entries(episode.servers?.reduce((acc: any, s: any) => { (acc[s.lang] = acc[s.lang] || []).push(s); return acc; }, {}) || {}).map(([lang, servers]: any) => (
                   <div key={lang} className="space-y-2">
                     <p className="text-xs font-bold text-muted-foreground flex items-center gap-2"><Globe className="h-3 w-3" />{lang === 'ar' ? 'العربية' : 'English'}</p>
@@ -978,19 +976,19 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-6 w-full max-w-full">
+            <div className="flex flex-col gap-6 w-full max-w-full overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h1 className="font-headline text-2xl font-bold md:text-3xl">{epTitle}</h1>
+                <div className="space-y-1 min-w-0 flex-1">
+                  <h1 className="font-headline text-2xl font-bold md:text-3xl break-words">{epTitle}</h1>
                   <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
-                    <Link href={`/anime/${anime.id}`} className="text-accent hover:underline font-bold">{animeTitle}</Link>
+                    <Link href={`/anime/${anime.id}`} className="text-accent hover:underline font-bold truncate max-w-[200px]">{animeTitle}</Link>
                     <div className="flex items-center gap-1 text-yellow-400"><Star className="h-4 w-4 fill-current" /><span className="text-sm font-bold">{anime.rating?.toFixed(1) || '0.0'}</span></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <section className="space-y-6 pt-8 w-full max-w-full">
+            <section className="space-y-6 pt-8 w-full max-w-full overflow-hidden">
               <div className="flex items-center gap-2"><MessageSquare className="h-6 w-6 text-accent" /><h2 className="font-headline text-2xl font-bold">{t('comments')} ({comments?.length || 0})</h2></div>
               
               {isRestricted && (
@@ -1003,7 +1001,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               )}
 
               {user && !isRestricted ? (
-                <div className="flex gap-4">
+                <div className="flex gap-4 w-full max-w-full">
                   <Avatar className="h-10 w-10 shrink-0">
                     {profile?.avatarId && officialAvatars?.find(a => a.id === profile.avatarId) ? (
                       <AvatarImage src={ensureAbsoluteUrl(officialAvatars.find(a => a.id === profile.avatarId)!.url)} />
@@ -1011,7 +1009,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <AvatarFallback className="bg-primary/10 text-primary font-bold">{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback>
                     )}
                   </Avatar>
-                  <div className="flex-1 space-y-2 relative min-w-0">
+                  <div className="flex-1 space-y-2 min-w-0">
                     <Textarea 
                       placeholder={language === 'ar' ? 'انضم إلى المناقشة...' : "Join the discussion..."} 
                       className="min-h-[80px] rounded-xl bg-secondary/30 focus:ring-accent border-none w-full" 
@@ -1019,9 +1017,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       onChange={(e) => setCommentText(e.target.value)} 
                       maxLength={COMMENT_LIMIT} 
                     />
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{commentText.length}/{COMMENT_LIMIT}</span>
-                      <Button onClick={() => handlePostComment()} disabled={!commentText.trim()} className="gap-2 rounded-xl bg-accent px-6 font-bold text-accent-foreground"><Send className="h-4 w-4" />{t('postComment')}</Button>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground shrink-0">{commentText.length}/{COMMENT_LIMIT}</span>
+                      <Button onClick={() => handlePostComment()} disabled={!commentText.trim()} className="gap-2 rounded-xl bg-accent px-4 sm:px-6 font-bold text-accent-foreground text-xs sm:text-sm"><Send className="h-4 w-4" />{t('postComment')}</Button>
                     </div>
                   </div>
                 </div>
@@ -1029,7 +1027,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 <div className="rounded-xl bg-secondary/30 p-8 text-center"><p className="text-muted-foreground mb-4">{language === 'ar' ? 'يجب عليك تسجيل الدخول للتعليق.' : "You must be logged in to comment."}</p><Button asChild variant="outline"><Link href="/login">{t('login')}</Link></Button></div>
               )}
 
-              <div className="space-y-8 pt-4">
+              <div className="space-y-8 pt-4 overflow-hidden">
                 {topLevelComments.map((c) => (
                   <div key={c.id} className="space-y-4">
                     <CommentItem 
@@ -1052,9 +1050,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </section>
 
-            {/* Suggestions Section */}
             {suggestions.length > 0 && (
-              <section className="space-y-6 pt-12 border-t mt-12 w-full max-w-full">
+              <section className="space-y-6 pt-12 border-t mt-12 w-full max-w-full overflow-hidden">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-6 w-6 text-accent" />
                   <h2 className="font-headline text-2xl font-bold">{t('recommended')}</h2>
@@ -1068,11 +1065,11 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             )}
           </div>
 
-          <aside className="space-y-8 w-full max-w-full">
-            <section className="space-y-4">
-              <h3 className="font-headline text-xl font-bold">{t('episodes')}</h3>
-              <ScrollArea className="h-[600px] pr-4">
-                <div className="space-y-2">
+          <aside className="space-y-8 w-full max-w-full overflow-hidden">
+            <section className="space-y-4 w-full">
+              <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
+              <ScrollArea className="h-[600px] w-full">
+                <div className="space-y-2 pr-4">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const rating = (ep.ratingCount && ep.ratingCount > 0) 
                       ? (ep.totalRatingSum || 0) / ep.ratingCount 
@@ -1128,12 +1125,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                 </div>
               </ScrollArea>
             </section>
-            <AdBanner dataAdSlot="0987654321" />
+            <div className="w-full overflow-hidden">
+              <AdBanner dataAdSlot="0987654321" />
+            </div>
           </aside>
         </div>
       </main>
 
-      <Dialog open={isCommentReportDialogOpen} onOpenChange={isCommentReportDialogOpen => setIsCommentReportDialogOpen(isCommentReportDialogOpen)}>
+      <Dialog open={isCommentReportDialogOpen} onOpenChange={setIsCommentReportDialogOpen}>
         <DialogContent className="bg-card border-none">
           <DialogHeader>
             <DialogTitle>{t('reportComment')}</DialogTitle>
