@@ -165,7 +165,7 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
   const displayAvg = currentAvg > 0 ? currentAvg.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
 
   return (
-    <div className="bg-secondary/20 rounded-2xl p-6 border border-accent/10">
+    <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-accent/10 overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -177,8 +177,8 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-2 max-w-full">
-          <div className="flex flex-wrap justify-center items-center gap-1.5 md:gap-1">
+        <div className="flex flex-col items-center gap-2 w-full max-w-sm md:max-w-md">
+          <div className="flex flex-wrap justify-center items-center gap-1 sm:gap-1.5">
             {[...Array(10)].map((_, i) => {
               const val = i + 1;
               const isActive = (hoveredValue !== null ? val <= hoveredValue : val <= (userRatingDoc?.value || 0));
@@ -190,16 +190,16 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
                   onClick={() => handleRate(val)}
                   disabled={isRating}
                   className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+                    "w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
                     isActive ? "bg-yellow-500 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)] scale-110" : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                   )}
                 >
-                  <span className="text-xs font-bold">{val}</span>
+                  <span className="text-[10px] sm:text-xs font-bold">{val}</span>
                 </button>
               );
             })}
           </div>
-          <div className="flex items-center justify-between w-full max-w-[280px] sm:max-w-none px-1 text-[10px] font-bold uppercase text-muted-foreground">
+          <div className="flex items-center justify-between w-full px-1 text-[10px] font-bold uppercase text-muted-foreground">
             <span>{language === 'ar' ? 'سيء' : 'Poor'}</span>
             <span className="text-accent">
               {userRatingDoc ? (language === 'ar' ? `تقييمك: ${userRatingDoc.value}` : `Your Score: ${userRatingDoc.value}`) : ''}
@@ -870,20 +870,42 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const nextEp = episodes && currentIdx < episodes.length - 1 ? episodes[currentIdx + 1] : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <main className="container mx-auto px-4 py-8 md:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
           <div className="space-y-6">
             <StreamPlayer url={activeServer?.url || ""} title={`${animeTitle} - ${language === 'ar' ? 'الحلقة' : 'Episode'} ${episode.episodeNumber}`} />
             
-            <div className="flex items-center justify-between gap-4">
-              <Button asChild variant="secondary" disabled={!prevEp} className="rounded-xl">
-                {prevEp ? <Link href={`/watch/${prevEp.id}?animeId=${animeId}`}><ChevronLeft className="h-4 w-4 mr-2" />{language === 'ar' ? 'السابق' : 'Previous'}</Link> : <span className="opacity-50 flex items-center"><ChevronLeft className="h-4 w-4 mr-2" />{language === 'ar' ? 'السابق' : 'Previous'}</span>}
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
+              <Button asChild variant="secondary" disabled={!prevEp} className="rounded-xl flex-1 max-w-[140px] sm:max-w-none">
+                {prevEp ? (
+                  <Link href={`/watch/${prevEp.id}?animeId=${animeId}`}>
+                    <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                  </Link>
+                ) : (
+                  <span className="opacity-50 flex items-center">
+                    <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                  </span>
+                )}
               </Button>
-              <div className="text-sm font-bold bg-secondary/50 px-4 py-2 rounded-xl">{language === 'ar' ? 'الحلقة' : 'Episode'} {episode.episodeNumber}</div>
-              <Button asChild variant="secondary" disabled={!nextEp} className="rounded-xl">
-                {nextEp ? <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>{language === 'ar' ? 'التالي' : 'Next'}<ChevronRight className="h-4 w-4 ml-2" /></Link> : <span className="opacity-50 flex items-center">{language === 'ar' ? 'التالي' : 'Next'}<ChevronRight className="h-4 w-4 ml-2" /></span>}
+              <div className="text-xs sm:text-sm font-bold bg-secondary/50 px-2 sm:px-4 py-2 rounded-xl whitespace-nowrap">
+                {language === 'ar' ? 'الحلقة' : 'Episode'} {episode.episodeNumber}
+              </div>
+              <Button asChild variant="secondary" disabled={!nextEp} className="rounded-xl flex-1 max-w-[140px] sm:max-w-none">
+                {nextEp ? (
+                  <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>
+                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'التالي' : 'Next'}</span>
+                    <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
+                  </Link>
+                ) : (
+                  <span className="opacity-50 flex items-center">
+                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'التالي' : 'Next'}</span>
+                    <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
+                  </span>
+                )}
               </Button>
             </div>
 
@@ -894,7 +916,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               userRatingDoc={userRatingDoc || null}
             />
 
-            <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border">
+            <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border overflow-hidden">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   <Server className="h-4 w-4 text-accent" />
@@ -982,10 +1004,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <AvatarFallback className="bg-primary/10 text-primary font-bold">{(profile?.displayName || profile?.username || 'U')[0]}</AvatarFallback>
                     )}
                   </Avatar>
-                  <div className="flex-1 space-y-2 relative">
+                  <div className="flex-1 space-y-2 relative min-w-0">
                     <Textarea 
                       placeholder={language === 'ar' ? 'انضم إلى المناقشة...' : "Join the discussion..."} 
-                      className="min-h-[80px] rounded-xl bg-secondary/30 focus:ring-accent border-none" 
+                      className="min-h-[80px] rounded-xl bg-secondary/30 focus:ring-accent border-none w-full" 
                       value={commentText} 
                       onChange={(e) => setCommentText(e.target.value)} 
                       maxLength={COMMENT_LIMIT} 
@@ -1080,7 +1102,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                               </button>
                             )}
                           </div>
-                          <div className="overflow-hidden whitespace-nowrap">
+                          <div className="overflow-hidden whitespace-nowrap max-w-full">
                             <h4 className={cn(
                               "text-sm font-bold inline-block",
                               isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
