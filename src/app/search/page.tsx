@@ -80,60 +80,73 @@ function SearchResults() {
   const processedAnime = useMemo(() => {
     if (!animeList || searchType !== 'anime') return [];
     
-    let filtered = [...animeList];
+    // We map the list to objects with a weighted relevance score
+    let scoredList = animeList.map(anime => {
+      let score = 0;
+      if (queryParam) {
+        const normalizedQuery = normalizeSearchString(queryParam);
+        const queryTokens = normalizedQuery.split(' ').filter(token => token.length > 0);
+        
+        if (queryTokens.length > 0) {
+          const mainTitleContext = normalizeSearchString(`${anime.titleEn} ${anime.titleAr}`);
+          const altTitleContext = normalizeSearchString((anime.alternativeTitles || []).join(' '));
 
-    if (queryParam) {
-      const normalizedQuery = normalizeSearchString(queryParam);
-      const queryTokens = normalizedQuery.split(' ').filter(token => token.length > 0);
-
-      if (queryTokens.length > 0) {
-        filtered = filtered.map(anime => {
-          const searchableContext = normalizeSearchString([
-            anime.titleEn,
-            anime.titleAr,
-            ...(anime.alternativeTitles || [])
-          ].join(' '));
-
-          let matchCount = 0;
           queryTokens.forEach(token => {
-            if (searchableContext.includes(token)) {
-              matchCount++;
+            // Priority: Main titles (English/Arabic) get 10 points per keyword match
+            if (mainTitleContext.includes(token)) {
+              score += 10;
+            } 
+            // Secondary: Alternative titles get 1 point per keyword match
+            else if (altTitleContext.includes(token)) {
+              score += 1;
             }
           });
-
-          return { anime, matchCount };
-        })
-        .filter(item => item.matchCount > 0)
-        .sort((a, b) => b.matchCount - a.matchCount) // Prioritize relevance initially
-        .map(item => item.anime);
+        } else {
+          score = 1; // Default if query is empty after normalization
+        }
+      } else {
+        score = 1; // No search query, all are relevant
       }
-    }
+      return { anime, score };
+    });
+
+    // Filter out items with 0 score (no match found during search)
+    let filtered = scoredList.filter(item => item.score > 0);
 
     if (selectedGenres.length > 0) {
-      filtered = filtered.filter(anime => 
-        selectedGenres.every(g => anime.genres?.includes(g))
+      filtered = filtered.filter(item => 
+        selectedGenres.every(g => item.anime.genres?.includes(g))
       );
     }
 
     if (selectedYears.length > 0) {
-      filtered = filtered.filter(anime => 
-        selectedYears.includes(anime.releaseYear)
+      filtered = filtered.filter(item => 
+        selectedYears.includes(item.anime.releaseYear)
       );
     }
 
-    // Apply secondary sort based on user preference
+    // Apply complex sort: Relevance score (if searching) is primary, user sortBy is secondary
     return filtered.sort((a, b) => {
+      // Primary: Weighted Relevance (Descending)
+      if (queryParam && a.score !== b.score) {
+        return b.score - a.score;
+      }
+
+      // Secondary: User preference
+      const animeA = a.anime;
+      const animeB = b.anime;
+      
       if (sortBy === 'name') {
-        const nameA = (language === 'ar' ? a.titleAr : a.titleEn) || '';
-        const nameB = (language === 'ar' ? b.titleAr : b.titleEn) || '';
+        const nameA = (language === 'ar' ? animeA.titleAr : animeA.titleEn) || '';
+        const nameB = (language === 'ar' ? animeB.titleAr : animeB.titleEn) || '';
         return nameA.localeCompare(nameB);
       }
-      if (sortBy === 'added_desc') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-      if (sortBy === 'added_asc') return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
-      if (sortBy === 'release_desc') return (b.releaseYear || 0) - (a.releaseYear || 0);
-      if (sortBy === 'release_asc') return (a.releaseYear || 0) - (b.releaseYear || 0);
+      if (sortBy === 'added_desc') return (animeB.updatedAt?.seconds || 0) - (animeA.updatedAt?.seconds || 0);
+      if (sortBy === 'added_asc') return (animeA.updatedAt?.seconds || 0) - (animeB.updatedAt?.seconds || 0);
+      if (sortBy === 'release_desc') return (animeB.releaseYear || 0) - (animeA.releaseYear || 0);
+      if (sortBy === 'release_asc') return (animeA.releaseYear || 0) - (animeB.releaseYear || 0);
       return 0;
-    });
+    }).map(item => item.anime);
   }, [animeList, queryParam, sortBy, language, selectedGenres, selectedYears, searchType]);
 
   const processedUsers = useMemo(() => {
