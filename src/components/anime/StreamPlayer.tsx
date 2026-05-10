@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useRef, useEffect, useMemo } from 'react';
+import { cn } from '../../lib/utils';
 
 interface StreamPlayerProps {
   url: string;
@@ -45,7 +46,7 @@ export function StreamPlayer({ url, title }: StreamPlayerProps) {
   }, [playbackMode]);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
+    <div className="relative aspect-video w-full max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
       {playbackMode.type === 'youtube' || playbackMode.type === 'iframe' ? (
         <iframe
           key={playbackMode.src}
@@ -73,7 +74,7 @@ export function StreamPlayer({ url, title }: StreamPlayerProps) {
         </div>
       )}
       
-      <div className="absolute left-4 top-4 pointer-events-none rounded-lg bg-black/60 px-3 py-1 text-sm font-medium text-white backdrop-blur-md">
+      <div className="absolute left-4 top-4 max-w-[calc(100%-32px)] pointer-events-none rounded-lg bg-black/60 px-3 py-1 text-[10px] sm:text-sm font-medium text-white backdrop-blur-md truncate">
         {title}
       </div>
     </div>
