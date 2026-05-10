@@ -1077,7 +1077,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                               </button>
                             )}
                           </div>
-                          <h4 className="text-sm font-bold truncate">{language === 'ar' ? ep.titleAr : ep.titleEn}</h4>
+                          <div className="overflow-hidden whitespace-nowrap">
+                            <h4 className={cn(
+                              "text-sm font-bold inline-block",
+                              language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide"
+                            )}>
+                              {language === 'ar' ? ep.titleAr : ep.titleEn}
+                            </h4>
+                          </div>
                           <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
                             <Star className="h-2 w-2 fill-current" />
                             {epAvg}

@@ -1,4 +1,3 @@
-
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -79,10 +78,20 @@ export default {
             height: '0',
           },
         },
+        'title-slide': {
+          '0%, 15%, 85%, 100%': { transform: 'translateX(0)' },
+          '50%': { transform: 'translateX(-35%)' },
+        },
+        'title-slide-rtl': {
+          '0%, 15%, 85%, 100%': { transform: 'translateX(0)' },
+          '50%': { transform: 'translateX(35%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'title-slide': 'title-slide 10s ease-in-out infinite',
+        'title-slide-rtl': 'title-slide-rtl 10s ease-in-out infinite',
       },
     },
   },
