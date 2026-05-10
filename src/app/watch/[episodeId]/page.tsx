@@ -165,7 +165,7 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
   const displayAvg = currentAvg > 0 ? currentAvg.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
 
   return (
-    <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-accent/10 overflow-hidden">
+    <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-accent/10 overflow-hidden w-full max-w-full">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -190,7 +190,7 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
                   onClick={() => handleRate(val)}
                   disabled={isRating}
                   className={cn(
-                    "w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+                    "w-5 h-5 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
                     isActive ? "bg-yellow-500 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)] scale-110" : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                   )}
                 >
@@ -870,24 +870,28 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const nextEp = episodes && currentIdx < episodes.length - 1 ? episodes[currentIdx + 1] : null;
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8 md:px-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="space-y-6">
-            <StreamPlayer url={activeServer?.url || ""} title={`${animeTitle} - ${language === 'ar' ? 'الحلقة' : 'Episode'} ${episode.episodeNumber}`} />
+          <div className="space-y-6 min-w-0 w-full max-w-full">
+            <div className="w-full max-w-full">
+              <StreamPlayer url={activeServer?.url || ""} title={`${animeTitle} - ${language === 'ar' ? 'الحلقة' : 'Episode'} ${episode.episodeNumber}`} />
+            </div>
             
-            <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full">
               <Button asChild variant="secondary" disabled={!prevEp} className="rounded-xl flex-1 max-w-[140px] sm:max-w-none">
                 {prevEp ? (
                   <Link href={`/watch/${prevEp.id}?animeId=${animeId}`}>
                     <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    <span className="text-xs sm:hidden">{language === 'ar' ? 'السابق' : 'Prev'}</span>
                   </Link>
                 ) : (
                   <span className="opacity-50 flex items-center">
                     <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    <span className="text-xs sm:hidden">{language === 'ar' ? 'السابق' : 'Prev'}</span>
                   </span>
                 )}
               </Button>
@@ -897,12 +901,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               <Button asChild variant="secondary" disabled={!nextEp} className="rounded-xl flex-1 max-w-[140px] sm:max-w-none">
                 {nextEp ? (
                   <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>
-                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'التالي' : 'Next'}</span>
+                    <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
+                    <span className="text-xs sm:hidden">{language === 'ar' ? 'التالي' : 'Next'}</span>
                     <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
                   </Link>
                 ) : (
                   <span className="opacity-50 flex items-center">
-                    <span className="text-xs sm:text-sm">{language === 'ar' ? 'التالي' : 'Next'}</span>
+                    <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
+                    <span className="text-xs sm:hidden">{language === 'ar' ? 'التالي' : 'Next'}</span>
                     <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
                   </span>
                 )}
@@ -916,7 +922,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               userRatingDoc={userRatingDoc || null}
             />
 
-            <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border overflow-hidden">
+            <div className="space-y-4 rounded-2xl bg-secondary/30 p-4 border overflow-hidden w-full max-w-full">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   <Server className="h-4 w-4 text-accent" />
@@ -971,7 +977,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 w-full max-w-full">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
                   <h1 className="font-headline text-2xl font-bold md:text-3xl">{epTitle}</h1>
@@ -983,7 +989,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </div>
 
-            <section className="space-y-6 pt-8">
+            <section className="space-y-6 pt-8 w-full max-w-full">
               <div className="flex items-center gap-2"><MessageSquare className="h-6 w-6 text-accent" /><h2 className="font-headline text-2xl font-bold">{t('comments')} ({comments?.length || 0})</h2></div>
               
               {isRestricted && (
@@ -1047,7 +1053,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
 
             {/* Suggestions Section */}
             {suggestions.length > 0 && (
-              <section className="space-y-6 pt-12 border-t mt-12">
+              <section className="space-y-6 pt-12 border-t mt-12 w-full max-w-full">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-6 w-6 text-accent" />
                   <h2 className="font-headline text-2xl font-bold">{t('recommended')}</h2>
@@ -1061,7 +1067,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             )}
           </div>
 
-          <aside className="space-y-8">
+          <aside className="space-y-8 w-full max-w-full">
             <section className="space-y-4">
               <h3 className="font-headline text-xl font-bold">{t('episodes')}</h3>
               <ScrollArea className="h-[600px] pr-4">
