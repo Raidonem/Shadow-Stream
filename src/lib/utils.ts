@@ -9,14 +9,14 @@ export function cn(...inputs: ClassValue[]) {
  * Normalizes a string for searching by:
  * 1. Converting to lowercase
  * 2. Removing all special characters (keeping alphanumeric and Arabic characters)
- * 3. Removing all whitespace
+ * 3. Preserving single spaces between words for tokenization
  */
 export function normalizeSearchString(str: string): string {
   if (!str) return '';
   return str
     .toLowerCase()
-    .replace(/[^a-z0-9\u0600-\u06FF]/gi, '')
-    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9\u0600-\u06FF\s]/gi, ' ') // Replace non-alphanumeric (except spaces) with a space
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
     .trim();
 }
 

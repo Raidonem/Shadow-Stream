@@ -84,14 +84,29 @@ function SearchResults() {
 
     if (queryParam) {
       const normalizedQuery = normalizeSearchString(queryParam);
-      filtered = filtered.filter(anime => {
-        const titleEn = normalizeSearchString(anime.titleEn || '');
-        const titleAr = normalizeSearchString(anime.titleAr || '');
-        const altTitlesMatch = (anime.alternativeTitles || []).some(t => 
-          normalizeSearchString(t).includes(normalizedQuery)
-        );
-        return titleEn.includes(normalizedQuery) || titleAr.includes(normalizedQuery) || altTitlesMatch;
-      });
+      const queryTokens = normalizedQuery.split(' ').filter(token => token.length > 0);
+
+      if (queryTokens.length > 0) {
+        filtered = filtered.map(anime => {
+          const searchableContext = normalizeSearchString([
+            anime.titleEn,
+            anime.titleAr,
+            ...(anime.alternativeTitles || [])
+          ].join(' '));
+
+          let matchCount = 0;
+          queryTokens.forEach(token => {
+            if (searchableContext.includes(token)) {
+              matchCount++;
+            }
+          });
+
+          return { anime, matchCount };
+        })
+        .filter(item => item.matchCount > 0)
+        .sort((a, b) => b.matchCount - a.matchCount) // Prioritize relevance initially
+        .map(item => item.anime);
+      }
     }
 
     if (selectedGenres.length > 0) {
@@ -106,6 +121,7 @@ function SearchResults() {
       );
     }
 
+    // Apply secondary sort based on user preference
     return filtered.sort((a, b) => {
       if (sortBy === 'name') {
         const nameA = (language === 'ar' ? a.titleAr : a.titleEn) || '';
@@ -123,11 +139,17 @@ function SearchResults() {
   const processedUsers = useMemo(() => {
     if (!usersList || searchType !== 'users') return [];
     if (!queryParam) return usersList;
+    
     const normalizedQuery = normalizeSearchString(queryParam);
-    return usersList.filter(user => 
-      normalizeSearchString(user.username || '').includes(normalizedQuery) ||
-      normalizeSearchString(user.displayName || '').includes(normalizedQuery)
-    );
+    const queryTokens = normalizedQuery.split(' ').filter(token => token.length > 0);
+    
+    if (queryTokens.length === 0) return usersList;
+
+    return usersList.filter(user => {
+      const userContext = normalizeSearchString(`${user.username} ${user.displayName}`);
+      // Return true if any of the query tokens match the user context
+      return queryTokens.some(token => userContext.includes(token));
+    });
   }, [usersList, queryParam, searchType]);
 
   const toggleGenre = (genre: GenreKey) => {
@@ -312,7 +334,7 @@ function SearchResults() {
                   <Card key={user.id} className="overflow-hidden bg-card border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/profile?uid=${user.id}`)}>
                     <CardContent className="p-4 flex items-center gap-4">
                       <Avatar className="h-12 w-12">
-                        {avatarUrl && <AvatarImage src={avatarUrl} />}
+                        {avatarUrl && <AvatarImage src={ensureAbsoluteUrl(avatarUrl)} />}
                         <AvatarFallback className="bg-primary/20 text-primary font-bold">
                           {(user.displayName || user.username || 'U')[0]?.toUpperCase()}
                         </AvatarFallback>

@@ -371,12 +371,22 @@ export default function AdminPage() {
 
   const filteredAnime = useMemo(() => {
     if (!catalogSearchQuery.trim()) return sortedAnime;
-    const q = catalogSearchQuery.toLowerCase().trim();
-    return sortedAnime.filter(anime => 
-      anime.titleEn.toLowerCase().includes(q) || 
-      anime.titleAr.toLowerCase().includes(q) ||
-      (anime.alternativeTitles || []).some(t => t.toLowerCase().includes(q))
-    );
+    
+    const normalizedQuery = normalizeSearchString(catalogSearchQuery);
+    const queryTokens = normalizedQuery.split(' ').filter(token => token.length > 0);
+    
+    if (queryTokens.length === 0) return sortedAnime;
+
+    return sortedAnime.filter(anime => {
+      const animeSearchable = normalizeSearchString([
+        anime.titleEn,
+        anime.titleAr,
+        ...(anime.alternativeTitles || [])
+      ].join(' '));
+      
+      // Return true if any of the query tokens are found in the anime's names
+      return queryTokens.some(token => animeSearchable.includes(token));
+    });
   }, [sortedAnime, catalogSearchQuery]);
 
   useEffect(() => {
