@@ -261,15 +261,15 @@ function EpisodeManager({ anime, db }: { anime: Anime; db: Firestore }) {
           ) : (
             <div className="space-y-3">
               {episodes?.map(ep => (
-                <div key={ep.id} className="flex items-center justify-between p-4 rounded-xl bg-card border shadow-sm group">
-                  <div className="min-w-0">
+                <div key={ep.id} className="flex items-center justify-between p-4 rounded-xl bg-card border shadow-sm group gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold text-base flex items-center gap-2">
-                      <span className="text-accent">EP {ep.episodeNumber}</span>
+                      <span className="text-accent shrink-0">EP {ep.episodeNumber}</span>
                       <span className="truncate">{ep.titleEn}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{ep.servers?.length || 0} Servers • {ep.duration}</p>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{ep.servers?.length || 0} Servers • {ep.duration}</p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 shrink-0">
                     <Button size="icon" variant="ghost" className="h-10 w-10 text-accent hover:bg-accent/10" onClick={() => handleEditEpisode(ep)}>
                       <Edit2 className="h-5 w-5" />
                     </Button>
