@@ -669,7 +669,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   useEffect(() => {
     if (episodeId && episodes?.length) {
       const timer = setTimeout(() => {
-        const element = document.getElementById(`ep-item-${episodeId}`);
+        // Try desktop ID first
+        let element = document.getElementById(`ep-item-${episodeId}`);
+        // If not found (on mobile) try mobile ID
+        if (!element) {
+          element = document.getElementById(`ep-item-mobile-${episodeId}`);
+        }
+        
         if (element) {
           const viewport = element.closest('[data-radix-scroll-area-viewport]');
           if (viewport) {
@@ -1050,6 +1056,67 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </section>
 
+            {/* Episode List (Mobile Only) - Displayed above suggestions on thin screens */}
+            <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12">
+              <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
+              <ScrollArea className="h-[400px] w-full">
+                <div className="space-y-2 pr-4">
+                  {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
+                    const rating = (ep.ratingCount && ep.ratingCount > 0) 
+                      ? (ep.totalRatingSum || 0) / ep.ratingCount 
+                      : (ep.rating || 0);
+                    const epAvg = rating > 0 ? rating.toFixed(1) : (language === 'ar' ? '٠.٠' : '0.0');
+                    const thumbnail = getEpisodeThumbnail(ep);
+                    const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
+                    
+                    const title = language === 'ar' ? ep.titleAr : ep.titleEn;
+                    const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
+
+                    return (
+                      <Link 
+                        key={ep.id} 
+                        id={`ep-item-mobile-${ep.id}`}
+                        href={`/watch/${ep.id}?animeId=${animeId}`} 
+                        className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
+                      >
+                        <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
+                            {user && (
+                              <button
+                                onClick={(e) => handleToggleWatched(e, ep.id)}
+                                className={cn(
+                                  "transition-all",
+                                  isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/40 hover:text-muted-foreground"
+                                )}
+                              >
+                                <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                              </button>
+                            )}
+                          </div>
+                          <div className="overflow-hidden whitespace-nowrap max-w-full">
+                            <h4 className={cn(
+                              "text-sm font-bold inline-block",
+                              isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
+                            )}>
+                              {title}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                            <Star className="h-2 w-2 fill-current" />
+                            {epAvg}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </section>
+
             {suggestions.length > 0 && (
               <section className="space-y-6 pt-12 border-t mt-12 w-full max-w-full overflow-hidden">
                 <div className="flex items-center gap-2">
@@ -1066,7 +1133,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
           </div>
 
           <aside className="space-y-8 w-full max-w-full overflow-hidden">
-            <section className="space-y-4 w-full">
+            <section className="hidden lg:block space-y-4 w-full">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[600px] w-full">
                 <div className="space-y-2 pr-4">
