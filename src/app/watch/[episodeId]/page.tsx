@@ -669,23 +669,26 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   useEffect(() => {
     if (episodeId && episodes?.length) {
       const timer = setTimeout(() => {
-        // Try desktop ID first
-        let element = document.getElementById(`ep-item-${episodeId}`);
-        // If not found (on mobile) try mobile ID
-        if (!element) {
-          element = document.getElementById(`ep-item-mobile-${episodeId}`);
-        }
+        // Find all possible scrollable containers (desktop and mobile)
+        const ids = [`ep-item-${episodeId}`, `ep-item-mobile-${episodeId}`];
         
-        if (element) {
-          const viewport = element.closest('[data-radix-scroll-area-viewport]');
-          if (viewport) {
-            viewport.scrollTo({
-              top: element.offsetTop - 12,
-              behavior: 'smooth'
-            });
+        ids.forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            const viewport = element.closest('[data-radix-scroll-area-viewport]');
+            if (viewport) {
+              // Only scroll the container that is currently visible to the user
+              const rect = viewport.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) {
+                viewport.scrollTo({
+                  top: element.offsetTop - 12,
+                  behavior: 'smooth'
+                });
+              }
+            }
           }
-        }
-      }, 300);
+        });
+      }, 400);
       return () => clearTimeout(timer);
     }
   }, [episodeId, !!episodes]);
