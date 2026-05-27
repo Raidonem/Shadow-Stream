@@ -182,6 +182,13 @@ function WatchlistContent() {
     toast({ title: "User Blocked", description: "They can no longer send you requests." });
   };
 
+  const truncateByWords = (text: string, count: number) => {
+    if (!text) return '';
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    if (words.length <= count) return text;
+    return words.slice(0, count).join(' ') + '...';
+  };
+
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -321,6 +328,8 @@ function WatchlistContent() {
               <div className="grid gap-4">
                 {watchHistory.map(entry => {
                   const thumbnail = ensureAbsoluteUrl((entry.thumbnail || '').trim() !== '' ? entry.thumbnail : 'https://picsum.photos/seed/placeholder/320/180');
+                  const fullTitle = `${language === 'ar' ? 'الحلقة' : 'Episode'} ${entry.episodeNumber}: ${language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}`;
+                  
                   return (
                     <Link key={entry.id} href={`/watch/${entry.episodeId}?animeId=${entry.animeId}`}>
                       <Card className="overflow-hidden border-none bg-secondary/30 transition-colors hover:bg-secondary/50">
@@ -336,7 +345,7 @@ function WatchlistContent() {
                               {language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn}
                             </p>
                             <h4 className="font-bold text-sm sm:text-lg leading-tight mt-0.5">
-                              {language === 'ar' ? 'الحلقة' : 'Episode'} {entry.episodeNumber}: {language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}
+                              {truncateByWords(fullTitle, 5)}
                             </h4>
                             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                               {entry.watchedAt?.toDate?.()?.toLocaleString() || 'Recently'}
