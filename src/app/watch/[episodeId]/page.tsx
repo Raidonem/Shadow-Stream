@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -1091,21 +1090,21 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div 
                         key={ep.id} 
                         id={`ep-item-mobile-${ep.id}`}
-                        className="group flex items-stretch gap-2 w-full min-w-0"
+                        className="relative group w-full min-w-0"
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
                           className={cn(
-                            "flex-1 flex items-center gap-3 p-2 rounded-xl transition-colors min-w-0 overflow-hidden border",
+                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all min-w-0 overflow-hidden border",
                             ep.id === episodeId 
-                              ? "bg-accent/10 border-accent/20" 
-                              : "bg-secondary/20 border-transparent hover:bg-secondary/40"
+                              ? "bg-accent/5 border-accent/20" 
+                              : "bg-secondary/10 border-transparent hover:bg-secondary/20"
                           )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 pr-10">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                             <div className="overflow-hidden whitespace-nowrap max-w-full">
                               <h4 className={cn(
@@ -1122,18 +1121,18 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="flex shrink-0">
+                          <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 z-10 pointer-events-none">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "px-3 flex items-center justify-center rounded-xl transition-all border",
+                                "pointer-events-auto h-[70%] px-3 flex items-center justify-center rounded-xl transition-all border shadow-md",
                                 isWatched 
-                                  ? "bg-primary/10 border-primary/20 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" 
-                                  : "bg-secondary/20 border-transparent text-muted-foreground/30 hover:bg-secondary/40 hover:text-muted-foreground/60"
+                                  ? "bg-primary border-primary/20 text-primary-foreground drop-shadow-[0_0_8px_hsl(var(--primary))]" 
+                                  : "bg-secondary border-border text-muted-foreground/30 hover:text-muted-foreground/60"
                               )}
                               title={isWatched ? "Watched" : "Mark as Watched"}
                             >
-                              <Eye className={cn("h-5 w-5", isWatched && "fill-current")} />
+                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                             </button>
                           </div>
                         )}
@@ -1179,21 +1178,21 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div 
                         key={ep.id} 
                         id={`ep-item-${ep.id}`}
-                        className="group flex items-stretch gap-2 w-full min-w-0"
+                        className="relative group w-full min-w-0"
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
                           className={cn(
-                            "flex-1 flex items-center gap-3 p-2 rounded-xl transition-colors min-w-0 overflow-hidden border",
+                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all overflow-hidden border",
                             ep.id === episodeId 
-                              ? "bg-accent/10 border-accent/20" 
-                              : "bg-secondary/20 border-transparent hover:bg-secondary/40"
+                              ? "bg-accent/5 border-accent/20" 
+                              : "bg-secondary/10 border-transparent hover:bg-secondary/20"
                           )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex-1 min-w-0 pr-10 overflow-hidden">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                             <div className="overflow-hidden whitespace-nowrap w-full">
                               <h4 className={cn(
@@ -1210,18 +1209,18 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="flex shrink-0">
+                          <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 z-10 pointer-events-none">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "px-3 flex items-center justify-center rounded-xl transition-all border",
+                                "pointer-events-auto h-[70%] px-3 flex items-center justify-center rounded-xl transition-all border shadow-md",
                                 isWatched 
-                                  ? "bg-primary/10 border-primary/20 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" 
-                                  : "bg-secondary/20 border-transparent text-muted-foreground/30 hover:bg-secondary/40 hover:text-muted-foreground/60"
+                                  ? "bg-primary border-primary/20 text-primary-foreground drop-shadow-[0_0_8px_hsl(var(--primary))]" 
+                                  : "bg-secondary border-border text-muted-foreground/30 hover:text-muted-foreground/60"
                               )}
                               title={isWatched ? "Watched" : "Mark as Watched"}
                             >
-                              <Eye className={cn("h-5 w-5", isWatched && "fill-current")} />
+                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                             </button>
                           </div>
                         )}
