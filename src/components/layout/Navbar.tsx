@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLanguage } from '../../components/providers/LanguageContext';
@@ -39,7 +39,7 @@ import { NotificationBell } from '../notifications/NotificationBell';
 import { UserProfile, AvatarItem } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
-function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, onFocus, onBlur }: any) {
+function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, onFocus, onBlur, inputRef }: any) {
   const searchParams = useSearchParams();
   
   useEffect(() => {
@@ -51,6 +51,7 @@ function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, onFocus, on
     <div className="relative w-full group">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-accent transition-colors" />
       <Input
+        ref={inputRef}
         type="search"
         placeholder={t('search')}
         className="w-full bg-secondary/50 pl-10 focus:ring-accent border-none rounded-full transition-all"
@@ -74,6 +75,7 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -123,6 +125,13 @@ export function Navbar() {
     }
   };
 
+  const handleCancelSearch = () => {
+    if (searchRef.current) {
+      searchRef.current.blur();
+    }
+    setIsSearchFocused(false);
+  };
+
   const userInitial = userProfile?.username?.[0] || user?.email?.[0] || 'U';
 
   return (
@@ -132,7 +141,7 @@ export function Navbar() {
           "flex items-center gap-8 transition-opacity duration-200",
           isSearchFocused && "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto"
         )}>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" onClick={handleCancelSearch}>
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="font-headline font-bold text-primary-foreground">S</span>
             </div>
@@ -167,6 +176,7 @@ export function Navbar() {
               handleSearch={handleSearch} 
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
+              inputRef={searchRef}
             />
           </Suspense>
           {isSearchFocused && (
@@ -175,7 +185,7 @@ export function Navbar() {
               size="icon" 
               className="ml-2 md:hidden"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setIsSearchFocused(false)}
+              onClick={handleCancelSearch}
             >
               <X className="h-4 w-4" />
             </Button>
