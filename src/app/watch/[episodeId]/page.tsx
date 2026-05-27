@@ -1088,42 +1088,49 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
-                      <Link 
+                      <div 
                         key={ep.id} 
                         id={`ep-item-mobile-${ep.id}`}
-                        href={`/watch/${ep.id}?animeId=${animeId}`} 
-                        className={cn("relative flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
+                        className={cn(
+                          "group relative flex items-center rounded-xl transition-colors",
+                          ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "hover:bg-secondary/50"
+                        )}
                       >
-                        <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0 pr-8">
-                          <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                          <div className="overflow-hidden whitespace-nowrap max-w-full">
-                            <h4 className={cn(
-                              "text-sm font-bold inline-block",
-                              isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
-                            )}>
-                              {title}
-                            </h4>
+                        <Link 
+                          href={`/watch/${ep.id}?animeId=${animeId}`} 
+                          className="flex-1 flex items-center gap-3 p-2 min-w-0 pr-10"
+                        >
+                          <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
-                            <Star className="h-2 w-2 fill-current" />
-                            {epAvg}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
+                            <div className="overflow-hidden whitespace-nowrap max-w-full">
+                              <h4 className={cn(
+                                "text-sm font-bold inline-block",
+                                isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
+                              )}>
+                                {title}
+                              </h4>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                              <Star className="h-2 w-2 fill-current" />
+                              {epAvg}
+                            </div>
                           </div>
-                        </div>
+                        </Link>
                         {user && (
                           <button
                             onClick={(e) => handleToggleWatched(e, ep.id)}
                             className={cn(
-                              "absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all hover:bg-secondary/80 z-10",
+                              "absolute right-2 p-2 rounded-full transition-all hover:bg-secondary/80 z-20",
                               isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
                             )}
                           >
                             <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                           </button>
                         )}
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -1162,42 +1169,49 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
-                      <Link 
+                      <div 
                         key={ep.id} 
-                        id={`ep-item-${ep.id}`} 
-                        href={`/watch/${ep.id}?animeId=${animeId}`} 
-                        className={cn("relative flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
+                        id={`ep-item-${ep.id}`}
+                        className={cn(
+                          "group relative flex items-center rounded-xl transition-colors",
+                          ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "hover:bg-secondary/50"
+                        )}
                       >
-                        <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0 pr-8">
-                          <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                          <div className="overflow-hidden whitespace-nowrap max-w-full">
-                            <h4 className={cn(
-                              "text-sm font-bold inline-block",
-                              isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
-                            )}>
-                              {title}
-                            </h4>
+                        <Link 
+                          href={`/watch/${ep.id}?animeId=${animeId}`} 
+                          className="flex-1 flex items-center gap-3 p-2 min-w-0 pr-10"
+                        >
+                          <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
-                            <Star className="h-2 w-2 fill-current" />
-                            {epAvg}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
+                            <div className="overflow-hidden whitespace-nowrap max-w-full">
+                              <h4 className={cn(
+                                "text-sm font-bold inline-block",
+                                isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
+                              )}>
+                                {title}
+                              </h4>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                              <Star className="h-2 w-2 fill-current" />
+                              {epAvg}
+                            </div>
                           </div>
-                        </div>
+                        </Link>
                         {user && (
                           <button
                             onClick={(e) => handleToggleWatched(e, ep.id)}
                             className={cn(
-                              "absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all hover:bg-secondary/80 z-10",
+                              "absolute right-2 p-2 rounded-full transition-all hover:bg-secondary/80 z-20",
                               isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
                             )}
                           >
                             <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                           </button>
                         )}
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
