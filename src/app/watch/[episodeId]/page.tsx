@@ -1073,7 +1073,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </section>
 
-            {/* Episode List (Mobile Only) - Displayed above suggestions on thin screens */}
             <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12 overflow-hidden">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[400px] w-full">
@@ -1096,7 +1095,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           className={cn(
                             "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
-                              ? "bg-transparent border border-accent/20" 
+                              ? "bg-transparent border border-accent/20 ring-1 ring-accent/10" 
                               : "bg-transparent hover:bg-secondary/40"
                           )}
                         >
@@ -1115,14 +1114,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         
-                        <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
                           {user && (
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
                                 "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
                                 isWatched 
-                                  ? "text-primary drop-shadow-[0_0_12px_hsl(var(--accent))]" 
+                                  ? "text-purple-300 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
                                   : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
@@ -1175,7 +1174,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           className={cn(
                             "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
-                              ? "bg-transparent border border-accent/20" 
+                              ? "bg-transparent border border-accent/20 ring-1 ring-accent/10" 
                               : "bg-transparent hover:bg-secondary/40"
                           )}
                         >
@@ -1194,14 +1193,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         
-                        <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
                           {user && (
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
                                 "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
                                 isWatched 
-                                  ? "text-primary drop-shadow-[0_0_12px_hsl(var(--accent))]" 
+                                  ? "text-purple-300 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
                                   : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
