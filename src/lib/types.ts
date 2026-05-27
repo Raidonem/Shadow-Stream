@@ -48,6 +48,8 @@ export interface UserProfile {
   blockedUserIds: string[];
   suspendedUntil?: any;
   restrictedUntil?: any;
+  seenGlobalIds?: string[];
+  lastNotificationCheck?: any;
   createdAt: any;
   updatedAt: any;
 }
@@ -158,6 +160,7 @@ export interface UserNotification {
   customMessage?: string;
   link: string;
   read: boolean;
+  clickedAt?: any;
   createdAt: any;
 }
 

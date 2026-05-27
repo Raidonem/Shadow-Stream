@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Bell, PlayCircle, Loader2, MessageSquare, UserPlus, Users, AtSign, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase/index';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import { useLanguage } from '../providers/LanguageContext';
 import Link from 'next/link';
 import { GlobalNotification, UserNotification, UserProfile } from '../../lib/types';
 import { Badge } from '../ui/badge';
+import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 
 const RECENT_THRESHOLD_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
@@ -26,30 +27,6 @@ export function NotificationBell() {
   const db = useFirestore();
   const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const [lastSeen, setLastSeen] = useState(0);
-
-  // Load last seen notification timestamp from local storage on mount to avoid hydration mismatch
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const val = localStorage.getItem('last_notif_seen');
-      if (val) setLastSeen(parseInt(val));
-    }
-  }, []);
-
-  // Global Notifications (New Episodes)
-  const globalQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(50));
-  }, [db]);
-
-  // Personal Notifications (Friend Requests, Replies, Likes, Mentions)
-  const personalQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(20));
-  }, [db, user]);
-
-  const { data: globals, isLoading: isGlobalsLoading } = useCollection<GlobalNotification>(globalQuery);
-  const { data: personals, isLoading: isPersonalsLoading } = useCollection<UserNotification>(personalQuery);
 
   const profileRef = useMemoFirebase(() => {
     if (!user || !db) return null;
@@ -58,12 +35,24 @@ export function NotificationBell() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(profileRef);
 
-  // Merge and sort notifications
+  // Global Notifications (New Episodes)
+  const globalQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'global_notifications'), orderBy('createdAt', 'desc'), limit(50));
+  }, [db]);
+
+  // Personal Notifications (Friend Requests, Replies, Likes, Mentions, Warnings)
+  const personalQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(50));
+  }, [db, user]);
+
+  const { data: globals, isLoading: isGlobalsLoading } = useCollection<GlobalNotification>(globalQuery);
+  const { data: personals, isLoading: isPersonalsLoading } = useCollection<UserNotification>(personalQuery);
+
+  // Merge, sort, and filter notifications based on user business rules
   const allNotifications = useMemo(() => {
-    // If profile is still loading, we don't know what they follow.
-    if (!profile) {
-      return (personals || []).map(n => ({ ...n, category: 'personal' as const }));
-    }
+    if (!profile) return [];
 
     const followedAnimeIds = new Set([
       ...(profile.watchlistAnimeIds || []),
@@ -75,8 +64,7 @@ export function NotificationBell() {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const userJoinTime = profile.createdAt?.seconds || 0;
 
-    // 1. FILTER: Only global notifications for anime in user's library,
-    // created after the user joined, and within a recent window (7 days).
+    // 1. FILTER GLOBALS: Followed/Recent
     let filteredGlobals = (globals || []).filter(n => {
       const createdAt = n.createdAt?.seconds || 0;
       const isFollowed = n.type === 'new_episode' && n.animeId && followedAnimeIds.has(n.animeId);
@@ -86,8 +74,7 @@ export function NotificationBell() {
       return isFollowed && isAfterJoin && isRecent;
     });
 
-    // 2. DEDUPLICATE: Only show the LATEST episode notification per anime.
-    // This prevents "Notification Spam" when a user follows a show with many recent updates.
+    // 2. DEDUPLICATE GLOBALS: Latest per anime
     const latestPerAnime = new Map<string, GlobalNotification>();
     filteredGlobals.forEach(n => {
       if (!n.animeId) return;
@@ -104,7 +91,25 @@ export function NotificationBell() {
       ...(personals || []).map(n => ({ ...n, category: 'personal' as const }))
     ];
 
-    return merged.sort((a, b) => {
+    // 3. APPLY PERSISTENT VISIBILITY RULES
+    return merged.filter(n => {
+      // ANIME UPDATES & WARNINGS: Show once (until marked read/seen)
+      const isOneTime = n.type === 'new_episode' || ['warning', 'restriction', 'suspension'].includes(n.type);
+      
+      if (n.category === 'global') {
+        return !(profile.seenGlobalIds || []).includes(n.id);
+      } else {
+        // COMMENT MENTIONS: Stay 7 days after clicked
+        if (n.type === 'comment_mention') {
+          if (!n.read) return true;
+          const clickedSeconds = n.clickedAt?.seconds || 0;
+          return (nowSeconds - clickedSeconds) < (7 * 24 * 60 * 60);
+        }
+        
+        // DEFAULT PERSONAL: Hide if read
+        return !n.read;
+      }
+    }).sort((a, b) => {
       const timeA = a.createdAt?.seconds || 0;
       const timeB = b.createdAt?.seconds || 0;
       return timeB - timeA;
@@ -112,15 +117,37 @@ export function NotificationBell() {
   }, [globals, personals, profile]);
 
   const unreadCount = useMemo(() => {
-    return allNotifications.filter(n => (n.createdAt?.seconds || 0) > lastSeen).length;
-  }, [allNotifications, lastSeen]);
+    if (!profile) return 0;
+    const lastCheck = profile.lastNotificationCheck?.seconds || 0;
+    // Count notifications created AFTER the user's last persistent check
+    return allNotifications.filter(n => (n.createdAt?.seconds || 0) > lastCheck).length;
+  }, [allNotifications, profile?.lastNotificationCheck]);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (open && allNotifications.length > 0) {
-      const latestTime = allNotifications[0].createdAt?.seconds || 0;
-      setLastSeen(latestTime);
-      localStorage.setItem('last_notif_seen', latestTime.toString());
+    if (open && profileRef && profile) {
+      // Persistently update the last check timestamp in Firestore to clear badge for everyone
+      updateDocumentNonBlocking(profileRef, {
+        lastNotificationCheck: serverTimestamp()
+      });
+    }
+  };
+
+  const handleMarkConsumed = (n: any) => {
+    if (!user || !db || !profileRef) return;
+
+    if (n.category === 'global') {
+      // Add global notification ID to the user's seen list persistently
+      updateDocumentNonBlocking(profileRef, {
+        seenGlobalIds: arrayUnion(n.id)
+      });
+    } else {
+      // Mark personal notification as read and set click timestamp for the 7-day rule
+      const notifRef = doc(db, 'users', user.uid, 'notifications', n.id);
+      updateDocumentNonBlocking(notifRef, {
+        read: true,
+        clickedAt: serverTimestamp()
+      });
     }
   };
 
@@ -168,7 +195,11 @@ export function NotificationBell() {
                 const title = language === 'ar' ? n.animeTitleAr : n.animeTitleEn;
                 return (
                   <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0 focus:bg-secondary/50">
-                    <Link href={`/watch/${n.episodeId}?animeId=${n.animeId}`} className="flex flex-col gap-1 p-3">
+                    <Link 
+                      href={`/watch/${n.episodeId}?animeId=${n.animeId}`} 
+                      className="flex flex-col gap-1 p-3"
+                      onClick={() => handleMarkConsumed(n)}
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {getIcon(n.type)}
@@ -192,7 +223,11 @@ export function NotificationBell() {
               } else {
                 return (
                   <DropdownMenuItem key={n.id} asChild className="cursor-pointer p-0 focus:bg-secondary/50">
-                    <Link href={n.link} className="flex flex-col gap-1 p-3">
+                    <Link 
+                      href={n.link} 
+                      className="flex flex-col gap-1 p-3"
+                      onClick={() => handleMarkConsumed(n)}
+                    >
                       <div className="flex items-start gap-2">
                         {getIcon(n.type)}
                         <div className="flex-1">
