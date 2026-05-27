@@ -1101,20 +1101,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                            {user && (
-                              <button
-                                onClick={(e) => handleToggleWatched(e, ep.id)}
-                                className={cn(
-                                  "transition-all",
-                                  isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/40 hover:text-muted-foreground"
-                                )}
-                              >
-                                <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
-                              </button>
-                            )}
-                          </div>
+                          <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                           <div className="overflow-hidden whitespace-nowrap max-w-full">
                             <h4 className={cn(
                               "text-sm font-bold inline-block",
@@ -1128,6 +1115,19 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                             {epAvg}
                           </div>
                         </div>
+                        {user && (
+                          <div className="shrink-0">
+                            <button
+                              onClick={(e) => handleToggleWatched(e, ep.id)}
+                              className={cn(
+                                "p-2 rounded-full transition-all",
+                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60 hover:bg-secondary"
+                              )}
+                            >
+                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                            </button>
+                          </div>
+                        )}
                       </Link>
                     );
                   })}
@@ -1177,20 +1177,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                            {user && (
-                              <button
-                                onClick={(e) => handleToggleWatched(e, ep.id)}
-                                className={cn(
-                                  "transition-all",
-                                  isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/40 hover:text-muted-foreground"
-                                )}
-                              >
-                                <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
-                              </button>
-                            )}
-                          </div>
+                          <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                           <div className="overflow-hidden whitespace-nowrap max-w-full">
                             <h4 className={cn(
                               "text-sm font-bold inline-block",
@@ -1204,6 +1191,19 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                             {epAvg}
                           </div>
                         </div>
+                        {user && (
+                          <div className="shrink-0">
+                            <button
+                              onClick={(e) => handleToggleWatched(e, ep.id)}
+                              className={cn(
+                                "p-2 rounded-full transition-all",
+                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60 hover:bg-secondary"
+                              )}
+                            >
+                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                            </button>
+                          </div>
+                        )}
                       </Link>
                     );
                   })}
