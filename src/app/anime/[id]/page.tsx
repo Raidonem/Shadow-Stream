@@ -15,6 +15,7 @@ import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
 import { ensureAbsoluteUrl } from '../../../lib/utils';
 
+
 export default function AnimeDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const db = useFirestore();

@@ -1,7 +1,6 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* Standalone output is required for optimized Firebase App Hosting deployments */
   output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
@@ -10,6 +9,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
