@@ -26,23 +26,29 @@ service cloud.firestore {
 
     function isBlockedBy(userId) {
       let userPath = /databases/$(database)/documents/users/$(userId);
-      return isSignedIn() && exists(userPath) && request.auth.uid in get(userPath).data.blockedUserIds;
+      // Use .get() for safe field access if the field is missing
+      return isSignedIn() && exists(userPath) && 
+             request.auth.uid in get(userPath).data.get('blockedUserIds', []);
     }
 
     function isRestricted() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isSignedIn() && exists(userPath) && get(userPath).data.restrictedUntil != null && get(userPath).data.restrictedUntil > request.time;
+      // Use .get() with request.time as default to safely handle missing expiration fields
+      return isSignedIn() && exists(userPath) && 
+             get(userPath).data.get('restrictedUntil', request.time) > request.time;
     }
 
     function isSuspended() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isSignedIn() && exists(userPath) && get(userPath).data.suspendedUntil != null && get(userPath).data.suspendedUntil > request.time;
+      // Use .get() with request.time as default to safely handle missing expiration fields
+      return isSignedIn() && exists(userPath) && 
+             get(userPath).data.get('suspendedUntil', request.time) > request.time;
     }
 
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || (resource != null && resource.data.isPublic == true) || isFriend(userId) || isAdmin();
+      allow get: if isOwner(userId) || (resource != null && resource.data.get('isPublic', false) == true) || isFriend(userId) || isAdmin();
       // Allow listing public users with a limit of 50 to support the search page
       allow list: if isSignedIn() && (request.query.limit <= 50 || isAdmin()); 
       
@@ -146,7 +152,7 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid 
         && !isSuspended()
         && request.resource.data.value >= 1 && request.resource.data.value <= 10;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
 
     match /comment_votes/{voteId} {
