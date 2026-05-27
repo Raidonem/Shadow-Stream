@@ -684,7 +684,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   useEffect(() => {
     if (episodeId && episodes?.length) {
       const timer = setTimeout(() => {
-        // Find all possible scrollable containers (desktop and mobile)
         const ids = [`ep-item-${episodeId}`, `ep-item-mobile-${episodeId}`];
         
         ids.forEach(id => {
@@ -692,7 +691,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
           if (element) {
             const viewport = element.closest('[data-radix-scroll-area-viewport]');
             if (viewport) {
-              // Only scroll the container that is currently visible to the user
               const rect = viewport.getBoundingClientRect();
               if (rect.width > 0 && rect.height > 0) {
                 viewport.scrollTo({
@@ -1074,7 +1072,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </section>
 
-            {/* Episode List (Mobile Only) - Displayed above suggestions on thin screens */}
             <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[400px] w-full">
@@ -1116,7 +1113,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </div>
                         {user && (
-                          <div className="shrink-0">
+                          <div className="w-8 flex items-center justify-center shrink-0 ml-auto">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
@@ -1169,7 +1166,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     return (
                       <Link 
                         key={ep.id} 
-                        id={`ep-item-${ep.id}`}
+                        id={`ep-item-${ep.id}`} 
                         href={`/watch/${ep.id}?animeId=${animeId}`} 
                         className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
                       >
@@ -1192,7 +1189,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </div>
                         {user && (
-                          <div className="shrink-0">
+                          <div className="w-8 flex items-center justify-center shrink-0 ml-auto">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
