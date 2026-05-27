@@ -218,28 +218,28 @@ function WatchlistContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-8 flex w-full max-w-4xl overflow-x-auto rounded-xl bg-secondary p-1">
-            <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
+          <TabsList className="mb-8 flex w-full max-w-4xl overflow-x-auto justify-start rounded-xl bg-secondary p-1 scrollbar-hide">
+            <TabsTrigger value="watching" className="rounded-lg gap-2 px-4 shrink-0">
               <Eye className="h-4 w-4" />
               {t('currentlyWatching')}
             </TabsTrigger>
-            <TabsTrigger value="watchlist" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="watchlist" className="rounded-lg gap-2 px-4 shrink-0">
               <Bookmark className="h-4 w-4" />
               {t('watchLater')}
             </TabsTrigger>
-            <TabsTrigger value="favorites" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="favorites" className="rounded-lg gap-2 px-4 shrink-0">
               <Heart className="h-4 w-4" />
               {t('myFavorites')}
             </TabsTrigger>
-            <TabsTrigger value="completed" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="completed" className="rounded-lg gap-2 px-4 shrink-0">
               <CheckCircle2 className="h-4 w-4" />
               {t('completed')}
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="history" className="rounded-lg gap-2 px-4 shrink-0">
               <History className="h-4 w-4" />
               {t('history')}
             </TabsTrigger>
-            <TabsTrigger value="friends" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="friends" className="rounded-lg gap-2 px-4 shrink-0">
               <Users className="h-4 w-4" />
               {language === 'ar' ? 'الأصدقاء' : 'Friends'}
               {(incomingRequests?.length || 0) > 0 && <span className="ml-1 flex h-2 w-2 rounded-full bg-accent" />}
