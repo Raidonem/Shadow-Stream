@@ -1075,7 +1075,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[400px] w-full">
-                <div className="space-y-2 pr-4">
+                <div className="space-y-3 pr-4">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const rating = (ep.ratingCount && ep.ratingCount > 0) 
                       ? (ep.totalRatingSum || 0) / ep.ratingCount 
@@ -1091,14 +1091,16 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div 
                         key={ep.id} 
                         id={`ep-item-mobile-${ep.id}`}
-                        className={cn(
-                          "group relative flex items-center rounded-xl transition-colors",
-                          ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "hover:bg-secondary/50"
-                        )}
+                        className="group flex items-stretch gap-2 w-full min-w-0"
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
-                          className="flex-1 flex items-center gap-3 p-2 min-w-0 pr-10"
+                          className={cn(
+                            "flex-1 flex items-center gap-3 p-2 rounded-xl transition-colors min-w-0 overflow-hidden border",
+                            ep.id === episodeId 
+                              ? "bg-accent/10 border-accent/20" 
+                              : "bg-secondary/20 border-transparent hover:bg-secondary/40"
+                          )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
@@ -1120,15 +1122,18 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                          <div className="flex shrink-0">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
-                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
+                                "px-3 flex items-center justify-center rounded-xl transition-all border",
+                                isWatched 
+                                  ? "bg-primary/10 border-primary/20 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" 
+                                  : "bg-secondary/20 border-transparent text-muted-foreground/30 hover:bg-secondary/40 hover:text-muted-foreground/60"
                               )}
+                              title={isWatched ? "Watched" : "Mark as Watched"}
                             >
-                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                              <Eye className={cn("h-5 w-5", isWatched && "fill-current")} />
                             </button>
                           </div>
                         )}
@@ -1158,7 +1163,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             <section className="hidden lg:block space-y-4 w-full">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[600px] w-full border rounded-2xl bg-card/50 overflow-hidden">
-                <div className="space-y-2 p-3 pr-4">
+                <div className="space-y-3 p-3 pr-4">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const rating = (ep.ratingCount && ep.ratingCount > 0) 
                       ? (ep.totalRatingSum || 0) / ep.ratingCount 
@@ -1174,14 +1179,16 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div 
                         key={ep.id} 
                         id={`ep-item-${ep.id}`}
-                        className={cn(
-                          "group relative flex items-center rounded-xl transition-colors w-full overflow-hidden",
-                          ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "hover:bg-secondary/50"
-                        )}
+                        className="group flex items-stretch gap-2 w-full min-w-0"
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
-                          className="flex-1 flex items-center gap-3 p-2 min-w-0 pr-10 overflow-hidden"
+                          className={cn(
+                            "flex-1 flex items-center gap-3 p-2 rounded-xl transition-colors min-w-0 overflow-hidden border",
+                            ep.id === episodeId 
+                              ? "bg-accent/10 border-accent/20" 
+                              : "bg-secondary/20 border-transparent hover:bg-secondary/40"
+                          )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
@@ -1203,15 +1210,18 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                          <div className="flex shrink-0">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
-                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
+                                "px-3 flex items-center justify-center rounded-xl transition-all border",
+                                isWatched 
+                                  ? "bg-primary/10 border-primary/20 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" 
+                                  : "bg-secondary/20 border-transparent text-muted-foreground/30 hover:bg-secondary/40 hover:text-muted-foreground/60"
                               )}
+                              title={isWatched ? "Watched" : "Mark as Watched"}
                             >
-                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                              <Eye className={cn("h-5 w-5", isWatched && "fill-current")} />
                             </button>
                           </div>
                         )}
