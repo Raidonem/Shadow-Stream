@@ -1075,7 +1075,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             </section>
 
             {/* Episode List (Mobile Only) - Displayed above suggestions on thin screens */}
-            <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12">
+            <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12 overflow-hidden">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[400px] w-full">
                 <div className="space-y-3 p-3 pr-4">
@@ -1091,12 +1091,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
-                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0">
+                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden">
                         <Link 
                           id={`ep-item-mobile-${ep.id}`}
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
                           className={cn(
-                            "flex flex-1 min-w-0 items-center gap-3 p-2 rounded-xl transition-all duration-300",
+                            "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
                               ? "bg-accent/10 border border-accent/20 ring-1 ring-accent/10" 
                               : "bg-secondary/30 border border-transparent hover:bg-secondary/50"
@@ -1123,7 +1123,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </Link>
                         
                         {user && (
-                          <div className="shrink-0 flex items-center justify-center absolute right-2 z-10">
+                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-secondary/30 border border-transparent">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
@@ -1160,7 +1160,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
           </div>
 
           <aside className="space-y-8 w-full max-w-full min-w-0 overflow-hidden">
-            <section className="hidden lg:block space-y-4 w-full min-w-0">
+            <section className="hidden lg:block space-y-4 w-full min-w-0 overflow-hidden">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[600px] w-full border rounded-2xl bg-card/50 shadow-inner">
                 <div className="space-y-3 p-3 pr-4">
@@ -1176,12 +1176,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
-                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0">
+                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden">
                         <Link 
                           id={`ep-item-${ep.id}`}
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
                           className={cn(
-                            "flex flex-1 min-w-0 items-center gap-3 p-2 rounded-xl transition-all duration-300",
+                            "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
                               ? "bg-accent/10 border border-accent/20 ring-1 ring-accent/10" 
                               : "bg-secondary/30 border border-transparent hover:bg-secondary/50"
@@ -1208,7 +1208,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </Link>
                         
                         {user && (
-                          <div className="shrink-0 flex items-center justify-center absolute right-2 z-10">
+                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-secondary/30 border border-transparent">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
