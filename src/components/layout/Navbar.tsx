@@ -39,7 +39,7 @@ import { NotificationBell } from '../notifications/NotificationBell';
 import { UserProfile, AvatarItem } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
-function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, onFocus, onBlur, inputRef }: any) {
+function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, executeSearch, onFocus, onBlur, inputRef }: any) {
   const searchParams = useSearchParams();
   
   useEffect(() => {
@@ -49,7 +49,17 @@ function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, onFocus, on
 
   return (
     <div className="relative w-full group">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-accent transition-colors" />
+      <button 
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          executeSearch();
+        }}
+        className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground group-focus-within:text-accent transition-colors hover:scale-110 active:scale-95"
+        title={t('search')}
+      >
+        <Search className="h-4 w-4" />
+      </button>
       <Input
         ref={inputRef}
         type="search"
@@ -118,10 +128,19 @@ export function Navbar() {
     router.push('/');
   };
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
+  const executeSearch = () => {
+    if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      (e.target as HTMLInputElement).blur();
+      if (searchRef.current) {
+        searchRef.current.blur();
+      }
+      setIsSearchFocused(false);
+    }
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      executeSearch();
     }
   };
 
@@ -174,6 +193,7 @@ export function Navbar() {
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery} 
               handleSearch={handleSearch} 
+              executeSearch={executeSearch}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
               inputRef={searchRef}
