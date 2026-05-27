@@ -1,3 +1,4 @@
+
 "use client";
 
 import { LanguageProvider } from './LanguageContext';
@@ -15,6 +16,8 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '../../firebase/index';
 import { ShieldAlert, LogOut, Loader2 } from 'lucide-react';
 import { UserProfile } from '../../lib/types';
+import { errorEmitter } from '../../firebase/error-emitter';
+import { FirestorePermissionError } from '../../firebase/errors';
 
 /**
  * Generates a random display name for legacy accounts missing it.
@@ -44,49 +47,73 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
       if (user && db && !isUserLoading) {
         setIsLoadingProfile(true);
         const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          const pendingUsername = localStorage.getItem('pendingUsername') || user.email?.split('@')[0] || 'User';
-          const pendingDisplayName = localStorage.getItem('pendingDisplayName') || pendingUsername;
-          
-          const newProfile = {
-            id: user.uid,
-            externalAuthId: user.uid,
-            username: pendingUsername,
-            displayName: pendingDisplayName,
-            email: user.email || '',
-            role: 'user', 
-            languagePreference: localStorage.getItem('lang') || 'en',
-            themePreference: localStorage.getItem('theme') || 'dark',
-            watchlistAnimeIds: [],
-            currentlyWatchingAnimeIds: [],
-            favoriteAnimeIds: [],
-            completedAnimeIds: [],
-            favoriteEpisodeIds: [],
-            blockedUserIds: [],
-            isPremium: false,
-            isPublic: false,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          };
-          await setDoc(userRef, newProfile);
-          setProfileData(newProfile as any);
-        } else {
-          const data = userSnap.data() as UserProfile;
-          setProfileData(data);
-          
-          const updates: any = {};
-          if (!data.displayName) updates.displayName = generateRandomDisplayName();
-          if (Object.keys(updates).length > 0) updateDocumentNonBlocking(userRef, updates);
-        }
         
-        // Redirection for Email Verification
-        const publicPaths = ['/login', '/verify-email', '/forgot-password'];
-        if (!user.emailVerified && !publicPaths.some(p => pathname.startsWith(p))) {
-          router.push('/verify-email');
+        try {
+          const userSnap = await getDoc(userRef).catch(async (err) => {
+            if (err.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'get'
+              }));
+            }
+            throw err;
+          });
+
+          if (!userSnap.exists()) {
+            const pendingUsername = localStorage.getItem('pendingUsername') || user.email?.split('@')[0] || 'User';
+            const pendingDisplayName = localStorage.getItem('pendingDisplayName') || pendingUsername;
+            
+            const newProfile = {
+              id: user.uid,
+              externalAuthId: user.uid,
+              username: pendingUsername,
+              displayName: pendingDisplayName,
+              email: user.email || '',
+              role: 'user', 
+              languagePreference: localStorage.getItem('lang') || 'en',
+              themePreference: localStorage.getItem('theme') || 'dark',
+              watchlistAnimeIds: [],
+              currentlyWatchingAnimeIds: [],
+              favoriteAnimeIds: [],
+              completedAnimeIds: [],
+              favoriteEpisodeIds: [],
+              blockedUserIds: [],
+              isPremium: false,
+              isPublic: false,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+            
+            await setDoc(userRef, newProfile).catch(async (err) => {
+              if (err.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: userRef.path,
+                  operation: 'create',
+                  requestResourceData: newProfile
+                }));
+              }
+              throw err;
+            });
+            setProfileData(newProfile as any);
+          } else {
+            const data = userSnap.data() as UserProfile;
+            setProfileData(data);
+            
+            const updates: any = {};
+            if (!data.displayName) updates.displayName = generateRandomDisplayName();
+            if (Object.keys(updates).length > 0) updateDocumentNonBlocking(userRef, updates);
+          }
+          
+          // Redirection for Email Verification
+          const publicPaths = ['/login', '/verify-email', '/forgot-password'];
+          if (!user.emailVerified && !publicPaths.some(p => pathname.startsWith(p))) {
+            router.push('/verify-email');
+          }
+        } catch (err: any) {
+          // Contextual errors are handled by listener
+        } finally {
+          setIsLoadingProfile(false);
         }
-        setIsLoadingProfile(false);
       } else {
         setIsLoadingProfile(false);
       }

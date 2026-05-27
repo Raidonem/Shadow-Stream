@@ -67,6 +67,8 @@ import {
   DialogTrigger,
   DialogFooter
 } from "../../../components/ui/dialog";
+import { errorEmitter } from '../../../firebase/error-emitter';
+import { FirestorePermissionError } from '../../../firebase/errors';
 
 const COMMENT_LIMIT = 100;
 
@@ -131,7 +133,18 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
         updatedAt: serverTimestamp()
       });
 
-      const epsSnapshot = await getDocs(collection(db, 'anime', animeId, 'episodes'));
+      const epsColRef = collection(db, 'anime', animeId, 'episodes');
+      const epsSnapshot = await getDocs(epsColRef).catch(async (serverError) => {
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: epsColRef.path,
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        }
+        throw serverError;
+      });
+
       const allEps = epsSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Episode));
       
       let totalSum = 0;
@@ -156,8 +169,10 @@ function EpisodeRatingSystem({ animeId, episodeId, episodeDoc, userRatingDoc }: 
         title: language === 'ar' ? 'تم التقييم' : "Rating Saved", 
         description: (language === 'ar' ? `لقد قيمت الحلقة بـ ${value}/10` : `You rated this episode ${value}/10`) 
       });
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.code !== 'permission-denied') {
+        toast({ title: "Error", description: "Could not save rating.", variant: "destructive" });
+      }
     } finally {
       setIsRating(false);
     }
