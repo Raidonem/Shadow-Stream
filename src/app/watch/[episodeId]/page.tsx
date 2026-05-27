@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -924,13 +923,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>
                     <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
                     <span className="text-xs sm:hidden">{language === 'ar' ? 'التالي' : 'Next'}</span>
-                    <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
+                    <ChevronRight className="h-4 w-4 ml-1 sm:mr-2" />
                   </Link>
                 ) : (
                   <span className="opacity-50 flex items-center">
                     <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
                     <span className="text-xs sm:hidden">{language === 'ar' ? 'التالي' : 'Next'}</span>
-                    <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
+                    <ChevronRight className="h-4 w-4 ml-1 sm:mr-2" />
                   </span>
                 )}
               </Button>
@@ -1097,8 +1096,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           className={cn(
                             "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
-                              ? "bg-background border border-accent/20" 
-                              : "bg-background hover:bg-secondary/40"
+                              ? "bg-transparent border border-accent/20" 
+                              : "bg-transparent hover:bg-secondary/40"
                           )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -1117,7 +1116,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </Link>
                         
                         {user && (
-                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-background">
+                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
@@ -1176,8 +1175,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           className={cn(
                             "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
-                              ? "bg-background border border-accent/20" 
-                              : "bg-background hover:bg-secondary/40"
+                              ? "bg-transparent border border-accent/20" 
+                              : "bg-transparent hover:bg-secondary/40"
                           )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -1196,7 +1195,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </Link>
                         
                         {user && (
-                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-background">
+                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
