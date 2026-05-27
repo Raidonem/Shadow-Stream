@@ -1121,7 +1121,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                               className={cn(
                                 "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
                                 isWatched 
-                                  ? "text-purple-300 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
+                                  ? "text-purple-400 dark:text-purple-500 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
                                   : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
@@ -1200,7 +1200,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                               className={cn(
                                 "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
                                 isWatched 
-                                  ? "text-purple-300 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
+                                  ? "text-purple-400 dark:text-purple-500 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
                                   : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
