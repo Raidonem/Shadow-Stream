@@ -328,6 +328,7 @@ function WatchlistContent() {
               <div className="grid gap-4">
                 {watchHistory.map(entry => {
                   const thumbnail = ensureAbsoluteUrl((entry.thumbnail || '').trim() !== '' ? entry.thumbnail : 'https://picsum.photos/seed/placeholder/320/180');
+                  const animeTitle = language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn;
                   const fullTitle = `${language === 'ar' ? 'الحلقة' : 'Episode'} ${entry.episodeNumber}: ${language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}`;
                   
                   return (
@@ -341,8 +342,8 @@ function WatchlistContent() {
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] sm:text-xs font-bold text-accent uppercase tracking-wider truncate">
-                              {language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn}
+                            <p className="text-[10px] sm:text-xs font-bold text-accent uppercase tracking-wider">
+                              {truncateByWords(animeTitle, 8)}
                             </p>
                             <h4 className="font-bold text-sm sm:text-lg leading-tight mt-0.5">
                               {truncateByWords(fullTitle, 5)}
