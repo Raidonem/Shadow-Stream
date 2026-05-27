@@ -775,7 +775,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const handleVote = async (commentId: string, direction: 'up' | 'down') => {
     if (!user || !db || !animeId || !episodeId) return;
     
-    const voteId = `${user.uid}_${commentId}`;
+    const voteId = `${user.uid}_comment_vote_${commentId}`;
     const voteRef = doc(db, 'comment_votes', voteId);
     const existingVote = userVotes?.find(v => v.commentId === commentId);
     const commentDocRef = doc(db, 'anime', animeId, 'episodes', episodeId, 'comments', commentId);
@@ -1097,8 +1097,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           className={cn(
                             "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
-                              ? "bg-accent/10 border border-accent/20 ring-1 ring-accent/10" 
-                              : "bg-secondary/30 border border-transparent hover:bg-secondary/50"
+                              ? "bg-background border border-accent/20" 
+                              : "bg-background hover:bg-secondary/40"
                           )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -1117,7 +1117,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </Link>
                         
                         {user && (
-                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-secondary/30 border border-transparent">
+                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-background">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
@@ -1176,8 +1176,8 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           className={cn(
                             "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
                             ep.id === episodeId 
-                              ? "bg-accent/10 border border-accent/20 ring-1 ring-accent/10" 
-                              : "bg-secondary/30 border border-transparent hover:bg-secondary/50"
+                              ? "bg-background border border-accent/20" 
+                              : "bg-background hover:bg-secondary/40"
                           )}
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -1196,7 +1196,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         </Link>
                         
                         {user && (
-                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-secondary/30 border border-transparent">
+                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-background">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
