@@ -1120,15 +1120,17 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <button
-                            onClick={(e) => handleToggleWatched(e, ep.id)}
-                            className={cn(
-                              "absolute right-2 p-2 rounded-full transition-all hover:bg-secondary/80 z-20",
-                              isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
-                            )}
-                          >
-                            <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
-                          </button>
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                            <button
+                              onClick={(e) => handleToggleWatched(e, ep.id)}
+                              className={cn(
+                                "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
+                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
+                              )}
+                            >
+                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
@@ -1152,11 +1154,11 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             )}
           </div>
 
-          <aside className="space-y-8 w-full max-w-full overflow-hidden">
+          <aside className="space-y-8 w-full lg:w-[400px] lg:max-w-[400px] shrink-0 overflow-hidden min-w-0">
             <section className="hidden lg:block space-y-4 w-full">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
-              <ScrollArea className="h-[600px] w-full">
-                <div className="space-y-2 pr-4">
+              <ScrollArea className="h-[600px] w-full border rounded-2xl bg-card/50 overflow-hidden">
+                <div className="space-y-2 p-3 pr-4">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const rating = (ep.ratingCount && ep.ratingCount > 0) 
                       ? (ep.totalRatingSum || 0) / ep.ratingCount 
@@ -1173,20 +1175,20 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                         key={ep.id} 
                         id={`ep-item-${ep.id}`}
                         className={cn(
-                          "group relative flex items-center rounded-xl transition-colors",
+                          "group relative flex items-center rounded-xl transition-colors w-full overflow-hidden",
                           ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "hover:bg-secondary/50"
                         )}
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
-                          className="flex-1 flex items-center gap-3 p-2 min-w-0 pr-10"
+                          className="flex-1 flex items-center gap-3 p-2 min-w-0 pr-10 overflow-hidden"
                         >
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 overflow-hidden">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                            <div className="overflow-hidden whitespace-nowrap max-w-full">
+                            <div className="overflow-hidden whitespace-nowrap w-full">
                               <h4 className={cn(
                                 "text-sm font-bold inline-block",
                                 isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
@@ -1201,15 +1203,17 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <button
-                            onClick={(e) => handleToggleWatched(e, ep.id)}
-                            className={cn(
-                              "absolute right-2 p-2 rounded-full transition-all hover:bg-secondary/80 z-20",
-                              isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
-                            )}
-                          >
-                            <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
-                          </button>
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                            <button
+                              onClick={(e) => handleToggleWatched(e, ep.id)}
+                              className={cn(
+                                "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
+                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60"
+                              )}
+                            >
+                              <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
