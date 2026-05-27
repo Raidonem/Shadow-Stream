@@ -6,7 +6,8 @@ import { Toaster } from '../ui/toaster';
 import { FirebaseClientProvider } from '../../firebase/index';
 import { useUser, useFirestore } from '../../firebase/index';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '../../firebase/non-blocking-updates';
 import { usePathname, useRouter } from 'next/navigation';
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Button } from '../ui/button';
@@ -77,7 +78,7 @@ function UserProfileSync({ children }: { children: React.ReactNode }) {
           
           const updates: any = {};
           if (!data.displayName) updates.displayName = generateRandomDisplayName();
-          if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
+          if (Object.keys(updates).length > 0) updateDocumentNonBlocking(userRef, updates);
         }
         
         // Redirection for Email Verification
