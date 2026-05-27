@@ -335,10 +335,10 @@ function WatchlistContent() {
                             <p className="text-[10px] sm:text-xs font-bold text-accent uppercase tracking-wider truncate">
                               {language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn}
                             </p>
-                            <h4 className="font-bold truncate text-sm sm:text-lg">
+                            <h4 className="font-bold text-sm sm:text-lg leading-tight mt-0.5">
                               {language === 'ar' ? 'الحلقة' : 'Episode'} {entry.episodeNumber}: {language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}
                             </h4>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                               {entry.watchedAt?.toDate?.()?.toLocaleString() || 'Recently'}
                             </p>
                           </div>
