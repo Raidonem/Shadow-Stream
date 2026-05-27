@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, use, useEffect, Suspense, useRef, useMemo } from 'react';
@@ -775,7 +774,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
   const handleVote = async (commentId: string, direction: 'up' | 'down') => {
     if (!user || !db || !animeId || !episodeId) return;
     
-    const voteId = `${user.uid}_${commentId}`;
+    const voteId = `${user.uid}_comment_vote_${commentId}`;
     const voteRef = doc(db, 'comment_votes', voteId);
     const existingVote = userVotes?.find(v => v.commentId === commentId);
     const commentDocRef = doc(db, 'anime', animeId, 'episodes', episodeId, 'comments', commentId);
@@ -894,7 +893,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <main className="container mx-auto px-4 py-8 md:px-8 max-w-full overflow-hidden">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
           <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
             <div className="w-full max-w-full">
               <StreamPlayer url={activeServer?.url || ""} title={`${animeTitle} - ${language === 'ar' ? 'الحلقة' : 'Episode'} ${episode.episodeNumber}`} />
@@ -924,13 +923,13 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                   <Link href={`/watch/${nextEp.id}?animeId=${animeId}`}>
                     <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
                     <span className="text-xs sm:hidden">{language === 'ar' ? 'التالي' : 'Next'}</span>
-                    <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
+                    <ChevronRight className="h-4 w-4 ml-1 sm:mr-2" />
                   </Link>
                 ) : (
                   <span className="opacity-50 flex items-center">
                     <span className="text-xs sm:text-sm hidden sm:inline">{language === 'ar' ? 'التالي' : 'Next'}</span>
                     <span className="text-xs sm:hidden">{language === 'ar' ? 'التالي' : 'Next'}</span>
-                    <ChevronRight className="h-4 w-4 ml-1 sm:ml-2" />
+                    <ChevronRight className="h-4 w-4 ml-1 sm:mr-2" />
                   </span>
                 )}
               </Button>
@@ -1074,11 +1073,10 @@ function WatchContent({ episodeId }: { episodeId: string }) {
               </div>
             </section>
 
-            {/* Episode List (Mobile Only) - Displayed above suggestions on thin screens */}
-            <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12">
+            <section className="lg:hidden space-y-4 w-full pt-12 border-t mt-12 overflow-hidden">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
               <ScrollArea className="h-[400px] w-full">
-                <div className="space-y-2 pr-4">
+                <div className="space-y-3 p-3 pr-4">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const rating = (ep.ratingCount && ep.ratingCount > 0) 
                       ? (ep.totalRatingSum || 0) / ep.ratingCount 
@@ -1088,47 +1086,50 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
                     
                     const title = language === 'ar' ? ep.titleAr : ep.titleEn;
-                    const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
-                      <Link 
-                        key={ep.id} 
-                        id={`ep-item-mobile-${ep.id}`}
-                        href={`/watch/${ep.id}?animeId=${animeId}`} 
-                        className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
-                      >
-                        <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                          <div className="overflow-hidden whitespace-nowrap max-w-full">
-                            <h4 className={cn(
-                              "text-sm font-bold inline-block",
-                              isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
-                            )}>
+                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden bg-transparent">
+                        <Link 
+                          id={`ep-item-mobile-${ep.id}`}
+                          href={`/watch/${ep.id}?animeId=${animeId}`} 
+                          className={cn(
+                            "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
+                            ep.id === episodeId 
+                              ? "bg-transparent border border-accent/20 ring-1 ring-accent/10" 
+                              : "bg-transparent hover:bg-secondary/40"
+                          )}
+                        >
+                          <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0 pr-8">
+                            <p className="text-[10px] font-black text-accent uppercase truncate">EP {ep.episodeNumber}</p>
+                            <h4 className="text-sm font-bold leading-tight break-words">
                               {title}
                             </h4>
+                            <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                              <Star className="h-2 w-2 fill-current" />
+                              {epAvg}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
-                            <Star className="h-2 w-2 fill-current" />
-                            {epAvg}
-                          </div>
-                        </div>
-                        {user && (
-                          <div className="shrink-0">
+                        </Link>
+                        
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                          {user && (
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "p-2 rounded-full transition-all",
-                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60 hover:bg-secondary"
+                                "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
+                                isWatched 
+                                  ? "text-purple-400 dark:text-purple-500 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
+                                  : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
                               <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                             </button>
-                          </div>
-                        )}
-                      </Link>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -1150,11 +1151,11 @@ function WatchContent({ episodeId }: { episodeId: string }) {
             )}
           </div>
 
-          <aside className="space-y-8 w-full max-w-full overflow-hidden">
-            <section className="hidden lg:block space-y-4 w-full">
+          <aside className="space-y-8 w-full max-w-full min-w-0 overflow-hidden">
+            <section className="hidden lg:block space-y-4 w-full min-w-0 overflow-hidden">
               <h3 className="font-headline text-xl font-bold px-1">{t('episodes')}</h3>
-              <ScrollArea className="h-[600px] w-full">
-                <div className="space-y-2 pr-4">
+              <ScrollArea className="h-[600px] w-full border rounded-2xl bg-card/50 shadow-inner">
+                <div className="space-y-3 p-3 pr-4">
                   {episodes?.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => {
                     const rating = (ep.ratingCount && ep.ratingCount > 0) 
                       ? (ep.totalRatingSum || 0) / ep.ratingCount 
@@ -1164,47 +1165,50 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
                     
                     const title = language === 'ar' ? ep.titleAr : ep.titleEn;
-                    const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
-                      <Link 
-                        key={ep.id} 
-                        id={`ep-item-${ep.id}`}
-                        href={`/watch/${ep.id}?animeId=${animeId}`} 
-                        className={cn("flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-secondary/50", ep.id === episodeId ? "bg-accent/10 border border-accent/20" : "")}
-                      >
-                        <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                          <div className="overflow-hidden whitespace-nowrap max-w-full">
-                            <h4 className={cn(
-                              "text-sm font-bold inline-block",
-                              isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
-                            )}>
+                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden bg-transparent">
+                        <Link 
+                          id={`ep-item-${ep.id}`}
+                          href={`/watch/${ep.id}?animeId=${animeId}`} 
+                          className={cn(
+                            "flex flex-1 min-w-0 max-w-full items-center gap-3 p-2 rounded-xl transition-all duration-300",
+                            ep.id === episodeId 
+                              ? "bg-transparent border border-accent/20 ring-1 ring-accent/10" 
+                              : "bg-transparent hover:bg-secondary/40"
+                          )}
+                        >
+                          <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0 pr-8">
+                            <p className="text-[10px] font-black text-accent uppercase truncate">EP {ep.episodeNumber}</p>
+                            <h4 className="text-sm font-bold leading-tight break-words">
                               {title}
                             </h4>
+                            <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
+                              <Star className="h-2 w-2 fill-current" />
+                              {epAvg}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
-                            <Star className="h-2 w-2 fill-current" />
-                            {epAvg}
-                          </div>
-                        </div>
-                        {user && (
-                          <div className="shrink-0">
+                        </Link>
+                        
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                          {user && (
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "p-2 rounded-full transition-all",
-                                isWatched ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" : "text-muted-foreground/20 hover:text-muted-foreground/60 hover:bg-secondary"
+                                "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
+                                isWatched 
+                                  ? "text-purple-400 dark:text-purple-500 drop-shadow-[0_0_12px_hsl(var(--primary))]" 
+                                  : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
                               <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                             </button>
-                          </div>
-                        )}
-                      </Link>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
