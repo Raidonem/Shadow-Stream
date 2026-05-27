@@ -1104,7 +1104,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0 pr-10">
+                          <div className="flex-1 min-w-0 pr-16">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                             <div className="overflow-hidden whitespace-nowrap max-w-full">
                               <h4 className={cn(
@@ -1121,7 +1121,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 z-10 pointer-events-none">
+                          <div className="absolute right-2 inset-y-0 flex items-center z-30 pointer-events-none">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
@@ -1192,7 +1192,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0 pr-10 overflow-hidden">
+                          <div className="flex-1 min-w-0 pr-16 overflow-hidden">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                             <div className="overflow-hidden whitespace-nowrap w-full">
                               <h4 className={cn(
@@ -1209,7 +1209,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 z-10 pointer-events-none">
+                          <div className="absolute right-2 inset-y-0 flex items-center z-30 pointer-events-none">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
