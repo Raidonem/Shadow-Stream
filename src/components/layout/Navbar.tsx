@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, Suspense, useMemo, useRef } from 'react';
@@ -51,6 +52,7 @@ function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, executeSear
     <div className="relative w-full group">
       <button 
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={(e) => {
           e.preventDefault();
           executeSearch();
