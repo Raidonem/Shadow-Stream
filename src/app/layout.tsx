@@ -1,17 +1,14 @@
-import MobileBackButton from '@/components/MobileBackButton'; // Adjust the path if necessary
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '../components/providers/Providers';
 import { ADSENSE_PUBLISHER_ID } from '../lib/constants';
 import Script from 'next/script';
-// 1. Import the invisible mobile back button listener
-import MobileBackButton from '../components/MobileBackButton'; 
+import MobileBackButton from '../components/MobileBackButton';
 
 export const metadata: Metadata = {
   title: 'ShadowStream | Immersive Anime Streaming',
   description: 'Experience anime like never before in a mysterious, gloomy atmosphere.',
 };
-
 
 export default function RootLayout({
   children,
@@ -34,7 +31,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased selection:bg-accent selection:text-accent-foreground">
-        {/* 2. Drop the component right at the top of the body! */}
         <MobileBackButton />
         
         <Providers>
