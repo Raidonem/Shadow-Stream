@@ -9,7 +9,8 @@ import Link from 'next/link';
 import { Badge } from '../../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '../../../firebase/index';
-import { doc, collection, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
+import { doc, collection, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useToast } from "../../../hooks/use-toast";
 import { useLanguage } from '../../../components/providers/LanguageContext';
 import { translations } from '../../../lib/i18n';
@@ -79,45 +80,45 @@ export default function AnimeDetails({ params }: { params: Promise<{ id: string 
     return fallback;
   };
 
-  const toggleWatchlist = async () => {
+  const toggleWatchlist = () => {
     if (!user || !profileRef) {
       toast({ title: t('login'), description: "Sign in to manage your watchlist." });
       return;
     }
-    await updateDoc(profileRef, {
+    updateDocumentNonBlocking(profileRef, {
       watchlistAnimeIds: isInWatchlist ? arrayRemove(id) : arrayUnion(id)
     });
     toast({ title: isInWatchlist ? (language === 'ar' ? 'تمت الإزالة من المشاهدة لاحقاً' : "Removed from Watch Later") : (language === 'ar' ? 'تمت الإضافة إلى المشاهدة لاحقاً' : "Added to Watch Later") });
   };
 
-  const toggleFavorite = async () => {
+  const toggleFavorite = () => {
     if (!user || !profileRef) {
       toast({ title: t('login'), description: "Sign in to favorite this series." });
       return;
     }
-    await updateDoc(profileRef, {
+    updateDocumentNonBlocking(profileRef, {
       favoriteAnimeIds: isFavorite ? arrayRemove(id) : arrayUnion(id)
     });
     toast({ title: isFavorite ? (language === 'ar' ? 'تمت الإزالة من المفضلة' : "Removed from Favorites") : (language === 'ar' ? 'تمت الإضافة إلى المفضلة' : "Added to Favorites") });
   };
 
-  const toggleCompleted = async () => {
+  const toggleCompleted = () => {
     if (!user || !profileRef) {
       toast({ title: t('login'), description: "Sign in to track your progress." });
       return;
     }
-    await updateDoc(profileRef, {
+    updateDocumentNonBlocking(profileRef, {
       completedAnimeIds: isCompleted ? arrayRemove(id) : arrayUnion(id)
     });
     toast({ title: isCompleted ? (language === 'ar' ? 'تمت الإزالة من المكتملة' : "Removed from Completed") : (language === 'ar' ? 'تمت الإضافة إلى المكتملة' : "Added to Completed") });
   };
 
-  const toggleWatching = async () => {
+  const toggleWatching = () => {
     if (!user || !profileRef) {
       toast({ title: t('login'), description: "Sign in to track what you're watching." });
       return;
     }
-    await updateDoc(profileRef, {
+    updateDocumentNonBlocking(profileRef, {
       currentlyWatchingAnimeIds: isWatching ? arrayRemove(id) : arrayUnion(id)
     });
     toast({ title: isWatching ? (language === 'ar' ? 'تمت الإزالة من المشاهدة الحالية' : "Removed from Currently Watching") : (language === 'ar' ? 'تمت الإضافة إلى المشاهدة الحالية' : "Added to Currently Watching") });

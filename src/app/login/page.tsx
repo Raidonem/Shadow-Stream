@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -15,6 +16,8 @@ import { useToast } from '../../hooks/use-toast';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useLanguage } from '../../components/providers/LanguageContext';
 import Link from 'next/link';
+import { errorEmitter } from '../../firebase/error-emitter';
+import { FirestorePermissionError } from '../../firebase/errors';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -68,7 +71,15 @@ export default function LoginPage() {
       // 1. Check if username is unique
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('username', '==', username.toLowerCase()));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDocs(q).catch(async (err) => {
+        if (err.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'users',
+            operation: 'list',
+          }));
+        }
+        throw err;
+      });
 
       if (!querySnapshot.empty) {
         toast({
@@ -95,11 +106,13 @@ export default function LoginPage() {
         description: "Please check your email to verify your account.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Sign Up Failed",
-        description: error.message,
-      });
+      if (error.code !== 'permission-denied') {
+        toast({
+          variant: "destructive",
+          title: "Sign Up Failed",
+          description: error.message,
+        });
+      }
       setIsSubmitting(false);
     }
   };

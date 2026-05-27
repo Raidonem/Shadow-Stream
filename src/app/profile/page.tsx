@@ -69,6 +69,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
+import { errorEmitter } from '../../firebase/error-emitter';
+import { FirestorePermissionError } from '../../firebase/errors';
 
 function AdminHistoryButton({ targetUid, isAdminSession, moderationLogs, reports }: { 
   targetUid: string; 
@@ -464,7 +466,15 @@ function ProfileContent() {
 
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('username', '==', editData.username.toLowerCase()));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(q).catch(async (err) => {
+          if (err.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: 'users',
+              operation: 'list',
+            }));
+          }
+          throw err;
+        });
 
         if (!querySnapshot.empty) {
           toast({ title: "Error", description: t('usernameTaken'), variant: "destructive" });
@@ -495,11 +505,13 @@ function ProfileContent() {
         description: usernameChanged ? t('usernameChanged') : "Your settings have been synced successfully."
       });
     } catch (err: any) {
-      toast({
-        title: "Update failed",
-        description: err.message || "Something went wrong while saving your profile.",
-        variant: "destructive"
-      });
+      if (err.code !== 'permission-denied') {
+        toast({
+          title: "Update failed",
+          description: err.message || "Something went wrong while saving your profile.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSaving(false);
     }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useEffect, useState } from 'react';
@@ -6,7 +5,8 @@ import { Navbar } from '../../../components/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { useFirestore, useDoc, useUser, useMemoFirebase } from '../../../firebase/index';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { AlertCircle, ShieldAlert, CheckCircle2, ChevronLeft, MessageSquareWarning, Slash, Ban } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '../../../components/providers/LanguageContext';
@@ -28,7 +28,7 @@ export default function WarningPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (notification && !notification.read && notificationRef) {
-      updateDoc(notificationRef, { read: true });
+      updateDocumentNonBlocking(notificationRef, { read: true });
     }
   }, [notification, notificationRef]);
 
