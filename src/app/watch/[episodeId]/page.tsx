@@ -1090,12 +1090,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div 
                         key={ep.id} 
                         id={`ep-item-mobile-${ep.id}`}
-                        className="relative group w-full min-w-0"
+                        className="flex items-stretch gap-2 w-full min-w-0"
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
                           className={cn(
-                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all min-w-0 overflow-hidden border",
+                            "flex-1 flex items-center gap-3 p-2 rounded-xl transition-all min-w-0 overflow-hidden border",
                             ep.id === episodeId 
                               ? "bg-accent/5 border-accent/20" 
                               : "bg-secondary/10 border-transparent hover:bg-secondary/20"
@@ -1104,7 +1104,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0 pr-16">
+                          <div className="flex-1 min-w-0">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                             <div className="overflow-hidden whitespace-nowrap max-w-full">
                               <h4 className={cn(
@@ -1121,14 +1121,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="absolute right-2 inset-y-0 flex items-center z-30 pointer-events-none">
+                          <div className="shrink-0 w-12 flex items-stretch">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "pointer-events-auto h-[70%] px-3 flex items-center justify-center rounded-xl transition-all border shadow-md",
+                                "w-full flex items-center justify-center rounded-xl transition-all border shadow-md",
                                 isWatched 
                                   ? "bg-primary border-primary/20 text-primary-foreground drop-shadow-[0_0_8px_hsl(var(--primary))]" 
-                                  : "bg-secondary border-border text-muted-foreground/30 hover:text-muted-foreground/60"
+                                  : "bg-secondary/30 border-border text-muted-foreground/30 hover:text-muted-foreground/60"
                               )}
                               title={isWatched ? "Watched" : "Mark as Watched"}
                             >
@@ -1178,12 +1178,12 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                       <div 
                         key={ep.id} 
                         id={`ep-item-${ep.id}`}
-                        className="relative group w-full min-w-0"
+                        className="flex items-stretch gap-2 w-full min-w-0"
                       >
                         <Link 
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
                           className={cn(
-                            "w-full flex items-center gap-3 p-2 rounded-xl transition-all overflow-hidden border",
+                            "flex-1 flex items-center gap-3 p-2 rounded-xl transition-all overflow-hidden border",
                             ep.id === episodeId 
                               ? "bg-accent/5 border-accent/20" 
                               : "bg-secondary/10 border-transparent hover:bg-secondary/20"
@@ -1192,7 +1192,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                             <Image src={ensureAbsoluteUrl(thumbnail)} alt={language === 'ar' ? ep.titleAr : ep.titleEn} fill className="object-cover" />
                           </div>
-                          <div className="flex-1 min-w-0 pr-16 overflow-hidden">
+                          <div className="flex-1 min-w-0 overflow-hidden">
                             <p className="text-[10px] font-bold text-accent uppercase truncate">EP {ep.episodeNumber}</p>
                             <div className="overflow-hidden whitespace-nowrap w-full">
                               <h4 className={cn(
@@ -1209,14 +1209,14 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         {user && (
-                          <div className="absolute right-2 inset-y-0 flex items-center z-30 pointer-events-none">
+                          <div className="shrink-0 w-12 flex items-stretch">
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
-                                "pointer-events-auto h-[70%] px-3 flex items-center justify-center rounded-xl transition-all border shadow-md",
+                                "w-full flex items-center justify-center rounded-xl transition-all border shadow-md",
                                 isWatched 
                                   ? "bg-primary border-primary/20 text-primary-foreground drop-shadow-[0_0_8px_hsl(var(--primary))]" 
-                                  : "bg-secondary border-border text-muted-foreground/30 hover:text-muted-foreground/60"
+                                  : "bg-secondary/30 border-border text-muted-foreground/30 hover:text-muted-foreground/60"
                               )}
                               title={isWatched ? "Watched" : "Mark as Watched"}
                             >
