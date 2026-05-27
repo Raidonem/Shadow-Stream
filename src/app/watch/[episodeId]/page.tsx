@@ -1089,7 +1089,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const title = language === 'ar' ? ep.titleAr : ep.titleEn;
 
                     return (
-                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden">
+                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden bg-transparent">
                         <Link 
                           id={`ep-item-mobile-${ep.id}`}
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
@@ -1115,21 +1115,21 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         
-                        {user && (
-                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                        <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                          {user && (
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
                                 "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
                                 isWatched 
-                                  ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" 
+                                  ? "text-primary drop-shadow-[0_0_12px_hsl(var(--accent))]" 
                                   : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
                               <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -1168,7 +1168,7 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const title = language === 'ar' ? ep.titleAr : ep.titleEn;
 
                     return (
-                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden">
+                      <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden bg-transparent">
                         <Link 
                           id={`ep-item-${ep.id}`}
                           href={`/watch/${ep.id}?animeId=${animeId}`} 
@@ -1194,21 +1194,21 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                         </Link>
                         
-                        {user && (
-                          <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                        <div className="shrink-0 flex items-center justify-center p-1 rounded-xl bg-transparent">
+                          {user && (
                             <button
                               onClick={(e) => handleToggleWatched(e, ep.id)}
                               className={cn(
                                 "p-2 rounded-full transition-all hover:bg-secondary/80 pointer-events-auto",
                                 isWatched 
-                                  ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" 
+                                  ? "text-primary drop-shadow-[0_0_12px_hsl(var(--accent))]" 
                                   : "text-muted-foreground/20 hover:text-muted-foreground/60"
                               )}
                             >
                               <Eye className={cn("h-4 w-4", isWatched && "fill-current")} />
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
