@@ -182,6 +182,13 @@ function WatchlistContent() {
     toast({ title: "User Blocked", description: "They can no longer send you requests." });
   };
 
+  const truncateByWords = (text: string, count: number) => {
+    if (!text) return '';
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    if (words.length <= count) return text;
+    return words.slice(0, count).join(' ') + '...';
+  };
+
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -218,28 +225,28 @@ function WatchlistContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-8 flex w-full max-w-4xl overflow-x-auto rounded-xl bg-secondary p-1">
-            <TabsTrigger value="watching" className="rounded-lg gap-2 flex-1">
+          <TabsList className="mb-8 flex w-full max-w-4xl overflow-x-auto justify-start rounded-xl bg-secondary p-1 scrollbar-hide">
+            <TabsTrigger value="watching" className="rounded-lg gap-2 px-4 shrink-0">
               <Eye className="h-4 w-4" />
               {t('currentlyWatching')}
             </TabsTrigger>
-            <TabsTrigger value="watchlist" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="watchlist" className="rounded-lg gap-2 px-4 shrink-0">
               <Bookmark className="h-4 w-4" />
               {t('watchLater')}
             </TabsTrigger>
-            <TabsTrigger value="favorites" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="favorites" className="rounded-lg gap-2 px-4 shrink-0">
               <Heart className="h-4 w-4" />
               {t('myFavorites')}
             </TabsTrigger>
-            <TabsTrigger value="completed" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="completed" className="rounded-lg gap-2 px-4 shrink-0">
               <CheckCircle2 className="h-4 w-4" />
               {t('completed')}
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="history" className="rounded-lg gap-2 px-4 shrink-0">
               <History className="h-4 w-4" />
               {t('history')}
             </TabsTrigger>
-            <TabsTrigger value="friends" className="rounded-lg gap-2 flex-1">
+            <TabsTrigger value="friends" className="rounded-lg gap-2 px-4 shrink-0">
               <Users className="h-4 w-4" />
               {language === 'ar' ? 'الأصدقاء' : 'Friends'}
               {(incomingRequests?.length || 0) > 0 && <span className="ml-1 flex h-2 w-2 rounded-full bg-accent" />}
@@ -321,24 +328,27 @@ function WatchlistContent() {
               <div className="grid gap-4">
                 {watchHistory.map(entry => {
                   const thumbnail = ensureAbsoluteUrl((entry.thumbnail || '').trim() !== '' ? entry.thumbnail : 'https://picsum.photos/seed/placeholder/320/180');
+                  const animeTitle = language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn;
+                  const fullTitle = `${language === 'ar' ? 'الحلقة' : 'Episode'} ${entry.episodeNumber}: ${language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}`;
+                  
                   return (
                     <Link key={entry.id} href={`/watch/${entry.episodeId}?animeId=${entry.animeId}`}>
                       <Card className="overflow-hidden border-none bg-secondary/30 transition-colors hover:bg-secondary/50">
-                        <CardContent className="flex items-center gap-4 p-3">
-                          <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg">
+                        <CardContent className="flex items-center gap-3 sm:gap-4 p-3">
+                          <div className="relative aspect-video w-28 sm:w-40 shrink-0 overflow-hidden rounded-lg">
                             <Image src={thumbnail} alt={entry.episodeTitleEn} fill className="object-cover" />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
                               <PlayCircle className="h-10 w-10 text-white" />
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-accent uppercase tracking-wider">
-                              {language === 'ar' ? entry.animeTitleAr : entry.animeTitleEn}
+                            <p className="text-[10px] sm:text-xs font-bold text-accent uppercase tracking-wider">
+                              {truncateByWords(animeTitle, 8)}
                             </p>
-                            <h4 className="font-bold truncate text-lg">
-                              {language === 'ar' ? 'الحلقة' : 'Episode'} {entry.episodeNumber}: {language === 'ar' ? entry.episodeTitleAr : entry.episodeTitleEn}
+                            <h4 className="font-bold text-sm sm:text-lg leading-tight mt-0.5">
+                              {truncateByWords(fullTitle, 5)}
                             </h4>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                               {entry.watchedAt?.toDate?.()?.toLocaleString() || 'Recently'}
                             </p>
                           </div>
