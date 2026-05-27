@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, Suspense, useMemo } from 'react';
@@ -19,7 +18,8 @@ import {
   Settings,
   LogIn,
   Library,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -37,8 +37,9 @@ import { signOut } from 'firebase/auth';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { UserProfile, AvatarItem } from '../../lib/types';
+import { cn } from '../../lib/utils';
 
-function SearchInput({ t, searchQuery, setSearchQuery, handleSearch }: any) {
+function SearchInput({ t, searchQuery, setSearchQuery, handleSearch, onFocus, onBlur }: any) {
   const searchParams = useSearchParams();
   
   useEffect(() => {
@@ -47,15 +48,17 @@ function SearchInput({ t, searchQuery, setSearchQuery, handleSearch }: any) {
   }, [searchParams, setSearchQuery]);
 
   return (
-    <div className="relative w-full">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <div className="relative w-full group">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-accent transition-colors" />
       <Input
         type="search"
         placeholder={t('search')}
-        className="w-full bg-secondary/50 pl-10 focus:ring-accent border-none rounded-full"
+        className="w-full bg-secondary/50 pl-10 focus:ring-accent border-none rounded-full transition-all"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyDown={handleSearch}
+        onFocus={onFocus}
+        onBlur={onBlur}
       />
     </div>
   );
@@ -70,6 +73,7 @@ export function Navbar() {
   const db = useFirestore();
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -115,6 +119,7 @@ export function Navbar() {
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      (e.target as HTMLInputElement).blur();
     }
   };
 
@@ -123,7 +128,10 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-8">
+        <div className={cn(
+          "flex items-center gap-8 transition-opacity duration-200",
+          isSearchFocused && "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto"
+        )}>
           <Link href="/" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="font-headline font-bold text-primary-foreground">S</span>
@@ -145,18 +153,39 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-6 max-w-xl">
+        <div className={cn(
+          "flex flex-1 items-center justify-center transition-all duration-300",
+          isSearchFocused 
+            ? "absolute inset-x-0 mx-4 z-50 md:relative md:mx-0 md:px-6 md:max-w-xl" 
+            : "px-6 max-w-xl"
+        )}>
           <Suspense fallback={<div className="h-10 w-full bg-secondary/50 rounded-full animate-pulse" />}>
             <SearchInput 
               t={t} 
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery} 
               handleSearch={handleSearch} 
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
             />
           </Suspense>
+          {isSearchFocused && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="ml-2 md:hidden"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setIsSearchFocused(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className={cn(
+          "flex items-center gap-2 transition-opacity duration-200",
+          isSearchFocused && "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto"
+        )}>
           {user && (
             <div className="flex items-center gap-1">
               <Link href="/watchlist?tab=friends">
