@@ -1088,7 +1088,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
                     
                     const title = language === 'ar' ? ep.titleAr : ep.titleEn;
-                    const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
                       <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden">
@@ -1107,14 +1106,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                           <div className="flex-1 min-w-0 pr-8">
                             <p className="text-[10px] font-black text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                            <div className="overflow-hidden whitespace-nowrap w-full">
-                              <h4 className={cn(
-                                "text-sm font-bold inline-block",
-                                isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
-                              )}>
-                                {title}
-                              </h4>
-                            </div>
+                            <h4 className="text-sm font-bold leading-tight break-words">
+                              {title}
+                            </h4>
                             <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
                               <Star className="h-2 w-2 fill-current" />
                               {epAvg}
@@ -1173,7 +1167,6 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                     const isWatched = profile?.watchedEpisodeIds?.includes(ep.id);
                     
                     const title = language === 'ar' ? ep.titleAr : ep.titleEn;
-                    const isLongTitle = title.length > (language === 'ar' ? 25 : 32);
 
                     return (
                       <div key={ep.id} className="flex items-center gap-2 group w-full relative min-w-0 overflow-hidden">
@@ -1192,14 +1185,9 @@ function WatchContent({ episodeId }: { episodeId: string }) {
                           </div>
                           <div className="flex-1 min-w-0 pr-8">
                             <p className="text-[10px] font-black text-accent uppercase truncate">EP {ep.episodeNumber}</p>
-                            <div className="overflow-hidden whitespace-nowrap w-full">
-                              <h4 className={cn(
-                                "text-sm font-bold inline-block",
-                                isLongTitle && (language === 'ar' ? "animate-title-slide-rtl" : "animate-title-slide")
-                              )}>
-                                {title}
-                              </h4>
-                            </div>
+                            <h4 className="text-sm font-bold leading-tight break-words">
+                              {title}
+                            </h4>
                             <div className="flex items-center gap-1 text-[10px] text-yellow-500 font-bold">
                               <Star className="h-2 w-2 fill-current" />
                               {epAvg}
