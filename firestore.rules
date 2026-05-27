@@ -25,25 +25,26 @@ service cloud.firestore {
     }
 
     function isBlockedBy(userId) {
-      let targetProfile = get(/databases/$(database)/documents/users/$(userId));
-      return isSignedIn() && request.auth.uid in targetProfile.data.blockedUserIds;
+      let userPath = /databases/$(database)/documents/users/$(userId);
+      return isSignedIn() && exists(userPath) && request.auth.uid in get(userPath).data.blockedUserIds;
     }
 
     function isRestricted() {
-      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return userProfile.data.restrictedUntil != null && userProfile.data.restrictedUntil > request.time;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userPath) && get(userPath).data.restrictedUntil != null && get(userPath).data.restrictedUntil > request.time;
     }
 
     function isSuspended() {
-      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return userProfile.data.suspendedUntil != null && userProfile.data.suspendedUntil > request.time;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userPath) && get(userPath).data.suspendedUntil != null && get(userPath).data.suspendedUntil > request.time;
     }
 
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || resource.data.isPublic == true || isFriend(userId) || isAdmin();
-      allow list: if isSignedIn() && (request.query.limit <= 20 || isAdmin()); 
+      allow get: if isOwner(userId) || (resource != null && resource.data.isPublic == true) || isFriend(userId) || isAdmin();
+      // Allow listing public users with a limit of 50 to support the search page
+      allow list: if isSignedIn() && (request.query.limit <= 50 || isAdmin()); 
       
       allow create: if isOwner(userId) 
         && request.resource.data.id == userId
@@ -97,13 +98,14 @@ service cloud.firestore {
     }
 
     match /anime/{animeId} {
+      // Anime catalog must be publicly accessible for browsing
       allow get, list: if true;
       allow create, delete: if isAdmin();
       // Allow regular users to update only views/rating while protecting sensitive metadata
       allow update: if isAdmin() || (
         isSignedIn() && !isSuspended()
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['rating', 'views', 'updatedAt'])
+            .hasOnly(['rating', 'views', 'updatedAt', 'ratingCount', 'totalRatingSum'])
       );
 
       match /episodes/{episodeId} {
@@ -153,7 +155,7 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid 
         && !isSuspended()
         && (request.resource.data.type == 'up' || request.resource.data.type == 'down');
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
     
     match /friendships/{friendshipId} {
